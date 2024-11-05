@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require('uuid');
 const app = express()
 app.use(cors());
 app.use(express.json())
-const port = 3000
+const port = 4000
 
 const GLOBAL_EXPIRATION_DATE = "2030-11-07T01:39:40.783Z";
 const GLOBAL_REFRESH_TOKEN = "d0f29726-3dbb-4023-8f3f-3f6d42647eab";
