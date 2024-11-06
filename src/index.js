@@ -31,6 +31,18 @@ app.get('/licenses', async (req, res) => {
     return res.send(licenses)
 })
 
+app.post('/teste', async (req, res) => {
+    const data = req.body;
+
+    if (data.test === true) {
+        console.log('JSON recebido:', data);
+    } else {
+        console.log("Teste não funcionou");
+    }
+
+    res.status(200).json({ success: true, message: "Requisição processada" });
+});
+
 app.post('/gumroad', async (req, res) => {
     const { success, license_key, created_at, variants, email, ip_country } = req.body;
 
