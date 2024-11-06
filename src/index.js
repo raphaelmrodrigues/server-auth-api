@@ -41,7 +41,7 @@ app.post('/teste', async (req, res) => {
 app.post('/gumroad', async (req, res) => {
     console.log("Dados recebidos:", req.body);
 
-    const { success, license_key, created_at, variants, email, ip_country } = req.body;
+    const { license_key, created_at, variants, email, ip_country } = req.body;
 
 
     // Convertendo a data de created_at para um objeto Date
