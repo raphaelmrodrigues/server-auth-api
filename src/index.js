@@ -6,11 +6,11 @@ const { v4: uuidv4 } = require('uuid');
 const app = express()
 app.use(cors());
 app.use(express.json())
-const port = 3000
+const port = 4000
 
 const GLOBAL_EXPIRATION_DATE = "2030-11-07T01:39:40.783Z";
-const GLOBAL_REFRESH_TOKEN = "d0f29726-3dbb-4023-8f3f-3f6d42647eab";
-const GLOBAL_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsaWNlbnNlS2V5IjoiMUJEMkY1NTgtNUQ2QjQ2MTYtQUY3QzMwRkEtREMyRTc3QjUiLCJpYXQiOjE3MjgyNjgyODksImV4cCI6MTczMDk0MzU4MH0.-vdkvMi2yGKIILbfUzx1zfDsVN006wgkTkCg-EVSF5A";
+const GLOBAL_REFRESH_TOKEN = "ded2cbef-bec7-41db-94d7-27de530912c2";
+const GLOBAL_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsaWNlbnNlS2V5IjoiODI1QTcyNTItQUI3OTRDOTgtQkQwQTY2MkQtNTZBOEQxQTQiLCJpYXQiOjE3MzA4NjMwOTYsImV4cCI6MTczMzU0MDk4MH0._OE4kDcTpHcX8s4u9ck0AxDa8zR2Osz2oKjfkz21wqU";
 
 const License = mongoose.model('license', {
     playerid: String,
@@ -23,6 +23,11 @@ const License = mongoose.model('license', {
 
 app.get('/', async (req, res) => {
     const licenses = await License.find()
+    return res.send("API esta rodando!")
+})
+
+app.get('/licenses', async (req, res) => {
+    const licenses = await License.find()
     return res.send(licenses)
 })
 
@@ -33,12 +38,6 @@ app.post('/gumroad', async (req, res) => {
         console.log("Erro: Webhook não foi bem-sucedido");
         return res.status(400).json({ success: false, message: 'Webhook não foi bem-sucedido' });
     }
-
-    console.log('License Key:', license_key);
-    console.log('Email:', email);
-    console.log('Created At:', created_at);
-    console.log('Variants:', variants);
-    console.log('Country:', ip_country);
 
     // Convertendo a data de created_at para um objeto Date
     const createdAtDate = new Date(created_at);
