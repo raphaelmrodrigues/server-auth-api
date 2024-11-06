@@ -39,12 +39,10 @@ app.post('/teste', async (req, res) => {
 });
 
 app.post('/gumroad', async (req, res) => {
+    console.log("Dados recebidos:", req.body);
+
     const { success, license_key, created_at, variants, email, ip_country } = req.body;
 
-    if (!success) {
-        console.log("Erro: Webhook não foi bem-sucedido");
-        return res.status(400).json({ success: false, message: 'Webhook não foi bem-sucedido' });
-    }
 
     // Convertendo a data de created_at para um objeto Date
     const createdAtDate = new Date(created_at);
