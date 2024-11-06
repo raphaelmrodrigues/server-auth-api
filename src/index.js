@@ -33,12 +33,7 @@ app.get('/licenses', async (req, res) => {
 
 app.post('/teste', async (req, res) => {
     const data = req.body;
-
-    if (data.test === true) {
-        console.log('JSON recebido:', data);
-    } else {
-        console.log("Teste não funcionou");
-    }
+    console.log('JSON recebido:', data);
 
     res.status(200).json({ success: true, message: "Requisição processada" });
 });
