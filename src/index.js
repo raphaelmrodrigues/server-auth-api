@@ -22,7 +22,7 @@ const License = mongoose.model('license', {
 })
 
 app.get('/', async (req, res) => {
-    const licenses = await License.find()
+
     return res.send("API esta rodando!")
 })
 
