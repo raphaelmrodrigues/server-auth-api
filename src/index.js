@@ -5,7 +5,8 @@ const { v4: uuidv4 } = require('uuid');
 
 const app = express()
 app.use(cors());
-app.use(express.json())
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 const port = 4000
 
 const GLOBAL_EXPIRATION_DATE = "2030-11-07T01:39:40.783Z";
@@ -32,10 +33,11 @@ app.get('/licenses', async (req, res) => {
 })
 
 app.post('/teste', async (req, res) => {
+    console.log('Dados recebidos do Gumroad:', req.body);
     const data = req.body;
     console.log('JSON recebido:', data);
 
-    res.status(200).json({ success: true, message: "Requisição processada" });
+    res.status(200).send('Webhook received');
 });
 
 app.post('/gumroad', async (req, res) => {
