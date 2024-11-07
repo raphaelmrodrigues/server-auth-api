@@ -43,25 +43,25 @@ app.post('/teste', async (req, res) => {
 app.post('/gumroad', async (req, res) => {
     console.log("Dados recebidos:", req.body);
 
-    const { license_key, created_at, variants, email, ip_country } = req.body;
+    const { license_key, sale_timestamp, variants, email, ip_country } = req.body;
 
 
     // Convertendo a data de created_at para um objeto Date
-    const createdAtDate = new Date(created_at);
+    const createdAtDate = new Date(sale_timestamp);
     let expireDate;
 
     // Definindo a data de expiração com base no variants
-    switch (variants) {
-        case '(90 days)':
+    switch (variants.Version) {
+        case '90 days':
             expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 3));
             break;
-        case '(60 days)':
+        case '60 days':
             expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 2));
             break;
-        case '(30 days)':
+        case '30 days':
             expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 1));
             break;
-        case '(15 days)':
+        case '15 days':
             expireDate = new Date(createdAtDate.setDate(createdAtDate.getDate() + 15));
             break;
         default:
