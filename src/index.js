@@ -73,9 +73,6 @@ app.post('/country', (req, res) => {
 
 app.post('/checkout15', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
-        shipping_address_collection: {
-            allowed_countries: ['US', 'CA', 'BR'],
-        },
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
@@ -84,17 +81,14 @@ app.post('/checkout15', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `gldbotserver.com/success.html`,
-        cancel_url: `gldbotserver.com/checkout.html`,
+        success_url: `https://gldbotserver.com/success.html`,
+        cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });
 
 app.post('/checkout30', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
-        shipping_address_collection: {
-            allowed_countries: ['US', 'CA', 'BR'],
-        },
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
@@ -103,17 +97,14 @@ app.post('/checkout30', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `gldbotserver.com/success.html`,
-        cancel_url: `gldbotserver.com/checkout.html`,
+        success_url: `https://gldbotserver.com/success.html`,
+        cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });
 
 app.post('/checkout60', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
-        shipping_address_collection: {
-            allowed_countries: ['US', 'CA', 'BR'],
-        },
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
@@ -122,8 +113,8 @@ app.post('/checkout60', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `gldbotserver.com/success.html`,
-        cancel_url: `gldbotserver.com/checkout.html`,
+        success_url: `https://gldbotserver.com/success.html`,
+        cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });

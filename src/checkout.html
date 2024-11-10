@@ -178,7 +178,7 @@
             <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
 
         </ul>
-        <form action="/checkout15" method="POST">
+        <form id="form-15" method="POST">
             <button type="submit" id="checkout-button1">Comprar</button>
         </form>
     </div>
@@ -191,7 +191,7 @@
             <li><strong>Atenção</strong></li>
             <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
         </ul>
-        <form action="/checkout30" method="POST">
+        <form id="form-30" method="POST">
             <button type="submit" id="checkout-button2">Comprar</button>
         </form>
     </div>
@@ -203,10 +203,19 @@
             <li><strong>Atenção</strong></li>
             <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
         </ul>
-        <form action="/checkout60" method="POST">
+        <form id="form-60" method="POST">
             <button type="submit" id="checkout-button3">Comprar</button>
         </form>
     </div>
 </div>
+<script>
+    // Define a URL base
+    const baseUrl = "https://gldbotserver.com";
+
+    // Define as URLs para cada formulário
+    document.getElementById("form-15").action = `${baseUrl}/checkout15`;
+    document.getElementById("form-30").action = `${baseUrl}/checkout30`;
+    document.getElementById("form-60").action = `${baseUrl}/checkout60`;
+</script>
 </body>
 </html>
