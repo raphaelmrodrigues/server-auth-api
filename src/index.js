@@ -17,6 +17,7 @@ const GLOBAL_EXPIRATION_DATE = "2030-11-07T01:39:40.783Z";
 const GLOBAL_REFRESH_TOKEN = "ded2cbef-bec7-41db-94d7-27de530912c2";
 const GLOBAL_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsaWNlbnNlS2V5IjoiODI1QTcyNTItQUI3OTRDOTgtQkQwQTY2MkQtNTZBOEQxQTQiLCJpYXQiOjE3MzA4NjMwOTYsImV4cCI6MTczMzU0MDk4MH0._OE4kDcTpHcX8s4u9ck0AxDa8zR2Osz2oKjfkz21wqU";
 const YOUR_DOMAIN = `http://localhost:${port}`;
+const endpointSecret = 'whsec_RIEiy3AvCrga5BDWmrncpFgWcq0uffqn';
 
 const License = mongoose.model('license', {
     playerid: String,
@@ -36,20 +37,29 @@ app.get('/licenses', async (req, res) => {
     return res.send(licenses)
 })
 
-app.post('/webhook', express.json({type: 'application/json'}), (request, response) => {
-    const event = request.body;
-    console.log("webhook recebido:", event)
+app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
+    const sig = request.headers['stripe-signature'];
+    console.log('sig', sig);
+
+    let event;
+
+    try {
+        event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+        console.log('event', event);
+    }
+    catch (err) {
+        response.status(400).send(`Webhook Error: ${err.message}`);
+    }
+
     // Handle the event
     switch (event.type) {
         case 'payment_intent.succeeded':
             const paymentIntent = event.data.object;
-            // Then define and call a method to handle the successful payment intent.
-            // handlePaymentIntentSucceeded(paymentIntent);
+            console.log('PaymentIntent was successful!');
             break;
         case 'payment_method.attached':
             const paymentMethod = event.data.object;
-            // Then define and call a method to handle the successful attachment of a PaymentMethod.
-            // handlePaymentMethodAttached(paymentMethod);
+            console.log('PaymentMethod was attached to a Customer!');
             break;
         // ... handle other event types
         default:
@@ -57,7 +67,7 @@ app.post('/webhook', express.json({type: 'application/json'}), (request, respons
     }
 
     // Return a response to acknowledge receipt of the event
-    response.status(200).json({received: true});
+    response.json({received: true});
 });
 
 
