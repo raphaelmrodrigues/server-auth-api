@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLDbot - Gladiatus Bot</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
+    <style>
+        /* Configurações gerais */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            background-image: url('./images/welcome.png');
+            background-size: cover;
+            background-position: center;
+            color: #fff;
+            position: relative;
+        }
+
+        .container {
+            text-align: center;
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 2rem;
+            border-radius: 10px;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+            z-index: 1;
+            position: relative;
+        }
+
+        /* Título estilo romano */
+        .roman-title {
+            font-family: 'Times New Roman', serif;
+            font-size: 3rem;
+            color: #d4af37; /* Dourado */
+            font-weight: bold;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            margin-bottom: 2rem;
+        }
+
+        /* Estilizando o select em dourado */
+        #country-select {
+            padding: 0.5rem;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 300px;
+            color: #d4af37;
+            background-color: #333;
+            border: 2px solid #d4af37; /* Borda dourada */
+            border-radius: 5px;
+            text-align-last: center;
+            cursor: pointer;
+            appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, #d4af37 50%),
+            linear-gradient(135deg, #d4af37 50%, transparent 50%);
+            background-position: calc(100% - 15px) calc(1em), calc(100% - 10px) calc(1em);
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+        }
+
+        /* Estilo do botão */
+        #submit-button {
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            color: #d4af37;
+            background-color: #333;
+            border: 2px solid #d4af37;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+
+        .flag-icon {
+            margin-right: 8px;
+            font-size: 2rem;
+            vertical-align: middle;
+        }
+
+        /* Efeito de hover para o select */
+        #country-select:hover {
+            background-color: #444;
+            color: #d4af37; /* Texto dourado ao passar o mouse */
+        }
+        #country-select {
+            padding: 0.5rem;
+            font-size: 1rem;
+            width: 100%;
+            max-width: 300px;
+            color: #d4af37;
+            background-color: #333;
+            border: 2px solid #d4af37; /* Borda dourada */
+            border-radius: 5px;
+            text-align-last: center; /* Centraliza o texto do item selecionado */
+            cursor: pointer;
+            appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, #d4af37 50%),
+            linear-gradient(135deg, #d4af37 50%, transparent 50%);
+            background-position: calc(100% - 15px) calc(1em), calc(100% - 10px) calc(1em);
+            background-size: 5px 5px, 5px 5px;
+            background-repeat: no-repeat;
+            max-height: 200px;
+            overflow-y: auto; /* Adiciona a barra de rolagem vertical */
+            -webkit-appearance: none; /* Remove estilos padrão do navegador */
+            scrollbar-width: thin; /* Firefox */
+            scrollbar-color: #d4af37 #333; /* Cores para a barra de rolagem no Firefox */
+        }
+
+        /* Estilizando a barra de rolagem para navegadores WebKit (Chrome, Safari) */
+        #country-select::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        #country-select::-webkit-scrollbar-track {
+            background-color: #333; /* Cor de fundo da área de rolagem */
+        }
+
+        #country-select::-webkit-scrollbar-thumb {
+            background-color: #d4af37; /* Cor da barra de rolagem */
+            border-radius: 10px;
+        }
+
+        /* Estilizando as opções do select */
+        #country-select option {
+            background-color: #333; /* Cor de fundo das opções */
+            color: #d4af37; /* Cor do texto das opções */
+            text-align: center; /* Centraliza o texto nas opções */
+        }
+
+        /* Garantindo que o select abra sempre para baixo */
+        #country-select {
+            position: relative;
+        }
+
+        #country-select option {
+            background-color: #333; /* Cor de fundo das opções */
+            color: #d4af37; /* Cor do texto das opções */
+        }
+
+        /* Ajustes para a lista de opções */
+        #country-select::-ms-expand {
+            display: none; /* Oculta o ícone padrão do select no IE */
+        }
+
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="roman-title">GLDbot - Gladiatus Bot</h1>
+    <h2 style="color:#d4af37;">Select your country</h2><br>
+    <div style="display: flex; align-items: center; justify-content: center;">
+        <span id="selected-flag" class="fi fi-us flag-icon"></span> <!-- Bandeira inicial -->
+        <select id="country-select">
+            <!-- Opções de países -->
+            <option value="us" data-flag="us">United States</option>
+            <option value="br" data-flag="br">Brazil</option>
+            <option value="ca" data-flag="ca">Canada</option>
+            <option value="fr" data-flag="fr">France</option>
+            <option value="de" data-flag="de">Germany</option>
+            <option value="tr" data-flag="tr">Turkey</option>
+            <option value="jp" data-flag="jp">Japan</option>
+            <option value="in" data-flag="in">India</option>
+            <option value="cn" data-flag="cn">China</option>
+            <option value="it" data-flag="it">Italy</option>
+            <option value="es" data-flag="es">Spain</option>
+            <option value="gb" data-flag="gb">United Kingdom</option>
+            <option value="ru" data-flag="ru">Russia</option>
+            <option value="au" data-flag="au">Australia</option>
+            <option value="mx" data-flag="mx">Mexico</option>
+            <option value="kr" data-flag="kr">South Korea</option>
+            <option value="se" data-flag="se">Sweden</option>
+            <option value="no" data-flag="no">Norway</option>
+            <option value="nl" data-flag="nl">Netherlands</option>
+            <option value="ch" data-flag="ch">Switzerland</option>
+            <option value="pl" data-flag="pl">Poland</option>
+            <option value="gr" data-flag="gr">Greece</option>
+            <option value="be" data-flag="be">Belgium</option>
+            <option value="pt" data-flag="pt">Portugal</option>
+            <option value="cz" data-flag="cz">Czech Republic</option>
+            <option value="at" data-flag="at">Austria</option>
+            <option value="dk" data-flag="dk">Denmark</option>
+            <option value="fi" data-flag="fi">Finland</option>
+            <option value="ar" data-flag="ar">Argentina</option>
+            <option value="cl" data-flag="cl">Chile</option>
+            <option value="co" data-flag="co">Colombia</option>
+            <option value="ve" data-flag="ve">Venezuela</option>
+            <option value="pe" data-flag="pe">Peru</option>
+            <option value="uy" data-flag="uy">Uruguay</option>
+            <option value="ec" data-flag="ec">Ecuador</option>
+            <option value="sa" data-flag="sa">Saudi Arabia</option>
+            <option value="ae" data-flag="ae">United Arab Emirates</option>
+            <option value="kw" data-flag="kw">Kuwait</option>
+            <option value="qa" data-flag="qa">Qatar</option>
+            <option value="bh" data-flag="bh">Bahrain</option>
+            <option value="om" data-flag="om">Oman</option>
+            <option value="il" data-flag="il">Israel</option>
+            <option value="eg" data-flag="eg">Egypt</option>
+            <option value="ma" data-flag="ma">Morocco</option>
+            <option value="tn" data-flag="tn">Tunisia</option>
+            <option value="ke" data-flag="ke">Kenya</option>
+            <option value="ng" data-flag="ng">Nigeria</option>
+            <option value="za" data-flag="za">South Africa</option>
+            <option value="dz" data-flag="dz">Algeria</option>
+            <option value="ke" data-flag="ke">Kenya</option>
+            <option value="pk" data-flag="pk">Pakistan</option>
+            <option value="bd" data-flag="bd">Bangladesh</option>
+            <option value="lk" data-flag="lk">Sri Lanka</option>
+            <option value="np" data-flag="np">Nepal</option>
+            <option value="mm" data-flag="mm">Myanmar</option>
+            <option value="kh" data-flag="kh">Cambodia</option>
+            <option value="vn" data-flag="vn">Vietnam</option>
+            <option value="th" data-flag="th">Thailand</option>
+            <option value="sg" data-flag="sg">Singapore</option>
+            <option value="my" data-flag="my">Malaysia</option>
+            <option value="ph" data-flag="ph">Philippines</option>
+            <option value="id" data-flag="id">Indonesia</option>
+            <option value="ro" data-flag="ro">Romania</option>
+            <option value="hu" data-flag="hu">Hungary</option>
+            <option value="bg" data-flag="bg">Bulgaria</option>
+            <option value="hr" data-flag="hr">Croatia</option>
+            <option value="rs" data-flag="rs">Serbia</option>
+            <option value="mk" data-flag="mk">North Macedonia</option>
+            <option value="ua" data-flag="ua">Ukraine</option>
+            <option value="pl" data-flag="pl">Poland</option>
+            <option value="cz" data-flag="cz">Czech Republic</option>
+            <option value="sk" data-flag="sk">Slovakia</option>
+            <option value="lt" data-flag="lt">Lithuania</option>
+            <option value="ee" data-flag="ee">Estonia</option>
+            <option value="lv" data-flag="lv">Latvia</option>
+            <option value="by" data-flag="by">Belarus</option>
+            <option value="it" data-flag="it">Italy</option>
+            <option value="es" data-flag="es">Spain</option>
+            <option value="fr" data-flag="fr">France</option>
+            <option value="de" data-flag="de">Germany</option>
+            <option value="ch" data-flag="ch">Switzerland</option>
+            <option value="se" data-flag="se">Sweden</option>
+            <option value="nl" data-flag="nl">Netherlands</option>
+            <option value="be" data-flag="be">Belgium</option>
+            <option value="pt" data-flag="pt">Portugal</option>
+            <option value="at" data-flag="at">Austria</option>
+            <option value="no" data-flag="no">Norway</option>
+            <option value="dk" data-flag="dk">Denmark</option>
+            <option value="fi" data-flag="fi">Finland</option>
+            <option value="ar" data-flag="ar">Argentina</option>
+            <option value="cl" data-flag="cl">Chile</option>
+            <option value="co" data-flag="co">Colombia</option>
+            <option value="pe" data-flag="pe">Peru</option>
+            <option value="ec" data-flag="ec">Ecuador</option>
+            <option value="py" data-flag="py">Paraguay</option>
+            <option value="bo" data-flag="bo">Bolivia</option>
+            <option value="uy" data-flag="uy">Uruguay</option>
+            <option value="gy" data-flag="gy">Guyana</option>
+            <option value="sr" data-flag="sr">Suriname</option>
+            <option value="ve" data-flag="ve">Venezuela</option>
+            <option value="do" data-flag="do">Dominican Republic</option>
+            <option value="hn" data-flag="hn">Honduras</option>
+            <option value="ni" data-flag="ni">Nicaragua</option>
+            <option value="cr" data-flag="cr">Costa Rica</option>
+            <option value="sv" data-flag="sv">El Salvador</option>
+            <option value="gt" data-flag="gt">Guatemala</option>
+            <option value="bz" data-flag="bz">Belize</option>
+            <option value="pa" data-flag="pa">Panama</option>
+            <option value="jm" data-flag="jm">Jamaica</option>
+            <option value="tt" data-flag="tt">Trinidad and Tobago</option>
+        </select>
+        <button id="submit-button">GO</button>
+    </div>
+</div>
+
+<script>
+    const select = document.getElementById('country-select');
+    const flagIcon = document.getElementById('selected-flag');
+    const submitButton = document.getElementById('submit-button');
+
+    // Atualiza a bandeira ao selecionar um país
+    select.addEventListener('change', function() {
+        const selectedOption = select.options[select.selectedIndex];
+        const flagCode = selectedOption.getAttribute('data-flag');
+        flagIcon.className = `fi fi-${flagCode} flag-icon`;
+    });
+
+    submitButton.addEventListener('click', async function() {
+        const selectedCountry = select.value;
+
+        try {
+            const response = await fetch('http://localhost:4000/country', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ country: selectedCountry })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+
+                if (data.redirectTo === 'checkout') {
+                    window.location.href = 'checkout.html';
+                } else if (data.redirectTo === 'gumroad') {
+                    window.location.href = 'https://gldbot.gumroad.com/l/gladiatusbot';
+                }
+            } else {
+                console.error('Erro ao enviar a requisição:', response.statusText);
+            }
+        } catch (error) {
+            console.error('Erro ao enviar a requisição:', error);
+        }
+    });
+</script>
+</body>
+</html>

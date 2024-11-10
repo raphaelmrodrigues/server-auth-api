@@ -2,16 +2,21 @@ const express = require('express')
 const mongoose = require('mongoose');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
+const path = require('path');
+const stripe = require('stripe')('sk_test_51QINJJAgZqiodFBTHAHBKeseukq4cQ3ZvPAZ1Ex98PPTnz1whshtBQTd2sXMwES0UIXNRALCH7Tza2GlqbZKmqOx00pybqgafT');
 
 const app = express()
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(express.static('public'));
+app.use(express.static('src'));
 const port = 4000
 
 const GLOBAL_EXPIRATION_DATE = "2030-11-07T01:39:40.783Z";
 const GLOBAL_REFRESH_TOKEN = "ded2cbef-bec7-41db-94d7-27de530912c2";
 const GLOBAL_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsaWNlbnNlS2V5IjoiODI1QTcyNTItQUI3OTRDOTgtQkQwQTY2MkQtNTZBOEQxQTQiLCJpYXQiOjE3MzA4NjMwOTYsImV4cCI6MTczMzU0MDk4MH0._OE4kDcTpHcX8s4u9ck0AxDa8zR2Osz2oKjfkz21wqU";
+const YOUR_DOMAIN = `http://localhost:${port}`;
 
 const License = mongoose.model('license', {
     playerid: String,
@@ -23,14 +28,105 @@ const License = mongoose.model('license', {
 })
 
 app.get('/', async (req, res) => {
-
-    return res.send("API esta rodando!")
-})
+    return res.sendFile(path.join(__dirname, 'welcome.html'));
+});
 
 app.get('/licenses', async (req, res) => {
     const licenses = await License.find()
     return res.send(licenses)
 })
+
+app.post('/webhook', express.json({type: 'application/json'}), (request, response) => {
+    const event = request.body;
+    console.log("webhook recebido:", event)
+    // Handle the event
+    switch (event.type) {
+        case 'payment_intent.succeeded':
+            const paymentIntent = event.data.object;
+            // Then define and call a method to handle the successful payment intent.
+            // handlePaymentIntentSucceeded(paymentIntent);
+            break;
+        case 'payment_method.attached':
+            const paymentMethod = event.data.object;
+            // Then define and call a method to handle the successful attachment of a PaymentMethod.
+            // handlePaymentMethodAttached(paymentMethod);
+            break;
+        // ... handle other event types
+        default:
+            console.log(`Unhandled event type ${event.type}`);
+    }
+
+    // Return a response to acknowledge receipt of the event
+    response.json({received: true});
+});
+
+
+app.post('/country', (req, res) => {
+    const { country } = req.body;
+
+    if (country === 'br') {
+        res.json({ redirectTo: 'checkout' });
+    } else {
+        res.json({ redirectTo: 'gumroad' });
+    }
+});
+
+app.post('/checkout15', async (req, res) => {
+    const session = await stripe.checkout.sessions.create({
+        shipping_address_collection: {
+            allowed_countries: ['US', 'CA', 'BR'],
+        },
+        line_items: [
+            {
+                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                price: 'price_1QIinsAgZqiodFBTHxB1WW0r',
+                quantity: 1,
+            },
+        ],
+        mode: 'payment',
+        success_url: `${YOUR_DOMAIN}/success.html`,
+        cancel_url: `${YOUR_DOMAIN}/cancel.html`,
+    });
+    res.redirect(303, session.url);
+});
+
+app.post('/checkout30', async (req, res) => {
+    const session = await stripe.checkout.sessions.create({
+        shipping_address_collection: {
+            allowed_countries: ['US', 'CA', 'BR'],
+        },
+        line_items: [
+            {
+                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                price: 'price_1QIioSAgZqiodFBTr3DLXxZh',
+                quantity: 1,
+            },
+        ],
+        mode: 'payment',
+        success_url: `${YOUR_DOMAIN}/success.html`,
+        cancel_url: `${YOUR_DOMAIN}/cancel.html`,
+    });
+    res.redirect(303, session.url);
+});
+
+app.post('/checkout60', async (req, res) => {
+    const session = await stripe.checkout.sessions.create({
+        shipping_address_collection: {
+            allowed_countries: ['US', 'CA', 'BR'],
+        },
+        line_items: [
+            {
+                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                price: 'price_1QIipJAgZqiodFBTdogYTWhQ',
+                quantity: 1,
+            },
+        ],
+        mode: 'payment',
+        success_url: `${YOUR_DOMAIN}/success.html`,
+        cancel_url: `${YOUR_DOMAIN}/cancel.html`,
+    });
+    res.redirect(303, session.url);
+});
 
 app.post('/teste', async (req, res) => {
     console.log('Dados recebidos do Gumroad:', req.body);

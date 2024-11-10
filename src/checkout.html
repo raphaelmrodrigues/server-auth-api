@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GLDbot - shop</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<style>
+    {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: Arial, sans-serif;
+        background-color: #f5f7fa;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 2rem;
+    }
+
+    header {
+        text-align: center;
+        margin-bottom: 3rem;
+    }
+
+    header h1 {
+        font-size: 2.5rem;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+    }
+
+    header p {
+        color: #4a5568;
+        font-size: 1.1rem;
+    }
+
+    .pricing-table {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap; /* Permite que os cards se movam para a próxima linha */
+    }
+
+    .plan {
+        background-color: #ffffff;
+        padding: 2rem;
+        width: 260px;
+        border-radius: 12px;
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: all 0.3s ease-in-out;
+        position: relative;
+    }
+
+    .plan:hover {
+        transform: scale(1.03);
+        background-color: rgba(200, 200, 200, 0.2);
+    }
+
+    .plan.featured {
+        border: 2px solid #3182ce;
+    }
+
+    .plan.featured:hover {
+        background-color: rgba(49, 130, 206, 0.2);
+    }
+
+    .plan .badge {
+        position: absolute;
+        top: -15px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #3182ce;
+        color: #ffffff;
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+        border-radius: 12px;
+        font-weight: bold;
+    }
+
+    .plan h2 {
+        font-size: 1.6rem;
+        color: #2d3748;
+        margin-bottom: 0.5rem;
+    }
+
+    .plan .price {
+        font-size: 2rem;
+        color: #2d3748;
+        margin-bottom: 1.5rem;
+    }
+
+    .plan ul {
+        list-style-type: none;
+        margin-bottom: 1.5rem;
+    }
+
+    .plan li {
+        font-size: 0.9rem;
+        color: #718096;
+        margin: 0.5rem 0;
+    }
+
+    button {
+        padding: 0.8rem 1.6rem;
+        border: none;
+        background-color: #3182ce;
+        color: #ffffff;
+        font-size: 1rem;
+        font-weight: bold;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background-color 0.3s;
+    }
+
+    button:hover {
+        background-color: #2b6cb0;
+    }
+
+    .plan img {
+        height: 250px;
+        object-fit: contain;
+        margin-bottom: 1rem;
+    }
+
+    /* Responsividade para dispositivos móveis */
+    @media (max-width: 768px) {
+        .pricing-table {
+            flex-direction: column; /* Empilha os cards verticalmente */
+            gap: 2rem; /* Aumenta o espaço entre os cards */
+        }
+
+        .plan {
+            width: 90%; /* Faz com que o card ocupe 90% da largura disponível */
+        }
+    }
+
+    @media (max-width: 480px) {
+        .plan {
+            width: 80%; /* Faz com que o card ocupe 90% da largura disponível */
+        }
+        header h1 {
+            font-size: 1.8rem; /* Ajusta o tamanho do título para telas muito pequenas */
+        }
+
+        header p {
+            font-size: 1rem; /* Ajusta o tamanho do texto abaixo do título */
+        }
+
+        .plan img {
+            height: 200px; /* Ajusta a altura da imagem para dispositivos móveis */
+        }
+
+        button {
+            width: 100%; /* Faz com que o botão ocupe toda a largura disponível */
+            padding: 1rem 0;
+        }
+    }
+
+</style>
+<header>
+    <h1>Planos disponíveis em moeda local</h1>
+    <p>Em caso de problemas com o pagamento, nos contate via discord!</p>
+</header>
+
+<div class="pricing-table">
+    <div class="plan">
+        <img src="./images/gldicon.png" alt="Product Image">
+        <h2>GLDbot - 15 dias</h2>
+        <p class="price">R$6,26</p>
+        <ul style="padding-left: 0 !important;">
+            <li><strong>Atenção</strong></li>
+            <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
+
+        </ul>
+        <form action="/checkout15" method="POST">
+            <button type="submit" id="checkout-button1">Comprar</button>
+        </form>
+    </div>
+    <div class="plan featured">
+        <div class="badge">Mais Vendido</div>
+        <img src="./images/gldicon.png" alt="Product Image">
+        <h2>GLDbot - 30 dias</h2>
+        <p class="price">R$10,97</p>
+        <ul style="padding-left: 0 !important;">
+            <li><strong>Atenção</strong></li>
+            <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
+        </ul>
+        <form action="/checkout30" method="POST">
+            <button type="submit" id="checkout-button2">Comprar</button>
+        </form>
+    </div>
+    <div class="plan">
+        <img src="./images/gldicon.png" alt="Product Image">
+        <h2>GLDbot - 60 dias</h2>
+        <p class="price">R$19,45</p>
+        <ul style="padding-left: 0 !important;">
+            <li><strong>Atenção</strong></li>
+            <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
+        </ul>
+        <form action="/checkout60" method="POST">
+            <button type="submit" id="checkout-button3">Comprar</button>
+        </form>
+    </div>
+</div>
+</body>
+</html>

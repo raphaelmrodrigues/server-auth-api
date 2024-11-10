@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compra Realizada com Sucesso</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            color: #2d3748;
+            margin-bottom: 0.5rem;
+        }
+
+        header p {
+            color: #4a5568;
+            font-size: 1.1rem;
+        }
+
+        .success-message {
+            background-color: #38a169;
+            color: #fff;
+            padding: 1rem 2rem;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            text-align: center;
+            width: 100%;
+            max-width: 500px;
+            font-size: 1.2rem;
+        }
+
+        .purchase-details {
+            background-color: #ffffff;
+            padding: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 600px;
+            margin-bottom: 3rem;
+        }
+
+        .purchase-details h2 {
+            font-size: 1.8rem;
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+        }
+
+        .purchase-details .price {
+            font-size: 2rem;
+            color: #2d3748;
+            margin-bottom: 1.5rem;
+        }
+
+        .purchase-details ul {
+            list-style-type: none;
+            margin-bottom: 1.5rem;
+        }
+
+        .purchase-details li {
+            font-size: 1rem;
+            color: #718096;
+            margin: 0.5rem 0;
+        }
+
+        .key-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+        }
+
+        .key-container input {
+            padding: 0.5rem;
+            font-size: 1rem;
+            width: 70%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .key-container button {
+            background-color: #3182ce;
+            color: #fff;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .key-container button:hover {
+            background-color: #2b6cb0;
+        }
+
+        button {
+            padding: 0.8rem 1.6rem;
+            border: none;
+            background-color: #3182ce;
+            color: #ffffff;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2b6cb0;
+        }
+
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Compra Realizada com Sucesso!</h1>
+    <p>Agradecemos por sua compra. Seu pedido está sendo processado.</p>
+</header>
+
+<div class="success-message">
+    <p><strong>Parabéns!</strong> Sua compra foi realizada com sucesso. O pagamento foi confirmado.</p>
+</div>
+
+<div class="purchase-details">
+    <h2>Detalhes da Compra</h2>
+    <p class="price">R$10,97</p>
+    <ul>
+        <li><strong>Plano:</strong> GLDbot - 30 dias</li>
+        <li><strong>Data da Compra:</strong> 08/11/2024</li>
+        <li><strong>Validade da Licença:</strong> 08/12/2024</li>
+        <li><strong>Status:</strong> Pago</li>
+    </ul>
+
+    <div class="key-container">
+        <input type="text" value="ABCD-1234-EFGH-5678-IJKL" id="licenseKey" readonly>
+        <button onclick="copyKey()">Copiar</button>
+    </div>
+
+    <button>Voltar à Página Principal</button>
+</div>
+
+<script>
+    function copyKey() {
+        const keyInput = document.getElementById('licenseKey');
+        keyInput.select();
+        document.execCommand('copy');
+        alert('Chave copiada para a área de transferência!');
+    }
+</script>
+
+</body>
+</html>
