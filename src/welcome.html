@@ -291,7 +291,7 @@
         const selectedCountry = select.value;
 
         try {
-            const response = await fetch('http://localhost:4000/country', {
+            const response = await fetch('http://gldbotserver.com/country', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ country: selectedCountry })

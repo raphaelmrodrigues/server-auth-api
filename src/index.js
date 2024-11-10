@@ -57,7 +57,7 @@ app.post('/webhook', express.json({type: 'application/json'}), (request, respons
     }
 
     // Return a response to acknowledge receipt of the event
-    response.json({received: true});
+    response.status(200).json({received: true});
 });
 
 
@@ -84,8 +84,8 @@ app.post('/checkout15', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `${YOUR_DOMAIN}/success.html`,
-        cancel_url: `${YOUR_DOMAIN}/cancel.html`,
+        success_url: `gldbotserver.com/success.html`,
+        cancel_url: `gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });
@@ -103,8 +103,8 @@ app.post('/checkout30', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `${YOUR_DOMAIN}/success.html`,
-        cancel_url: `${YOUR_DOMAIN}/cancel.html`,
+        success_url: `gldbotserver.com/success.html`,
+        cancel_url: `gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });
@@ -122,8 +122,8 @@ app.post('/checkout60', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `${YOUR_DOMAIN}/success.html`,
-        cancel_url: `${YOUR_DOMAIN}/cancel.html`,
+        success_url: `gldbotserver.com/success.html`,
+        cancel_url: `gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });
