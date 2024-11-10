@@ -39,13 +39,14 @@ app.get('/licenses', async (req, res) => {
 
 app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
     const sig = request.headers['stripe-signature'];
-    console.log('sig', sig);
+    console.log('sig:', sig);
 
     let event;
 
     try {
+        console.log('Raw body:', request.body.toString());
         event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
-        console.log('event', event);
+        console.log('event:', event);
     }
     catch (err) {
         response.status(400).send(`Webhook Error: ${err.message}`);
