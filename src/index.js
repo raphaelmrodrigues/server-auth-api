@@ -7,8 +7,6 @@ const stripe = require('stripe')('sk_test_51QINJJAgZqiodFBTHAHBKeseukq4cQ3ZvPAZ1
 
 const app = express()
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
 app.use(express.static('src'));
 const port = 4000
@@ -26,15 +24,6 @@ const License = mongoose.model('license', {
     trial: Boolean,
     email: String,
     country: String,
-})
-
-app.get('/', async (req, res) => {
-    return res.sendFile(path.join(__dirname, 'welcome.html'));
-});
-
-app.get('/licenses', async (req, res) => {
-    const licenses = await License.find()
-    return res.send(licenses)
 })
 
 app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
@@ -71,6 +60,17 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
     response.json({received: true});
 });
 
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.get('/', async (req, res) => {
+    return res.sendFile(path.join(__dirname, 'welcome.html'));
+});
+
+app.get('/licenses', async (req, res) => {
+    const licenses = await License.find()
+    return res.send(licenses)
+})
 
 app.post('/country', (req, res) => {
     const { country } = req.body;
