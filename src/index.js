@@ -43,15 +43,22 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
 
     // Handle the event
     switch (event.type) {
-        case 'payment_intent.succeeded':
-            const paymentIntent = event.data.object;
-            console.log('PaymentIntent was successful!');
+        case 'checkout.session.async_payment_failed':
+            const payment_failed = event.data.object;
+            console.log('payment_failed!');
             break;
-        case 'payment_method.attached':
-            const paymentMethod = event.data.object;
-            console.log('PaymentMethod was attached to a Customer!');
+        case 'checkout.session.async_payment_succeeded':
+            const payment_succeeded = event.data.object;
+            console.log('payment_succeeded!');
             break;
-        // ... handle other event types
+        case 'checkout.session.completed':
+            const completed = event.data.object;
+            console.log('completed!');
+            break;
+        case 'checkout.session.expired':
+            const expired = event.data.object;
+            console.log('expired!');
+            break;
         default:
             console.log(`Unhandled event type ${event.type}`);
     }
