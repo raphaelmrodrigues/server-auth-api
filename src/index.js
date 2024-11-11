@@ -28,7 +28,8 @@ const License = mongoose.model('license', {
 
 app.post ('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
     const sig = request.headers['stripe-signature'];
-    console.log('sig:', sig);
+    // Return a response to acknowledge receipt of the event
+    response.json({received: true});
 
     let event;
 
@@ -54,11 +55,45 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
         case 'checkout.session.completed':
             const session = event.data.object;
             const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
+            const userCountry = session.customer_details.address ? session.customer_details.address.country : ''; // Captura o país
+            const customerName = session.customer_details.name; // Captura o nome do cliente
+
+            // Captura os itens da sessão
             const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
             console.log(`E-mail do cliente: ${userEmail}`);
-            console.log('valor:', session.amount_subtotal);
+            console.log(`Nome do cliente: ${customerName}`);
+            console.log(`País: ${userCountry}`);
             lineItems.data.forEach(item => {
                 console.log(`Produto: ${item.description}, ID: ${item.id}`);
+
+                // Definir a data de expiração com base no produto
+                let expirationDate;
+                const currentDate = new Date();
+
+                if (item.description === 'GLDbot - 60 dias') {
+                    expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 60)); // Adiciona 60 dias
+                } else if (item.description === 'GLDbot - 30 dias') {
+                    expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 30)); // Adiciona 30 dias
+                } else if (item.description === 'GLDbot - 15 dias') {
+                    expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 15)); // Adiciona 15 dias
+                }
+
+                // Gerar chave UUID
+                const licenseKey = uuidv4();
+
+                // Salvar no banco de dados
+                const newLicense = new License({
+                    playerid: "",
+                    licenseKey: licenseKey,
+                    expireDate: expirationDate,
+                    trial: false, // Set trial como false
+                    email: userEmail,
+                    country: userCountry
+                });
+
+                newLicense.save()
+                    .then(() => console.log(`License for ${customerName} saved successfully.`))
+                    .catch((err) => console.error('Error saving license:', err));
             });
             break;
         case 'checkout.session.expired':
@@ -68,9 +103,6 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
         default:
             console.log(`Unhandled event type ${event.type}`);
     }
-
-    // Return a response to acknowledge receipt of the event
-    response.json({received: true});
 });
 
 app.use(express.json());
