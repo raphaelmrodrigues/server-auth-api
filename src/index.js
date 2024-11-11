@@ -26,7 +26,7 @@ const License = mongoose.model('license', {
     country: String,
 })
 
-app.post('/webhook', express.raw({type: 'application/json'}), (request, response) => {
+app.post ('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
     const sig = request.headers['stripe-signature'];
     console.log('sig:', sig);
 
@@ -54,11 +54,11 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
         case 'checkout.session.completed':
             const session = event.data.object;
             const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
-            const lineItems = session.display_items;  // Array com os itens do checkout
+            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
             console.log(`E-mail do cliente: ${userEmail}`);
             console.log('valor:', session.amount_subtotal);
-            lineItems.forEach(item => {
-                console.log(`Produto: ${item.custom.name}`);
+            lineItems.data.forEach(item => {
+                console.log(`Produto: ${item.description}, ID: ${item.id}`);
             });
             break;
         case 'checkout.session.expired':
