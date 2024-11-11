@@ -52,8 +52,10 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
             console.log('payment_succeeded!');
             break;
         case 'checkout.session.completed':
-            const completed = event.data.object;
-            console.log('completed!');
+            const session = event.data.object;
+            const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
+            console.log(`E-mail do cliente: ${userEmail}`);
+            console.log('Nome do produto:', session.line_items.data[0].description);
             break;
         case 'checkout.session.expired':
             const expired = event.data.object;
@@ -61,11 +63,6 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
             break;
         default:
             console.log(`Unhandled event type ${event.type}`);
-    }
-    if (event.type === 'checkout.session.completed') {
-        const session = event.data.object;
-        const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
-        console.log(`E-mail do cliente: ${userEmail}`);
     }
 
     // Return a response to acknowledge receipt of the event
@@ -99,10 +96,14 @@ app.post('/checkout15', async (req, res) => {
         payment_method_types: ['card'],
         line_items: [
             {
-                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QIinsAgZqiodFBTHxB1WW0r',
+                price_data: {
+                    currency: 'brl',
+                    product_data: {
+                        name: 'GLDbot - 15 dias', // Nome do produto
+                    },
+                    unit_amount: 626, // Valor em centavos (R$10,97)
+                },
                 quantity: 1,
-                name: 'GLDbot - 15 dias',
             },
         ],
         mode: 'payment',
@@ -118,10 +119,14 @@ app.post('/checkout30', async (req, res) => {
         payment_method_types: ['card'],
         line_items: [
             {
-                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QIioSAgZqiodFBTr3DLXxZh',
+                price_data: {
+                    currency: 'brl',
+                    product_data: {
+                        name: 'GLDbot - 30 dias', // Nome do produto
+                    },
+                    unit_amount: 1097, // Valor em centavos (R$10,97)
+                },
                 quantity: 1,
-                name: 'GLDbot - 30 dias',
             },
         ],
         mode: 'payment',
@@ -137,10 +142,14 @@ app.post('/checkout60', async (req, res) => {
         payment_method_types: ['card'],
         line_items: [
             {
-                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QIipJAgZqiodFBTdogYTWhQ',
+                price_data: {
+                    currency: 'brl',
+                    product_data: {
+                        name: 'GLDbot - 60 dias', // Nome do produto
+                    },
+                    unit_amount: 1945, // Valor em centavos (R$10,97)
+                },
                 quantity: 1,
-                name: 'GLDbot - 60 dias',
             },
         ],
         mode: 'payment',
