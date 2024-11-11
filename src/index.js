@@ -62,6 +62,11 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
         default:
             console.log(`Unhandled event type ${event.type}`);
     }
+    if (event.type === 'checkout.session.completed') {
+        const session = event.data.object;
+        const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
+        console.log(`E-mail do cliente: ${userEmail}`);
+    }
 
     // Return a response to acknowledge receipt of the event
     response.json({received: true});
@@ -91,48 +96,57 @@ app.post('/country', (req, res) => {
 
 app.post('/checkout15', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
                 price: 'price_1QIinsAgZqiodFBTHxB1WW0r',
                 quantity: 1,
+                name: 'GLDbot - 15 dias',
             },
         ],
         mode: 'payment',
         success_url: `https://gldbotserver.com/success.html`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
+        billing_address_collection: 'required',
     });
     res.redirect(303, session.url);
 });
 
 app.post('/checkout30', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
                 price: 'price_1QIioSAgZqiodFBTr3DLXxZh',
                 quantity: 1,
+                name: 'GLDbot - 30 dias',
             },
         ],
         mode: 'payment',
         success_url: `https://gldbotserver.com/success.html`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
+        billing_address_collection: 'required',
     });
     res.redirect(303, session.url);
 });
 
 app.post('/checkout60', async (req, res) => {
     const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
                 price: 'price_1QIipJAgZqiodFBTdogYTWhQ',
                 quantity: 1,
+                name: 'GLDbot - 60 dias',
             },
         ],
         mode: 'payment',
         success_url: `https://gldbotserver.com/success.html`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
+        billing_address_collection: 'required',
     });
     res.redirect(303, session.url);
 });
