@@ -53,9 +53,9 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
             break;
         case 'checkout.session.completed':
             const session = event.data.object;
-            const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
+            const userEmail = session.email; // Captura o e-mail digitado pelo usuário
             console.log(`E-mail do cliente: ${userEmail}`);
-            console.log('Nome do produto:', session.line_items.data[0].description);
+            console.log('valor:', session.amount_subtotal);
             break;
         case 'checkout.session.expired':
             const expired = event.data.object;
@@ -96,20 +96,14 @@ app.post('/checkout15', async (req, res) => {
         payment_method_types: ['card'],
         line_items: [
             {
-                price_data: {
-                    currency: 'brl',
-                    product_data: {
-                        name: 'GLDbot - 15 dias', // Nome do produto
-                    },
-                    unit_amount: 626, // Valor em centavos (R$10,97)
-                },
+                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                price: 'price_1QIinsAgZqiodFBTHxB1WW0r',
                 quantity: 1,
             },
         ],
         mode: 'payment',
         success_url: `https://gldbotserver.com/success.html`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
-        billing_address_collection: 'required',
     });
     res.redirect(303, session.url);
 });
@@ -119,20 +113,14 @@ app.post('/checkout30', async (req, res) => {
         payment_method_types: ['card'],
         line_items: [
             {
-                price_data: {
-                    currency: 'brl',
-                    product_data: {
-                        name: 'GLDbot - 30 dias', // Nome do produto
-                    },
-                    unit_amount: 1097, // Valor em centavos (R$10,97)
-                },
+                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                price: 'price_1QIioSAgZqiodFBTr3DLXxZh',
                 quantity: 1,
             },
         ],
         mode: 'payment',
         success_url: `https://gldbotserver.com/success.html`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
-        billing_address_collection: 'required',
     });
     res.redirect(303, session.url);
 });
@@ -142,20 +130,14 @@ app.post('/checkout60', async (req, res) => {
         payment_method_types: ['card'],
         line_items: [
             {
-                price_data: {
-                    currency: 'brl',
-                    product_data: {
-                        name: 'GLDbot - 60 dias', // Nome do produto
-                    },
-                    unit_amount: 1945, // Valor em centavos (R$10,97)
-                },
+                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                price: 'price_1QIipJAgZqiodFBTdogYTWhQ',
                 quantity: 1,
             },
         ],
         mode: 'payment',
         success_url: `https://gldbotserver.com/success.html`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
-        billing_address_collection: 'required',
     });
     res.redirect(303, session.url);
 });
