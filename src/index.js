@@ -53,9 +53,13 @@ app.post('/webhook', express.raw({type: 'application/json'}), (request, response
             break;
         case 'checkout.session.completed':
             const session = event.data.object;
-            const userEmail = session.email; // Captura o e-mail digitado pelo usuário
+            const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
+            const lineItems = session.display_items;  // Array com os itens do checkout
             console.log(`E-mail do cliente: ${userEmail}`);
             console.log('valor:', session.amount_subtotal);
+            lineItems.forEach(item => {
+                console.log(`Produto: ${item.custom.name}`);
+            });
             break;
         case 'checkout.session.expired':
             const expired = event.data.object;
