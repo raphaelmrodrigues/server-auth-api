@@ -137,7 +137,7 @@ app.get('/license-info', async (req, res) => {
         res.json({
             licenseKey: license.licenseKey,
             expirationDate: license.expireDate,
-            plan: license.plano,
+            plan: license.plan,
             customerName: license.customerName,
             email: license.email,
             country: license.country
