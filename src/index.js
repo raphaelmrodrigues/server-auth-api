@@ -24,12 +24,12 @@ const License = mongoose.model('license', {
     trial: Boolean,
     email: String,
     country: String,
+    sessionId: String,
 })
 
 app.post ('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
     const sig = request.headers['stripe-signature'];
-    // Return a response to acknowledge receipt of the event
-    response.json({received: true});
+
 
     let event;
 
@@ -63,6 +63,7 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
             console.log(`E-mail do cliente: ${userEmail}`);
             console.log(`Nome do cliente: ${customerName}`);
             console.log(`País: ${userCountry}`);
+            console.log('Id da sessão:', session.id);
             lineItems.data.forEach(item => {
                 console.log(`Produto: ${item.description}, ID: ${item.id}`);
 
@@ -88,7 +89,8 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
                     expireDate: expirationDate,
                     trial: false, // Set trial como false
                     email: userEmail,
-                    country: userCountry
+                    country: userCountry,
+                    sessionId: session.id,
                 });
 
                 newLicense.save()
@@ -103,6 +105,8 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
         default:
             console.log(`Unhandled event type ${event.type}`);
     }
+    // Return a response to acknowledge receipt of the event
+    response.json({received: true});
 });
 
 app.use(express.json());
@@ -116,6 +120,30 @@ app.get('/licenses', async (req, res) => {
     const licenses = await License.find()
     return res.send(licenses)
 })
+
+app.get('/license-info', async (req, res) => {
+    const sessionId = req.query.session_id;
+    if (!sessionId) {
+        return res.status(400).json({ error: 'Session ID required' });
+    }
+    try {
+        const license = await License.findOne({ session_id: sessionId });
+        if (!license) {
+            return res.status(404).json({ error: 'License not found' });
+        }
+        res.json({
+            licenseKey: license.licenseKey,
+            purchaseDate: license.purchaseDate,
+            expirationDate: license.expireDate,
+            plan: license.plan,
+            customerName: license.customerName,
+            email: license.email,
+            country: license.country
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
 
 app.post('/country', (req, res) => {
     const { country } = req.body;
@@ -138,7 +166,7 @@ app.post('/checkout15', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html`,
+        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
@@ -155,7 +183,7 @@ app.post('/checkout30', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html`,
+        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
@@ -172,7 +200,7 @@ app.post('/checkout60', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html`,
+        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);

@@ -141,16 +141,15 @@
 
 <div class="purchase-details">
     <h2>Detalhes da Compra</h2>
-    <p class="price">R$10,97</p>
     <ul>
-        <li><strong>Plano:</strong> GLDbot - 30 dias</li>
-        <li><strong>Data da Compra:</strong> 08/11/2024</li>
-        <li><strong>Validade da Licença:</strong> 08/12/2024</li>
-        <li><strong>Status:</strong> Pago</li>
+        <li><strong>Plano:</strong> <span id="plan">Carregando...</span></li>
+        <li><strong>Data da Compra:</strong> <span id="purchaseDate">Carregando...</span></li>
+        <li><strong>Validade da Licença:</strong> <span id="expirationDate">Carregando...</span></li>
+        <li><strong>Cliente:</strong> <span id="customerName">Carregando...</span></li>
     </ul>
 
     <div class="key-container">
-        <input type="text" value="ABCD-1234-EFGH-5678-IJKL" id="licenseKey" readonly>
+        <input type="text" id="licenseKey" readonly>
         <button onclick="copyKey()">Copiar</button>
     </div>
 
@@ -164,6 +163,34 @@
         document.execCommand('copy');
         alert('Chave copiada para a área de transferência!');
     }
+
+    // Função para buscar e exibir as informações de licença
+    async function fetchLicenseInfo() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const sessionId = urlParams.get('session_id');
+        console.log('sessionID', sessionId)
+        if (!sessionId) return;
+
+        try {
+            const response = await fetch(`https://gldbotserver.com/license-info?session_id=${sessionId}`);
+            const data = await response.json();
+            console.log('data:', data)
+            if (response.ok) {
+                document.getElementById('licenseKey').value = data.licenseKey;
+                document.getElementById('purchaseDate').innerText = data.purchaseDate;
+                document.getElementById('expirationDate').innerText = data.expirationDate;
+                document.getElementById('plan').innerText = data.plan;
+                document.getElementById('customerName').innerText = data.customerName;
+            } else {
+                console.error(data.error || 'Erro ao buscar informações da licença');
+            }
+        } catch (error) {
+            console.error('Erro ao buscar informações da licença:', error);
+        }
+    }
+
+    // Chama a função ao carregar a página
+    window.onload = fetchLicenseInfo;
 </script>
 
 </body>
