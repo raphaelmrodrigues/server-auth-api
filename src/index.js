@@ -20,6 +20,7 @@ const endpointSecret = 'whsec_RIEiy3AvCrga5BDWmrncpFgWcq0uffqn';
 const License = mongoose.model('license', {
     playerid: String,
     licenseKey: String,
+    plan: String,
     expireDate: Date,
     trial: Boolean,
     email: String,
@@ -69,6 +70,7 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
 
                 // Definir a data de expiração com base no produto
                 let expirationDate;
+                let description;
                 const currentDate = new Date();
 
                 if (item.description === 'GLDbot - 60 dias') {
@@ -86,6 +88,7 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
                 const newLicense = new License({
                     playerid: "",
                     licenseKey: licenseKey,
+                    plan: item.description,
                     expireDate: expirationDate,
                     trial: false, // Set trial como false
                     email: userEmail,
@@ -127,15 +130,14 @@ app.get('/license-info', async (req, res) => {
         return res.status(400).json({ error: 'Session ID required' });
     }
     try {
-        const license = await License.findOne({ session_id: sessionId });
+        const license = await License.findOne({ sessionId: sessionId });
         if (!license) {
             return res.status(404).json({ error: 'License not found' });
         }
         res.json({
             licenseKey: license.licenseKey,
-            purchaseDate: license.purchaseDate,
             expirationDate: license.expireDate,
-            plan: license.plan,
+            plan: license.plano,
             customerName: license.customerName,
             email: license.email,
             country: license.country
