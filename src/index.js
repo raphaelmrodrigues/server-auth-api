@@ -1,21 +1,27 @@
-const express = require('express')
+require('dotenv').config();
+
+const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
-const stripe = require('stripe')('sk_test_51QINJJAgZqiodFBTHAHBKeseukq4cQ3ZvPAZ1Ex98PPTnz1whshtBQTd2sXMwES0UIXNRALCH7Tza2GlqbZKmqOx00pybqgafT');
+const fs = require('fs');
+const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);  // Usando a variável do .env
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
-const app = express()
+const app = express();
 app.use(cors());
 app.use(express.static('public'));
 app.use(express.static('src'));
-const port = 4000
+const port = 4000;
 
-const GLOBAL_EXPIRATION_DATE = "2030-11-07T01:39:40.783Z";
-const GLOBAL_REFRESH_TOKEN = "ded2cbef-bec7-41db-94d7-27de530912c2";
-const GLOBAL_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJsaWNlbnNlS2V5IjoiODI1QTcyNTItQUI3OTRDOTgtQkQwQTY2MkQtNTZBOEQxQTQiLCJpYXQiOjE3MzA4NjMwOTYsImV4cCI6MTczMzU0MDk4MH0._OE4kDcTpHcX8s4u9ck0AxDa8zR2Osz2oKjfkz21wqU";
-const YOUR_DOMAIN = `http://localhost:${port}`;
-const endpointSecret = 'whsec_RIEiy3AvCrga5BDWmrncpFgWcq0uffqn';
+const GLOBAL_EXPIRATION_DATE = process.env.GLOBAL_EXPIRATION_DATE;
+const GLOBAL_REFRESH_TOKEN = process.env.GLOBAL_REFRESH_TOKEN;
+const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
+const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
+const endpointSecret = process.env.ENDPOINT_SECRET;
+
 
 const License = mongoose.model('license', {
     playerid: String,
@@ -57,7 +63,7 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
             const session = event.data.object;
             const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
             const userCountry = session.customer_details.address ? session.customer_details.address.country : ''; // Captura o país
-            const customerName = session.customer_details.name; // Captura o nome do cliente
+            const customerName = userEmail.split('@')[0]; // Captura o nome do cliente
 
             // Captura os itens da sessão
             const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
@@ -147,6 +153,72 @@ app.get('/license-info', async (req, res) => {
     }
 });
 
+app.post('/sendMail', async (req, res) => {
+    const { customerName, itemDescription, licenseKey, expirationDate, email } = req.body;
+    console.log('Received Parameters:', { customerName, itemDescription, licenseKey, expirationDate, email });
+
+    const enviarEmail = async (name, description, license, dateExpire, recipientEmail) => {
+        const imagePath = path.join(__dirname, 'images/gldicon.png');
+        const imageData = fs.readFileSync(imagePath).toString('base64');
+
+        // Format the expiration date to a readable format
+        const formattedDate = new Date(dateExpire).toLocaleDateString();
+
+        const msg = {
+            to: recipientEmail, // Use the email passed as a parameter
+            from: 'gldbotsuport@gmail.com',
+            subject: 'Detalhes da sua compra - GLDbot',
+            text: 'GLDbot',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; color: #333;">
+                    <div style="text-align: center;">
+                        <img src="cid:gldicon" alt="GLDbot" style="width: 100px; margin-bottom: 20px;">
+                        <h2 style="color: #4CAF50;">Compra Realizada com Sucesso!</h2>
+                    </div>
+                    <p>Olá <strong>${name}</strong>,</p>
+                    <p>Agradecemos por sua compra! Abaixo estão os detalhes da sua licença:</p>
+                    <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); margin-bottom: 20px;">
+                        <ul style="list-style-type: none; padding: 0;">
+                            <li><strong>Plano:</strong> ${description}</li>
+                            <li><strong>Data de Expiração:</strong> ${formattedDate}</li>
+                            <li><strong>Observação:</strong> Chave válida para uma única conta!</li>
+                            <li><strong>Chave da Licença:</strong> ${license}</li>
+                        </ul>
+                    </div>
+                    <p style="font-size: 0.9em; color: #555;">Por favor, guarde esta chave em segurança.</p>
+                    <p>Atenciosamente,<br>Equipe GLDbot</p>
+                    <footer style="text-align: center; margin-top: 20px; font-size: 0.8em; color: #999;">
+                        <p>&copy; ${new Date().getFullYear()} GLDbot. Todos os direitos reservados.</p>
+                    </footer>
+                </div>
+            `,
+            attachments: [
+                {
+                    filename: 'gldicon.png',
+                    content: imageData,
+                    type: 'image/png',
+                    disposition: 'inline',
+                    content_id: 'gldicon'
+                }
+            ]
+        };
+
+        try {
+            await sgMail.send(msg);
+            console.log('E-mail enviado com sucesso');
+        } catch (error) {
+            console.error('Erro ao enviar e-mail:', error);
+            if (error.response) {
+                console.error(error.response.body);
+            }
+        }
+    };
+
+    // Chama a função de envio de e-mail
+    await enviarEmail(customerName, itemDescription, licenseKey, expirationDate, email);
+    res.send({ message: 'E-mail enviado com sucesso!' });
+});
+
 app.post('/country', (req, res) => {
     const { country } = req.body;
 
@@ -163,13 +235,13 @@ app.post('/checkout15', async (req, res) => {
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QIinsAgZqiodFBTHxB1WW0r',
+                price: 'price_1QKLLuAgZqiodFBThrtZMlzj',
                 quantity: 1,
             },
         ],
         mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `https://gldbotserver.com/checkout.html`,
+        success_url: `http://localhost:4000/success.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `http://localhost:4000/checkout.html`,
     });
     res.redirect(303, session.url);
 });
@@ -180,13 +252,13 @@ app.post('/checkout30', async (req, res) => {
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QIioSAgZqiodFBTr3DLXxZh',
+                price: 'price_1QKLKDAgZqiodFBTn6IkgSME',
                 quantity: 1,
             },
         ],
         mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `https://gldbotserver.com/checkout.html`,
+        success_url: `http://localhost:4000/success.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `http://localhost:4000/checkout.html`,
     });
     res.redirect(303, session.url);
 });
@@ -197,13 +269,13 @@ app.post('/checkout60', async (req, res) => {
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QIipJAgZqiodFBTdogYTWhQ',
+                price: 'price_1QKLMyAgZqiodFBTBK4PXXMV',
                 quantity: 1,
             },
         ],
         mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `https://gldbotserver.com/checkout.html`,
+        success_url: `http://localhost:4000/success.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `http://localhost:4000/checkout.html`,
     });
     res.redirect(303, session.url);
 });
