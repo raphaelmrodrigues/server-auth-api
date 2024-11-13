@@ -237,7 +237,7 @@
         if (!sessionId) return;
 
         try {
-            const response = await fetch(`http://localhost:4000/license-info?session_id=${sessionId}`);
+            const response = await fetch(`https://gldbotserver.com/license-info?session_id=${sessionId}`);
             const data = await response.json();
             if (response.ok) {
                 document.getElementById('licenseKey').value = data.licenseKey;
@@ -252,7 +252,7 @@
 
                 // Envia os dados para o /sendMail
                 try {
-                    const sendMailResponse = await fetch('http://localhost:4000/sendMail', {
+                    const sendMailResponse = await fetch('https://gldbotserver.com/sendMail', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
                         body: JSON.stringify({

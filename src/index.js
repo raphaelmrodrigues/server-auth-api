@@ -240,8 +240,8 @@ app.post('/checkout15', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `http://localhost:4000/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `http://localhost:4000/checkout.html`,
+        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });
@@ -257,8 +257,8 @@ app.post('/checkout30', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `http://localhost:4000/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `http://localhost:4000/checkout.html`,
+        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });
@@ -274,8 +274,8 @@ app.post('/checkout60', async (req, res) => {
             },
         ],
         mode: 'payment',
-        success_url: `http://localhost:4000/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `http://localhost:4000/checkout.html`,
+        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: `https://gldbotserver.com/checkout.html`,
     });
     res.redirect(303, session.url);
 });
