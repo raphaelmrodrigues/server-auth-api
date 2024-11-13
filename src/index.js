@@ -40,14 +40,9 @@ const License = mongoose.model('license', {
 
 app.post ('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
     const sig = request.headers['stripe-signature'];
-
-
     let event;
-
     try {
-        console.log('Raw body:', request.body.toString());
         event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
-        console.log('event:', event);
     }
     catch (err) {
         response.status(400).send(`Webhook Error: ${err.message}`);
@@ -239,7 +234,7 @@ app.post('/checkout15', async (req, res) => {
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QIinsAgZqiodFBTHxB1WW0r',
+                price: 'price_1QKLLuAgZqiodFBThrtZMlzj',
                 quantity: 1,
             },
         ],
