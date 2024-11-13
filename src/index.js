@@ -22,6 +22,10 @@ const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
 const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
 const endpointSecret = process.env.ENDPOINT_SECRET;
 
+console.log(process.env.STRIPE_SECRET_KEY);
+console.log(process.env.SENDGRID_API_KEY);
+console.log(process.env.ENDPOINT_SECRET);
+
 
 const License = mongoose.model('license', {
     playerid: String,
@@ -235,7 +239,7 @@ app.post('/checkout15', async (req, res) => {
         line_items: [
             {
                 // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QKLLuAgZqiodFBThrtZMlzj',
+                price: 'price_1QIinsAgZqiodFBTHxB1WW0r',
                 quantity: 1,
             },
         ],
