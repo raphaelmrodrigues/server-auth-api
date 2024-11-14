@@ -156,11 +156,23 @@ app.post('/sendMail', async (req, res) => {
         const imagePath = path.join(__dirname, 'images/gldicon.png');
         const imageData = fs.readFileSync(imagePath).toString('base64');
 
-        // Format the expiration date to a readable format
-        const formattedDate = new Date(dateExpire).toLocaleDateString();
+        function formatDate(date) {
+            const options = {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            };
+            return new Intl.DateTimeFormat('pt-BR', options).format(date);
+        }
+
+        const Data = new Date(dateExpire);
+        const formattedDate = formatDate(Data);
 
         const msg = {
-            to: recipientEmail, // Use the email passed as a parameter
+            to: recipientEmail,
             from: 'gldbotsuport@gmail.com',
             subject: 'Detalhes da sua compra - GLDbot',
             text: 'GLDbot',

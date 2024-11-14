@@ -14,12 +14,13 @@
         }
 
         body {
+            border: 5px solid black;
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
             font-family: Arial, sans-serif;
-            background-image: url('./images/welcome.png');
+            background-image: url(https://s3-static.geo.gfsrv.net/browsergamelobby/gladiatus/6.2.1-r1/media/main_BG.8de4dd1a.jpg);
             background-size: cover;
             background-position: center;
             color: #fff;
@@ -27,6 +28,7 @@
         }
 
         .container {
+            animation: 2s ease-in-out 0s infinite normal none running breathing-light;
             text-align: center;
             background-color: rgba(0, 0, 0, 0.6);
             padding: 2rem;
@@ -43,7 +45,6 @@
             color: #d4af37; /* Dourado */
             font-weight: bold;
             letter-spacing: 2px;
-            text-transform: uppercase;
             margin-bottom: 2rem;
         }
 
@@ -145,21 +146,214 @@
             color: #d4af37; /* Cor do texto das opções */
         }
 
+        .sidebar {
+            position: absolute;
+            width: 223px;
+            top: 0;
+            left: 23px;
+            display: flex;
+            flex-direction: column;
+            background: url(//gf2.geo.gfsrv.net/cdn78/c22a8b33d6e837288acdf4ac202d85.jpg) 100%;
+            background-size: 100%;
+            padding: 1rem;
+            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+        }
+
+        .sidebar button {
+            margin: 10px 0;
+            padding: 0.5rem;
+            font-size: 1rem;
+            color: #d4af37;
+            background-color: #333;
+            border: 2px solid #d4af37;
+            border-radius: 5px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .sidebar button:hover {
+            background-color: #444;
+        }
+
+        /* Título estilo romano */
+        .roman-title {
+            font-family: 'Times New Roman', serif;
+            font-size: 3rem;
+            color: #d4af37; /* Dourado */
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 2rem;
+        }
+        div#sidebar_footer {
+            background-image: url(//gf2.geo.gfsrv.net/cdn47/aab533927a85bd855b890347492e65.gif);
+            width: 226px;
+            height: 52px;
+            position: absolute;
+            bottom: 915px;
+            left: 20px;
+            top: 206px;
+        }
+
+        #slideshow {
+            position: relative;
+            width: 1200px;
+            height: 600px;
+            margin: 20px auto;
+            border: 4px solid #6b3e26;
+            background-color: #f0e1c3;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+            font-family: 'Old English Text MT', serif;
+            font-size: 18px;
+            color: #55391e;
+        }
+
+        #slideshow::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border: 5px solid #a37f4a;
+            pointer-events: none;
+        }
+
+        .slide {
+            display: none;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+        }
+
+        .slide img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            filter: sepia(40%) saturate(90%);
+            border-radius: 5px;
+        }
+
+        #slideshow .slide.active {
+            display: block;
+        }
+
+        /* Transições de imagem */
+        #slideshow .slide img {
+            transition: opacity 1s ease-in-out;
+        }
+
         /* Ajustes para a lista de opções */
         #country-select::-ms-expand {
             display: none; /* Oculta o ícone padrão do select no IE */
         }
 
+        @media (max-width: 1024px) {
+            body {
+                background-size: cover; /* Reduz a imagem para caber na tela */
+            }
+            #slideshow {
+                width: 700px;
+                height: 400px;
+            }
+            .frame {
+                width: 580px;
+                height: 320px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                background-size: cover; /* Reduz ainda mais para telas pequenas */
+            }
+            #slideshow {
+                width: 500px;
+                height: 300px;
+            }
+            .mobile {
+                width: 550px!important;
+                height: 650px!important;;
+            }
+            .roman-title {
+                font-size: 1.5rem;
+            }
+        }
+
+
+
+        @media (max-width: 480px) {
+            body {
+                background-size: cover; /* Ajuste para dispositivos móveis */
+            }
+            #slideshow {
+                width: 500px;
+                height: 300px;
+            }
+            .mobile {
+                width: 450px!important;
+                height: 550px!important;
+                top: 90px;
+            }
+            .frame {
+                width: 340px;
+                height: 200px;
+            }
+        }
+        @keyframes breathing-light {
+            0%, 100% {
+                box-shadow: 0 0 11px 5px rgba(255, 255, 0, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 11px 10px rgba(255, 255, 0, 0.5);
+            }
+        }
+        .breathing-light {
+            animation: breathing-light 2s ease-in-out infinite;
+        }
+
     </style>
 </head>
 <body>
-<div class="container">
+<div class="sidebar">
+    <button id="back" style="display: none;">Back</button>
+    <button id="tutorial" style="display: block">Tutorial</button>
+    <button id="download" style="display: block">Download Bot</button>
+    <button id="buyButton" style="display: block; animation: 2s ease-in-out 0s infinite normal none running breathing-light;">Buy</button>
+</div>
+<div id="sidebar_footer"></div>
+
+<div id="slideshow">
+    <div id="show1" class="slide">
+        <img src="./images/botshow1.jpeg" alt="Propaganda 1">
+    </div>
+    <div id="show2" class="slide">
+        <img src="./images/slideshow2.jpeg" alt="Propaganda 2">
+    </div>
+    <div id="show3" class="slide">
+        <img src="./images/slideshow3.jpeg" alt="Propaganda 3">
+    </div>
+    <div id="show4" class="slide">
+        <img src="./images/slideshow4.jpeg" alt="Propaganda 4">
+    </div>
+</div>
+
+<div id="video" class="video-container" style="display:none">
+    <iframe class="frame" width="980" height="720" src="https://www.youtube.com/embed/NQqSgm82nno"
+            title="YouTube video player"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+    </iframe>
+</div>
+
+</div>
+
+<div id="container" class="container" style="display: none;">
     <h1 class="roman-title">GLDbot - Gladiatus Bot</h1>
     <h2 style="color:#d4af37;">Select your country</h2><br>
     <div style="display: flex; align-items: center; justify-content: center;">
-        <span id="selected-flag" class="fi fi-us flag-icon"></span> <!-- Bandeira inicial -->
+        <span id="selected-flag" class="fi fi-es flag-icon"></span> <!-- Bandeira inicial -->
         <select id="country-select">
             <!-- Opções de países -->
+            <option value="es" data-flag="es">Spain</option>
             <option value="us" data-flag="us">United States</option>
             <option value="br" data-flag="br">Brazil</option>
             <option value="ca" data-flag="ca">Canada</option>
@@ -170,7 +364,6 @@
             <option value="in" data-flag="in">India</option>
             <option value="cn" data-flag="cn">China</option>
             <option value="it" data-flag="it">Italy</option>
-            <option value="es" data-flag="es">Spain</option>
             <option value="gb" data-flag="gb">United Kingdom</option>
             <option value="ru" data-flag="ru">Russia</option>
             <option value="au" data-flag="au">Australia</option>
@@ -276,6 +469,101 @@
 </div>
 
 <script>
+    // Download
+    document.getElementById("download").addEventListener("click", function () {
+        const link = document.createElement("a");
+        link.href = "./GLDbot.zip"; // Caminho do arquivo a ser baixado
+        link.download = "GLDbot.zip"; // Nome do arquivo ao ser baixado
+        link.click();
+    });
+
+    // Alterna os slideshows
+    let currentSlide = 0;
+    const slides = document.querySelectorAll("#slideshow .slide");
+    const slideshowContainer = document.getElementById("slideshow");
+
+    function showSlide(index) {
+        slides.forEach((slide, i) => {
+            slide.classList.toggle("active", i === index);
+        });
+
+        // Adiciona o estilo à div "slideshow" se "show2" ou "show3" estiver ativo
+        if (slides[index].id === "show3" || slides[index].id === "show4") {
+            slideshowContainer.style.width = "550px";
+            slideshowContainer.style.height = "850px";
+            slideshowContainer.classList.add("mobile");
+        } else {
+            slideshowContainer.style.width = "";
+            slideshowContainer.style.height = "";
+            slideshowContainer.classList.remove("mobile");
+        }
+    }
+
+    function nextSlide() {
+        currentSlide = (currentSlide + 1) % slides.length;
+        showSlide(currentSlide);
+    }
+
+    setInterval(nextSlide, 3000); // Troca de imagem a cada 3 segundos
+
+    // Exibir a primeira imagem no carregamento
+    showSlide(currentSlide);
+
+    document.getElementById("tutorial").addEventListener("click", function() {
+        const carouselContainer = document.getElementById("slideshow");
+        const countriesContainer = document.getElementById("container");
+        const videoContainer = document.getElementById("video");
+
+        // Alterna display dos containers
+        if (videoContainer.style.display === "none") {
+            videoContainer.style.display = "block";
+            countriesContainer.style.display = "none";
+            carouselContainer.style.display = "none";
+            document.getElementById("back").style.display = "block";
+            document.getElementById("back").style.marginTop = "";
+            document.getElementById("back").style.marginBottom = "";
+            document.getElementById("download").style.display = "block";
+            document.getElementById("tutorial").style.display = "none";
+            document.getElementById("buyButton").style.display = "block";
+        }
+    });
+
+    document.getElementById("back").addEventListener("click", function() {
+        const carouselContainer = document.getElementById("slideshow");
+        const countriesContainer = document.getElementById("container");
+        const videoContainer = document.getElementById("video");
+
+        // Alterna display dos containers
+        if (countriesContainer.style.display === "block"||videoContainer.style.display === "block") {
+            videoContainer.style.display = "none";
+            countriesContainer.style.display = "none";
+            carouselContainer.style.display = "block";
+            document.getElementById("back").style.display = "none";
+            document.getElementById("download").style.display = "block";
+            document.getElementById("tutorial").style.display = "block";
+            document.getElementById("buyButton").style.display = "block";
+        }
+    });
+
+    // Alterna os botões
+    document.getElementById("buyButton").addEventListener("click", function() {
+        const carouselContainer = document.getElementById("slideshow");
+        const countriesContainer = document.getElementById("container");
+        const videoContainer = document.getElementById("video");
+
+        // Alterna display dos containers
+        if (countriesContainer.style.display === "none") {
+            countriesContainer.style.display = "block";
+            videoContainer.style.display = "none";
+            carouselContainer.style.display = "none";
+            document.getElementById("back").style.display = "block";
+            document.getElementById("back").style.marginTop = "60px";
+            document.getElementById("back").style.marginBottom = "76px";
+            document.getElementById("download").style.display = "none";
+            document.getElementById("tutorial").style.display = "none";
+            document.getElementById("buyButton").style.display = "none";
+        }
+    });
     const select = document.getElementById('country-select');
     const flagIcon = document.getElementById('selected-flag');
     const submitButton = document.getElementById('submit-button');
@@ -287,6 +575,7 @@
         flagIcon.className = `fi fi-${flagCode} flag-icon`;
     });
 
+    // mostra os países
     submitButton.addEventListener('click', async function() {
         const selectedCountry = select.value;
 
