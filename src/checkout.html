@@ -3,71 +3,89 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GLDbot - shop</title>
+    <title>GLDbot - Shop</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <style>
-    {
+    /* Reset básico */
+    * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
     }
 
+    /* Estilos do corpo */
     body {
-        font-family: Arial, sans-serif;
-        background-color: #f5f7fa;
+        font-family: 'Arial', sans-serif;
+        background-color: #f1f3f8;
         display: flex;
         flex-direction: column;
         align-items: center;
         padding: 2rem;
+        color: #2d3748;
     }
 
+    /* Estilo do cabeçalho */
     header {
         text-align: center;
         margin-bottom: 3rem;
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #2d3748, #4a5568);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        color: #f0f4f8;
+        max-width: 800px;
+        width: 100%;
     }
 
     header h1 {
-        font-size: 2.5rem;
-        color: #2d3748;
-        margin-bottom: 0.5rem;
+        font-size: 2.4rem;
+        color: #ffffff;
+        margin-bottom: 0.3rem;
+        font-weight: bold;
+        text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.3);
     }
 
     header p {
-        color: #4a5568;
-        font-size: 1.1rem;
+        color: #d4d7dd;
+        font-size: 1rem;
+        margin-top: 0.5rem;
     }
 
+    /* Estilo da tabela de preços */
     .pricing-table {
         display: flex;
         gap: 1.5rem;
         justify-content: center;
-        flex-wrap: wrap; /* Permite que os cards se movam para a próxima linha */
+        flex-wrap: wrap;
     }
 
+    /* Estilo dos planos */
     .plan {
         background-color: #ffffff;
         padding: 2rem;
-        width: 260px;
+        width: 280px;
         border-radius: 12px;
-        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
         text-align: center;
         transition: all 0.3s ease-in-out;
         position: relative;
+        border: 1px solid transparent;
     }
 
     .plan:hover {
-        transform: scale(1.03);
-        background-color: rgba(200, 200, 200, 0.2);
+        transform: scale(1.04);
+        border-color: #3182ce;
     }
 
     .plan.featured {
         border: 2px solid #3182ce;
+        background-color: #f0f8ff;
     }
 
     .plan.featured:hover {
-        background-color: rgba(49, 130, 206, 0.2);
+        background-color: #e1effe;
     }
 
     .plan .badge {
@@ -77,35 +95,38 @@
         transform: translateX(-50%);
         background-color: #3182ce;
         color: #ffffff;
-        padding: 0.5rem 1rem;
-        font-size: 0.9rem;
+        padding: 0.4rem 1rem;
+        font-size: 0.85rem;
         border-radius: 12px;
         font-weight: bold;
     }
 
     .plan h2 {
-        font-size: 1.6rem;
+        font-size: 1.5rem;
         color: #2d3748;
         margin-bottom: 0.5rem;
     }
 
     .plan .price {
         font-size: 2rem;
-        color: #2d3748;
-        margin-bottom: 1.5rem;
+        color: #3182ce;
+        margin-bottom: 1.2rem;
+        font-weight: bold;
     }
 
     .plan ul {
         list-style-type: none;
         margin-bottom: 1.5rem;
+        padding: 0;
     }
 
     .plan li {
-        font-size: 0.9rem;
-        color: #718096;
-        margin: 0.5rem 0;
+        font-size: 0.95rem;
+        color: #4a5568;
+        margin: 0.6rem 0;
     }
 
+    /* Botão de compra */
     button {
         padding: 0.8rem 1.6rem;
         border: none;
@@ -115,7 +136,7 @@
         font-weight: bold;
         border-radius: 8px;
         cursor: pointer;
-        transition: background-color 0.3s;
+        transition: background-color 0.3s ease;
     }
 
     button:hover {
@@ -123,49 +144,51 @@
     }
 
     .plan img {
-        height: 250px;
+        height: 200px;
         object-fit: contain;
         margin-bottom: 1rem;
     }
 
+
     /* Responsividade para dispositivos móveis */
     @media (max-width: 768px) {
         .pricing-table {
-            flex-direction: column; /* Empilha os cards verticalmente */
-            gap: 2rem; /* Aumenta o espaço entre os cards */
+            flex-direction: column;
+            gap: 2rem;
         }
 
         .plan {
-            width: 90%; /* Faz com que o card ocupe 90% da largura disponível */
+            width: 100%;
         }
     }
 
     @media (max-width: 480px) {
-        .plan {
-            width: 80%; /* Faz com que o card ocupe 90% da largura disponível */
-        }
         header h1 {
-            font-size: 1.8rem; /* Ajusta o tamanho do título para telas muito pequenas */
+            font-size: 1.8rem;
         }
 
         header p {
-            font-size: 1rem; /* Ajusta o tamanho do texto abaixo do título */
+            font-size: 1rem;
         }
 
         .plan img {
-            height: 200px; /* Ajusta a altura da imagem para dispositivos móveis */
+            height: 150px;
         }
 
         button {
-            width: 100%; /* Faz com que o botão ocupe toda a largura disponível */
+            width: 100%;
             padding: 1rem 0;
         }
     }
-
 </style>
+
 <header>
-    <h1>Planos disponíveis em moeda local</h1>
-    <p>Em caso de problemas com o pagamento, nos contate via discord!</p>
+    <div class="icon">
+        <img style="width: 10%" src="./images/stripe.png" alt="Confiança e segurança"> <!-- Caminho para o ícone de segurança -->
+        <img style="width: 25%" src="./images/stripe-v2.png" alt="Confiança e segurança">
+    </div>
+    <h1>Planos Disponíveis</h1>
+    <p>Pagamentos disponíveis em moeda local, confira no checkout!</p>
 </header>
 
 <div class="pricing-table">
@@ -173,10 +196,9 @@
         <img src="./images/gldicon.png" alt="Product Image">
         <h2>GLDbot - 15 dias</h2>
         <p class="price">R$5,78</p>
-        <ul style="padding-left: 0 !important;">
+        <ul>
             <li><strong>Atenção</strong></li>
-            <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
-
+            <li>Verifique seu e-mail após a compra! A licença será enviada após confirmação do pagamento.</li>
         </ul>
         <form id="form-15" method="POST">
             <button type="submit" id="checkout-button1">Comprar</button>
@@ -187,9 +209,9 @@
         <img src="./images/gldicon.png" alt="Product Image">
         <h2>GLDbot - 30 dias</h2>
         <p class="price">R$9,89</p>
-        <ul style="padding-left: 0 !important;">
+        <ul>
             <li><strong>Atenção</strong></li>
-            <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
+            <li>Verifique seu e-mail após a compra! A licença será enviada após confirmação do pagamento.</li>
         </ul>
         <form id="form-30" method="POST">
             <button type="submit" id="checkout-button2">Comprar</button>
@@ -199,15 +221,16 @@
         <img src="./images/gldicon.png" alt="Product Image">
         <h2>GLDbot - 60 dias</h2>
         <p class="price">R$18,98</p>
-        <ul style="padding-left: 0 !important;">
+        <ul>
             <li><strong>Atenção</strong></li>
-            <li>Verificar e-mail após a compra! License Key será enviada após a confirmação do pagamento</li>
+            <li>Verifique seu e-mail após a compra! A licença será enviada após confirmação do pagamento.</li>
         </ul>
         <form id="form-60" method="POST">
             <button type="submit" id="checkout-button3">Comprar</button>
         </form>
     </div>
 </div>
+
 <script>
     // Define a URL base
     const baseUrl = "https://gldbotserver.com";
