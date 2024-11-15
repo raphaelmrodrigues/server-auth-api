@@ -475,8 +475,18 @@ app.post('/validate-license', async (req, res) => {
                     licenseData.trial = trialStatus;
                     await licenseData.save();
                 } else {
+                    // Salvar a informação de trial
+                    const trialStatus = existingLicense.trial;
+
+                    // Deletar o registro atual
+                    await License.deleteOne({ _id: existingLicense._id });
+
+                    // Atualizar a licença para vincular ao playerid recebido
+                    licenseData.playerid = idkps;
+                    licenseData.trial = trialStatus;
+                    await licenseData.save();
                     // Retornar que a licença vinculada ainda está ativa
-                    return res.json({ valid: false, message: `The account still has an active license to use: ${existingLicense.licenseKey}` });
+                    // return res.json({ valid: false, message: `The account still has an active license to use: ${existingLicense.licenseKey}` });
                 }
             } else {
                 // Atualiza a licença para vincular ao playerid recebido
