@@ -6,6 +6,7 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);  // Usando a variável do .env
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
@@ -15,6 +16,9 @@ app.use(cors());
 app.use(express.static('public'));
 app.use(express.static('src'));
 const port = 4000;
+const storage = multer.memoryStorage();
+const upload = multer({ storage: storage }).single('attachment');
+
 
 const GLOBAL_EXPIRATION_DATE = process.env.GLOBAL_EXPIRATION_DATE;
 const GLOBAL_REFRESH_TOKEN = process.env.GLOBAL_REFRESH_TOKEN;
@@ -145,6 +149,53 @@ app.get('/license-info', async (req, res) => {
         });
     } catch (error) {
         res.status(500).json({ error: 'Server error' });
+    }
+});
+
+app.post('/contact', upload, async (req, res) => {
+    const { name, email, message } = req.body;
+
+    // Verifique se há um arquivo anexado
+    const attachment = req.file;
+
+    console.log('Dados recebidos:', { name, email, message, attachment });
+
+    const msg = {
+        to: 'raphaelmarquesr@gmail.com', // Seu e-mail para receber as mensagens de contato
+        from: 'gldbotsuport@gmail.com', // Endereço de origem
+        subject: `Nova mensagem de contato de ${name}`,
+        text: `Nome: ${name}\nE-mail: ${email}\nMensagem: ${message}`,
+        html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; color: #333;">
+                <h2 style="color: #4CAF50;">Nova Mensagem de Contato</h2>
+                <p><strong>Nome:</strong> ${name}</p>
+                <p><strong>E-mail:</strong> ${email}</p>
+                <p><strong>Mensagem:</strong></p>
+                <p style="white-space: pre-line;">${message}</p>
+            </div>
+        `,
+    };
+
+    // Se houver um arquivo, adicione-o como anexo
+    if (attachment) {
+        msg.attachments = [{
+            filename: attachment.originalname,
+            content: attachment.buffer.toString('base64'),
+            type: attachment.mimetype,
+            disposition: 'attachment',
+        }];
+    }
+
+    try {
+        await sgMail.send(msg);
+        console.log('E-mail de contato enviado com sucesso');
+        res.status(200).json({ success: true, message: 'Mensagem enviada com sucesso!' });
+    } catch (error) {
+        console.error('Erro ao enviar o e-mail de contato:', error);
+        if (error.response) {
+            console.error(error.response.body);
+        }
+        res.status(500).json({ success: false, message: 'Erro ao enviar a mensagem, tente novamente mais tarde.' });
     }
 });
 

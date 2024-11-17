@@ -1,6 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Link para fonte medieval (Google Fonts) -->
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>GLDbot - Gladiatus Bot</title>
@@ -157,6 +160,7 @@
             background-size: 100%;
             padding: 1rem;
             box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
+            z-index: 10;
         }
 
         .sidebar button {
@@ -175,6 +179,7 @@
             background-color: #444;
         }
 
+
         /* Título estilo romano */
         .roman-title {
             font-family: 'Times New Roman', serif;
@@ -191,13 +196,15 @@
             position: absolute;
             bottom: 915px;
             left: 20px;
-            top: 206px;
+            top: 264px;
+            z-index: 10;
         }
 
         #slideshow {
             position: relative;
             width: 1200px;
             height: 600px;
+            top: 150px;
             margin: 20px auto;
             border: 4px solid #6b3e26;
             background-color: #f0e1c3;
@@ -314,11 +321,64 @@
 <body>
 <div class="sidebar">
     <button id="back" style="display: none;">Back</button>
+    <button id="contactus" style="display: block;">Contact us</button>
     <button id="tutorial" style="display: block">Tutorial</button>
     <button id="download" style="display: block">Download Bot</button>
     <button id="buyButton" style="display: block; animation: 2s ease-in-out 0s infinite normal none running breathing-light;">Buy</button>
 </div>
 <div id="sidebar_footer"></div>
+
+<div id="contact-section" style="display: none; max-width: 80%; margin: 20px auto; padding: 30px; border: 3px solid #8B4513; border-radius: 15px; font-family: 'Cinzel', serif; color: #fff;">
+    <h2 style="text-align: center; font-size: 2rem; color: #FFD700; text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);">Entre em Contato</h2>
+    <form id="contact-form" enctype="multipart/form-data">
+        <!-- Nome do usuário -->
+        <div style="margin-bottom: 20px;">
+            <label for="name" style="display: block; font-weight: bold; margin-bottom: 10px;">Nome:</label>
+            <input type="text" id="name" name="name" placeholder="Seu nome"
+                   style="width: 100%; padding: 15px; border: 2px solid #8B4513; border-radius: 8px; background: #F5DEB3; color: #333; font-size: 1rem;" required>
+        </div>
+
+        <!-- E-mail do usuário -->
+        <div style="margin-bottom: 20px;">
+            <label for="email" style="display: block; font-weight: bold; margin-bottom: 10px;">E-mail:</label>
+            <input type="email" id="email" name="email" placeholder="Seu e-mail"
+                   style="width: 100%; padding: 15px; border: 2px solid #8B4513; border-radius: 8px; background: #F5DEB3; color: #333; font-size: 1rem;" required>
+        </div>
+
+        <!-- Corpo da mensagem -->
+        <div style="margin-bottom: 20px;">
+            <label for="message" style="display: block; font-weight: bold; margin-bottom: 10px;">Mensagem:</label>
+            <textarea id="message" name="message" rows="6" placeholder="Escreva sua mensagem aqui..."
+                      style="width: 100%; padding: 15px; border: 2px solid #8B4513; border-radius: 8px; background: #F5DEB3; color: #333; font-size: 1rem;" required></textarea>
+        </div>
+
+        <!-- Flex container para alinhar o anexo e o botão -->
+        <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
+            <!-- Campo de anexo -->
+            <div style="display: flex; align-items: center;">
+                <label for="attachment" style="display: inline-block; margin-right: 10px; font-size: 1rem; color: #FFD700; cursor: pointer;">
+                    <i class="fas fa-paperclip"></i> <!-- Ícone de anexo -->
+                    Anexar Arquivo
+                    <div id="attachment-message" style="display: none; color: #FFD700; font-size: 1rem; margin-left: 10px;">
+                        <br>
+                        Item anexado!
+                    </div>
+                </label>
+                <input type="file" id="attachment" name="attachment" style="display: none; border: 2px solid #8B4513; border-radius: 8px; padding: 10px; background-color: #F5DEB3;" onchange="showAttachmentMessage()">
+            </div>
+
+            <!-- Exibir a mensagem "Item anexado!" -->
+
+
+            <!-- Botão de envio -->
+            <button type="submit"
+                    style="background-color: #8B4513; color: #FFD700; padding: 15px 30px; border: 2px solid #FFD700; border-radius: 10px; font-size: 1.2rem; cursor: pointer; box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);">
+                Enviar
+            </button>
+        </div>
+    </form>
+</div>
+
 
 <div id="slideshow">
     <div id="show1" class="slide">
@@ -469,6 +529,11 @@
 </div>
 
 <script>
+    function showAttachmentMessage() {
+        const message = document.getElementById('attachment-message');
+        message.style.display = 'inline';
+    }
+
     // Download
     document.getElementById("download").addEventListener("click", function () {
         const link = document.createElement("a");
@@ -513,16 +578,19 @@
         const carouselContainer = document.getElementById("slideshow");
         const countriesContainer = document.getElementById("container");
         const videoContainer = document.getElementById("video");
+        const contact = document.getElementById("contact-section");
 
         // Alterna display dos containers
         if (videoContainer.style.display === "none") {
             videoContainer.style.display = "block";
             countriesContainer.style.display = "none";
             carouselContainer.style.display = "none";
+            contact.style.display = "none";
             document.getElementById("back").style.display = "block";
             document.getElementById("back").style.marginTop = "";
             document.getElementById("back").style.marginBottom = "";
             document.getElementById("download").style.display = "block";
+            document.getElementById("contactus").style.display = "block";
             document.getElementById("tutorial").style.display = "none";
             document.getElementById("buyButton").style.display = "block";
         }
@@ -532,16 +600,42 @@
         const carouselContainer = document.getElementById("slideshow");
         const countriesContainer = document.getElementById("container");
         const videoContainer = document.getElementById("video");
+        const contact = document.getElementById("contact-section");
 
         // Alterna display dos containers
-        if (countriesContainer.style.display === "block"||videoContainer.style.display === "block") {
+        if (countriesContainer.style.display === "block"||videoContainer.style.display === "block"||contact.style.display === "block") {
             videoContainer.style.display = "none";
             countriesContainer.style.display = "none";
             carouselContainer.style.display = "block";
+            contact.style.display = "none";
             document.getElementById("back").style.display = "none";
+            document.getElementById("sidebar_footer").style.top = "264px";
             document.getElementById("download").style.display = "block";
             document.getElementById("tutorial").style.display = "block";
             document.getElementById("buyButton").style.display = "block";
+            document.getElementById("contactus").style.display = "block";
+        }
+    });
+
+    document.getElementById("contactus").addEventListener("click", function() {
+        const carouselContainer = document.getElementById("slideshow");
+        const countriesContainer = document.getElementById("container");
+        const videoContainer = document.getElementById("video");
+        const contact = document.getElementById("contact-section");
+
+        // Alterna display dos containers
+        if (countriesContainer.style.display === "block"||videoContainer.style.display === "block"||carouselContainer.style.display === "block"||contact.style.display === "none") {
+            videoContainer.style.display = "none";
+            countriesContainer.style.display = "none";
+            carouselContainer.style.display = "none";
+            contact.style.display = "block";
+            document.getElementById("back").style.marginTop = "";
+            document.getElementById("back").style.marginBottom = "";
+            document.getElementById("back").style.display = "block";
+            document.getElementById("download").style.display = "block";
+            document.getElementById("tutorial").style.display = "block";
+            document.getElementById("buyButton").style.display = "block";
+            document.getElementById("contactus").style.display = "none";
         }
     });
 
@@ -550,18 +644,22 @@
         const carouselContainer = document.getElementById("slideshow");
         const countriesContainer = document.getElementById("container");
         const videoContainer = document.getElementById("video");
+        const contact = document.getElementById("contact-section");
 
         // Alterna display dos containers
         if (countriesContainer.style.display === "none") {
             countriesContainer.style.display = "block";
             videoContainer.style.display = "none";
             carouselContainer.style.display = "none";
+            contact.style.display = "none";
             document.getElementById("back").style.display = "block";
             document.getElementById("back").style.marginTop = "60px";
             document.getElementById("back").style.marginBottom = "76px";
+            document.getElementById("sidebar_footer").style.top = "206px";
             document.getElementById("download").style.display = "none";
             document.getElementById("tutorial").style.display = "none";
             document.getElementById("buyButton").style.display = "none";
+            document.getElementById("contactus").style.display = "none";
         }
     });
     const select = document.getElementById('country-select');
@@ -600,6 +698,88 @@
         } catch (error) {
             console.error('Erro ao enviar a requisição:', error);
         }
+    });
+
+    function showMedievalAlert(message, isSuccess) {
+        // Remove qualquer alerta anterior
+        const existingAlert = document.getElementById('medieval-alert');
+        if (existingAlert) existingAlert.remove();
+
+        // Cria o container do alerta
+        const alertDiv = document.createElement('div');
+        alertDiv.id = 'medieval-alert';
+        alertDiv.style.position = 'fixed';
+        alertDiv.style.top = '10%';
+        alertDiv.style.left = '50%';
+        alertDiv.style.transform = 'translate(-50%, -50%)';
+        alertDiv.style.maxWidth = '400px';
+        alertDiv.style.width = '90%';
+        alertDiv.style.padding = '20px';
+        alertDiv.style.border = '3px solid #4d3e36';
+        alertDiv.style.backgroundColor = isSuccess ? '#e4dbc8' : '#f8d7da';
+        alertDiv.style.color = isSuccess ? '#2f4f2f' : '#842029';
+        alertDiv.style.fontFamily = `'MedievalSharp', cursive`;
+        alertDiv.style.fontSize = '18px';
+        alertDiv.style.borderRadius = '10px';
+        alertDiv.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
+        alertDiv.style.textAlign = 'center';
+        alertDiv.style.zIndex = '1000';
+
+        // Adiciona o conteúdo ao alerta
+        alertDiv.innerHTML = `
+        <div style="margin-bottom: 10px;">
+            ${isSuccess === 'waiting' ? 'Aguarde...' : isSuccess ? 'Sucesso!' : 'Erro!'}
+        </div>
+        <p>${message}</p>
+        <button id="close-alert-btn" style="
+            margin-top: 10px;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: ${isSuccess ? '#6c757d' : '#d4a5a5'};
+            color: white;
+        ">Fechar</button>
+    `;
+
+        // Adiciona o alerta ao corpo do documento
+        document.body.appendChild(alertDiv);
+
+        // Fecha o alerta ao clicar no botão
+        document.getElementById('close-alert-btn').addEventListener('click', () => {
+            alertDiv.remove();
+        });
+    }
+
+    document.getElementById('contact-form').addEventListener('submit', function (e) {
+        e.preventDefault(); // Impede o recarregamento da página
+
+        const formData = new FormData();
+        formData.append('name', document.getElementById('name').value);
+        formData.append('email', document.getElementById('email').value);
+        formData.append('message', document.getElementById('message').value);
+        const attachment = document.getElementById('attachment').files[0];
+        if (attachment) {
+            formData.append('attachment', attachment);
+        }
+        showMedievalAlert('Enviando a mensagem...', 'waiting');
+
+        fetch('http://localhost:4000/contact', {
+            method: 'POST',
+            body: formData // Use FormData para enviar o arquivo junto com os outros dados
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMedievalAlert('Recebemos sua mensagem, aguarde a resposta via e-mail.', true);
+                } else {
+                    showMedievalAlert('Mensagem não enviada, tente novamente.', false);
+                }
+            })
+            .catch(error => {
+                showMedievalAlert('Erro ao enviar a mensagem: ' + error.message, false);
+            });
     });
 </script>
 </body>
