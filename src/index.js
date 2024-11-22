@@ -25,6 +25,7 @@ const GLOBAL_REFRESH_TOKEN = process.env.GLOBAL_REFRESH_TOKEN;
 const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
 const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
 const endpointSecret = process.env.ENDPOINT_SECRET;
+let globalAnnouncement = '';
 
 
 const License = mongoose.model('license', {
@@ -198,6 +199,24 @@ app.post('/contact', upload, async (req, res) => {
         res.status(500).json({ success: false, message: 'Erro ao enviar a mensagem, tente novamente mais tarde.' });
     }
 });
+
+app.post('/announcement', async (req, res) => {
+    const { announcement } = req.body;
+
+    if (!announcement || typeof announcement !== 'string') {
+        return res.status(400).json({ success: false, message: 'Invalid announcement string' });
+    }
+
+    globalAnnouncement = announcement;
+
+    return res.status(200).json({ success: true, message: 'Announcement saved successfully' });
+});
+
+
+app.get('/announcement', (req, res) => {
+    return res.status(200).json({ success: true, announcement: globalAnnouncement });
+});
+
 
 app.post('/sendMail', async (req, res) => {
     const { customerName, itemDescription, licenseKey, expirationDate, email } = req.body;
@@ -488,7 +507,7 @@ app.post('/validate-key', async (req, res) => {
 
             // Verifica se a data de expiração é maior que a data atual
             if (currentDate <= new Date(licenseData.expireDate)) {
-                return res.json({ valid: true, p: licenseData.expireDate}); // Retorna true se a licença for válida
+                return res.json({ valid: true, p: licenseData.expireDate, globalAnnouncement: globalAnnouncement}); // Retorna true se a licença for válida
             } else {
                 return res.json({ valid: false, message: 'Expired license Key' }); // Retorna false se a licença expirou
             }
@@ -557,7 +576,8 @@ app.post('/validate-license', async (req, res) => {
                     token: GLOBAL_TOKEN,
                     expirationDate: GLOBAL_EXPIRATION_DATE,
                     refreshToken: GLOBAL_REFRESH_TOKEN,
-                    p: licenseData.expireDate
+                    p: licenseData.expireDate,
+                    globalAnnouncement: globalAnnouncement
                 });
             } else {
                 return res.json({ valid: false, message: 'Expired license Key' });
