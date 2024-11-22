@@ -507,7 +507,7 @@ app.post('/validate-key', async (req, res) => {
 
             // Verifica se a data de expiração é maior que a data atual
             if (currentDate <= new Date(licenseData.expireDate)) {
-                return res.json({ valid: true, p: licenseData.expireDate, globalAnnouncement: globalAnnouncement}); // Retorna true se a licença for válida
+                return res.json({ valid: true, p: licenseData.expireDate, globalAnnouncement: String(globalAnnouncement)}); // Retorna true se a licença for válida
             } else {
                 return res.json({ valid: false, message: 'Expired license Key' }); // Retorna false se a licença expirou
             }
@@ -577,7 +577,7 @@ app.post('/validate-license', async (req, res) => {
                     expirationDate: GLOBAL_EXPIRATION_DATE,
                     refreshToken: GLOBAL_REFRESH_TOKEN,
                     p: licenseData.expireDate,
-                    globalAnnouncement: globalAnnouncement
+                    globalAnnouncement: String(globalAnnouncement)
                 });
             } else {
                 return res.json({ valid: false, message: 'Expired license Key' });
