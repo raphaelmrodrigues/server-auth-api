@@ -25,7 +25,7 @@ const GLOBAL_REFRESH_TOKEN = process.env.GLOBAL_REFRESH_TOKEN;
 const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
 const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
 const endpointSecret = process.env.ENDPOINT_SECRET;
-let globalAnnouncement = '';
+var globalAnnouncement = '';
 
 
 const License = mongoose.model('license', {
