@@ -373,96 +373,92 @@ app.post('/gumroad', async (req, res) => {
 
     const { license_key, sale_timestamp, variants, email, ip_country } = req.body;
 
-    try {
 
-        switch (variants.Version) {
-            case 'Send 10 times':
-            case 'Send 20 times':
-            case 'Send 30 times':
-            case 'Vitalicy': {
-                let additionalMessages = 0;
+    switch (variants.Version) {
+        case 'Send 10 times':
+        case 'Send 20 times':
+        case 'Send 30 times':
+        case 'Vitalicy': {
+            let additionalMessages = 0;
 
-                switch (variants.Version) {
-                    case 'Send 10 times':
-                        additionalMessages = 10;
-                        break;
-                    case 'Send 20 times':
-                        additionalMessages = 20;
-                        break;
-                    case 'Send 30 times':
-                        additionalMessages = 30;
-                        break;
-                    case 'Vitalicy':
-                        additionalMessages = 999999;
-                        break;
-                }
-
-                const newLicense = new License({
-                    user: "",
-                    licenseKey: license_key,
-                    email: email,
-                    country: ip_country,
-                    plan: variants.Version,
-                    messages: additionalMessages,
-                });
-
-                await newLicense.save();
-                console.log('Licença salva com sucesso:', license);
-
-                return res.status(200).json({
-                    success: true,
-                    message: 'Webhook received and processed',
-                });
+            switch (variants.Version) {
+                case 'Send 10 times':
+                    additionalMessages = 10;
+                    break;
+                case 'Send 20 times':
+                    additionalMessages = 20;
+                    break;
+                case 'Send 30 times':
+                    additionalMessages = 30;
+                    break;
+                case 'Vitalicy':
+                    additionalMessages = 999999;
+                    break;
             }
 
-            case '90 days':
-            case '60 days':
-            case '30 days':
-            case '15 days': {
-                const createdAtDate = new Date(sale_timestamp);
-                let expireDate;
+            const newLicense = new License({
+                user: "",
+                licenseKey: license_key,
+                email: email,
+                country: ip_country,
+                plan: variants.Version,
+                messages: additionalMessages,
+            });
 
-                switch (variants.Version) {
-                    case '90 days':
-                        expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 3));
-                        break;
-                    case '60 days':
-                        expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 2));
-                        break;
-                    case '30 days':
-                        expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 1));
-                        break;
-                    case '15 days':
-                        expireDate = new Date(createdAtDate.setDate(createdAtDate.getDate() + 15));
-                        break;
-                }
-
-                // Cria um novo documento de licença
-                const newLicense = new License({
-                    playerid: "",
-                    licenseKey: license_key,
-                    expireDate: expireDate,
-                    trial: false,
-                    email: email,
-                    country: ip_country,
-                });
-
+            try {
                 await newLicense.save();
                 console.log('Licença salva com sucesso:', newLicense);
+                res.status(200).json({ success: true, message: 'Webhook received and processed' });
+            } catch (error) {
+                console.error('Erro ao salvar a licença:', error);
+                res.status(500).json({ success: false, message: 'Erro ao processar o webhook' });
+            }
+        }
 
-                return res.status(200).json({
-                    success: true,
-                    message: 'Webhook received and processed',
-                });
+        case '90 days':
+        case '60 days':
+        case '30 days':
+        case '15 days': {
+            const createdAtDate = new Date(sale_timestamp);
+            let expireDate;
+
+            switch (variants.Version) {
+                case '90 days':
+                    expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 3));
+                    break;
+                case '60 days':
+                    expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 2));
+                    break;
+                case '30 days':
+                    expireDate = new Date(createdAtDate.setMonth(createdAtDate.getMonth() + 1));
+                    break;
+                case '15 days':
+                    expireDate = new Date(createdAtDate.setDate(createdAtDate.getDate() + 15));
+                    break;
             }
 
-            default:
-                console.log("Erro: Variant desconhecido");
-                return res.status(400).json({ success: false, message: 'Variant desconhecido' });
+            // Cria um novo documento de licença
+            const newLicense = new License({
+                playerid: "",
+                licenseKey: license_key,
+                expireDate: expireDate,
+                trial: false,
+                email: email,
+                country: ip_country,
+            });
+
+            try {
+                await newLicense.save();
+                console.log('Licença salva com sucesso:', newLicense);
+                res.status(200).json({ success: true, message: 'Webhook received and processed' });
+            } catch (error) {
+                console.error('Erro ao salvar a licença:', error);
+                res.status(500).json({ success: false, message: 'Erro ao processar o webhook' });
+            }
         }
-    } catch (error) {
-        console.error('Erro ao salvar a licença:', error);
-        res.status(500).json({ success: false, message: 'Erro ao processar o webhook' });
+        default:
+            console.log("Erro: Variant desconhecido");
+            return res.status(400).json({success: false, message: 'Variant desconhecido'});
     }
 });
 
