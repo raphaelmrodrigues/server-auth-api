@@ -2,6 +2,8 @@ require('dotenv').config();
 
 const express = require('express');
 const mongoose = require('mongoose');
+const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
@@ -31,14 +33,18 @@ var globalAnnouncement = '';
 const License = mongoose.model('license', {
     playerid: String,
     user: String,
+    password: String,
     licenseKey: String,
     plan: String,
     messages: Number,
     expireDate: Date,
     trial: Boolean,
+    valid: String,
     email: String,
     country: String,
     sessionId: String,
+    resetToken: String,
+    resetTokenExpiration: Date,
 })
 
 
@@ -399,6 +405,7 @@ app.post('/gumroad', async (req, res) => {
                 const newLicense = new License({
                     user: "",
                     licenseKey: license_key,
+                    valid: "valid",
                     email: email,
                     country: ip_country,
                     plan: variants.Version,
@@ -537,6 +544,237 @@ app.post('/manage-license', async (req, res) => {
         return res.status(500).json({ success: false, message: 'Erro no servidor' });
     }
 });
+
+app.post('/login', async (req, res) => {
+    const { user, password } = req.body;
+
+    if (!user || !password) {
+        return res.status(400).json({ success: false, message: 'User and password are required' });
+    }
+
+    try {
+        const existingUser = await License.findOne({ user });
+        if (!existingUser) {
+            return res.status(400).json({ success: false, message: 'User does not exist' });
+        }
+
+        const passwordMatch = await bcrypt.compare(password, existingUser.password);
+        if (!passwordMatch) {
+            return res.status(400).json({ success: false, message: 'Invalid password' });
+        }
+
+        return res.status(200).json({ success: true, message: 'Login successful' });
+    } catch (error) {
+        console.error('Error in /login:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+app.post('/register', async (req, res) => {
+    const { user, password, email } = req.body;
+
+    if (!user || !password || !email) {
+        return res.status(400).json({ success: false, message: 'User and password are required' });
+    }
+
+    try {
+        // Verifica se o usuário já existe
+        const existingUser = await License.findOne({ user });
+        const existingEmail = await License.findOne({ email });
+
+        if (existingUser) {
+            return res.status(200).json({ success: false, message: 'User already exists' });
+        }
+        if (existingEmail) {
+            return res.status(200).json({ success: false, message: 'Email already registered' });
+        }
+
+        // Criptografa a senha
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Cria e salva o novo usuário com a senha criptografada
+        const newUser = new License({
+            user,
+            password: hashedPassword,
+            messages: 0,
+            email: email,
+        });
+
+        await newUser.save();
+        return res.status(201).json({ success: true, message: 'User registered successfully' });
+    } catch (error) {
+        console.error('Error in /register:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+app.post('/request-password-reset', async (req, res) => {
+    const { user } = req.body;
+
+    if (!user) {
+        return res.status(400).json({ success: false, message: 'User is required' });
+    }
+
+    try {
+        // Verifica se o usuário existe no banco
+        const existingUser = await License.findOne({ user });
+        if (!existingUser) {
+            return res.status(404).json({ success: false, message: 'User does not exist' });
+        }
+
+        // Gera um token de redefinição de senha
+        const resetToken = crypto.randomBytes(32).toString('hex');
+        const resetTokenExpiration = Date.now() + 3600000; // Token válido por 1 hora
+        const imagePath = path.join(__dirname, 'images/gldicon.png');
+        const imageData = fs.readFileSync(imagePath).toString('base64');
+
+
+        existingUser.resetToken = resetToken;
+        existingUser.resetTokenExpiration = resetTokenExpiration;
+        await existingUser.save();
+
+        // Cria o link para redefinição de senha
+        const resetLink = `https://gldbotserver.com/reset_password.html?token=${resetToken}`;
+
+
+        const msg = {
+            to: existingUser.email,
+            from: 'gldbotsuport@gmail.com',
+            subject: 'Password Reset',
+            html: `
+                <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; max-width: 600px; margin: auto; border-radius: 8px;">
+                    <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
+                        <div style="text-align: center;">
+                            <img src="cid:gldicon" alt="GLDbot" style="width: 200px;">
+                            <h2 style="color: #4d3131; text-align: center;">Password Reset</h2>
+                        </div>
+                        <p style="font-size: 16px; color: #555555;">Hello, ${existingUser.user}</p>
+                        <p style="font-size: 16px; color: #555555;">
+                            We received a request to reset your password. Please click the button below to reset your password.
+                        </p>
+                        <div style="text-align: center;">
+                            <a href="${resetLink}" style="background-color: #590f0f; color: #ffffff; padding: 15px 25px; font-size: 16px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px;">
+                                Reset Password
+                            </a>
+                        </div>
+                        <p style="font-size: 14px; color: #555555; margin-top: 20px;">
+                            This link will expire in 1 hour. If you did not request this, you can ignore this email.
+                        </p>
+                        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
+                        <p style="font-size: 14px; color: #888888; text-align: center;">
+                            If you have any questions, feel free to contact our support team.
+                        </p>
+                    </div>
+                </div>
+            `,
+            attachments: [
+                {
+                    filename: 'gldicon.png',
+                    content: imageData,
+                    type: 'image/png',
+                    disposition: 'inline',
+                    content_id: 'gldicon'
+                }
+            ]
+        };
+
+        // Envia o e-mail via SendGrid
+        await sgMail.send(msg);
+
+        return res.status(200).json({ success: true, message: 'Password reset link sent to email' });
+    } catch (error) {
+        console.error('Error in /request-password-reset:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+app.post('/api/reset-password', async (req, res) => {
+    const { token, password } = req.body;
+
+    // Verificar se todos os dados foram fornecidos
+    if (!token || !password) {
+        return res.status(400).json({ success: false, message: 'Token and password are required' });
+    }
+
+    try {
+        // Procurar o usuário no banco de dados com base no token e na validade do token
+        const user = await License.findOne({
+            resetToken: token,
+            resetTokenExpiration: { $gt: Date.now() }, // Certificar que o token não expirou
+        });
+
+        if (!user) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+        }
+
+        // Criptografar a nova senha
+        const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Atualizar a senha no banco e limpar o token e sua validade
+        user.password = hashedPassword;
+        user.resetToken = undefined;
+        user.resetTokenExpiration = undefined;
+
+        await user.save();
+
+        return res.status(200).json({ success: true, message: 'Password reset successful' });
+    } catch (error) {
+        console.error('Error resetting password:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+
+app.post('/ps', async (req, res) => {
+    const { licenseKey, user } = req.body;
+
+    // Verifica se os campos obrigatórios foram enviados
+    if (!licenseKey || !user) {
+        return res.status(400).json({ success: false, message: 'License key and user are required' });
+    }
+
+    try {
+        // Procura a licença no banco de dados
+        const licenseRecord = await License.findOne({ licenseKey });
+
+        if (!licenseRecord) {
+            return res.status(404).json({ success: false, message: 'License key does not exist' });
+        }
+
+        // Verifica se a licença está válida ou já utilizada
+        if (licenseRecord.valid === 'used') {
+            return res.status(400).json({ success: false, message: 'License key already used' });
+        } else if (licenseRecord.valid !== 'valid') {
+            return res.status(400).json({ success: false, message: 'License key is not valid' });
+        }
+
+        // Procura o usuário no banco de dados
+        const userRecord = await License.findOne({ user });
+
+        if (!userRecord) {
+            return res.status(404).json({ success: false, message: 'User does not exist, please login' });
+        }
+
+        // Soma as mensagens
+        const newMessageCount = userRecord.messages + licenseRecord.messages;
+
+        // Atualiza o registro do usuário com o novo valor de mensagens
+        userRecord.messages = newMessageCount;
+        await userRecord.save();
+
+        // Marca a licença como "used"
+        licenseRecord.valid = 'used';
+        await licenseRecord.save();
+
+        // Retorna o novo valor de mensagens
+        return res.status(200).json({ success: true, message: 'License key applied successfully', newMessageCount });
+    } catch (error) {
+        console.error('Error in /ps route:', error);
+        return res.status(500).json({ success: false, message: 'Internal server error' });
+    }
+});
+
+
 
 app.post('/validate-key', async (req, res) => {
     const { idkps } = req.body;
