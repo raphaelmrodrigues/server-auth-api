@@ -580,12 +580,11 @@ app.post('/register', async (req, res) => {
     try {
         // Verifica se o usuário já existe
         const existingUser = await License.findOne({ user });
-        const existingEmail = await License.findOne({ email });
 
         if (existingUser) {
             return res.status(200).json({ success: false, message: 'User already exists' });
         }
-        if (existingEmail) {
+        if (existingUser.email === email) {
             return res.status(200).json({ success: false, message: 'Email already registered' });
         }
 
@@ -594,7 +593,7 @@ app.post('/register', async (req, res) => {
 
         // Cria e salva o novo usuário com a senha criptografada
         const newUser = new License({
-            user,
+            user: user,
             password: hashedPassword,
             messages: 0,
             email: email,
