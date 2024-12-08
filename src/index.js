@@ -584,7 +584,9 @@ app.post('/register', async (req, res) => {
         if (existingUser) {
             return res.status(200).json({ success: false, message: 'User already exists' });
         }
-        if (existingUser.email === email) {
+        // Verifica se o e-mail já está registrado com um usuário vinculado
+        const emailInUse = await License.findOne({ email, user: { $ne: null } });
+        if (emailInUse) {
             return res.status(200).json({ success: false, message: 'Email already registered' });
         }
 
