@@ -406,7 +406,6 @@ app.post('/gumroad', async (req, res) => {
                     user: "",
                     licenseKey: license_key,
                     valid: "valid",
-                    email: email,
                     country: ip_country,
                     plan: variants.Version,
                     messages: additionalMessages,
