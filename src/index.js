@@ -562,7 +562,12 @@ app.post('/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid password' });
         }
 
-        return res.status(200).json({ success: true, q: existingUser.messages, message: 'Login successful' });
+        let newMessageCount = existingUser.messages;
+        if (newMessageCount > 50000) {
+            newMessageCount = -43;
+        }
+
+        return res.status(200).json({ success: true, q: newMessageCount, message: 'Login successful' });
     } catch (error) {
         console.error('Error in /login:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -756,7 +761,7 @@ app.post('/ps', async (req, res) => {
         }
 
         // Soma as mensagens
-        const newMessageCount = userRecord.messages + licenseRecord.messages;
+        let newMessageCount = userRecord.messages + licenseRecord.messages;
 
         // Atualiza o registro do usuário com o novo valor de mensagens
         userRecord.messages = newMessageCount;
@@ -766,6 +771,10 @@ app.post('/ps', async (req, res) => {
         licenseRecord.valid = 'used';
         await licenseRecord.save();
 
+        if (newMessageCount > 50000) {
+            newMessageCount = -43;
+        }
+
         // Retorna o novo valor de mensagens
         return res.status(200).json({ success: true, message: 'License key applied successfully', newMessageCount });
     } catch (error) {
@@ -774,6 +783,45 @@ app.post('/ps', async (req, res) => {
     }
 });
 
+app.post('/ls', async (req, res) => {
+    const { user } = req.body;
+
+    if (!user) {
+        return res.status(400).json({ success: false, message: "Usuário não fornecido." });
+    }
+
+    try {
+        const foundLicense = await License.findOne({ user });
+
+        if (!foundLicense) {
+            return res.status(404).json({ success: false, message: "Usuário não encontrado." });
+        }
+
+        if (foundLicense.messages <= 0) {
+            return res.json({
+                success: false,
+                message: "Você possui 0 mensagens disponíveis, faça uma recarga!",
+            });
+        }
+
+        let remainingMessages = foundLicense.messages - 1;
+        foundLicense.messages = remainingMessages;
+        await foundLicense.save();
+
+        if (remainingMessages > 50000) {
+            remainingMessages = -43;
+        }
+
+        res.json({
+            success: true,
+            w: remainingMessages,
+            t: "index.php?mod=messages&submod=messageNew",
+        });
+    } catch (error) {
+        console.error("Erro ao processar a rota '/ls':", error);
+        res.status(500).json({ success: false, message: "Erro interno no servidor." });
+    }
+});
 
 
 app.post('/validate-key', async (req, res) => {
