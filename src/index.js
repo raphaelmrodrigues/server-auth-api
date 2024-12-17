@@ -130,7 +130,7 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-app.get('/', async (req, res) => {
+app.get('/gldbot-home', async (req, res) => {
     return res.sendFile(path.join(__dirname, 'welcome.html'));
 });
 
