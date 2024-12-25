@@ -134,6 +134,10 @@ app.get('/gldbot-home', async (req, res) => {
     return res.sendFile(path.join(__dirname, 'welcome.html'));
 });
 
+app.get('/', async (req, res) => {
+    return res.sendFile(path.join(__dirname, 'welcome.html'));
+});
+
 app.get('/licenses', async (req, res) => {
     const licenses = await License.find()
     return res.send(licenses)
