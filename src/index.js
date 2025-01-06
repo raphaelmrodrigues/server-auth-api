@@ -374,6 +374,43 @@ app.post('/teste', async (req, res) => {
     res.status(200).send('Webhook received');
 });
 
+app.get('/emails', async (req, res) => {
+    try {
+        // Busca todos os emails únicos no banco de dados
+        const emails = await License.distinct('email');
+        if (!emails || emails.length === 0) {
+            return res.status(404).json({ success: false, message: 'Nenhum email encontrado.' });
+        }
+        res.json({ success: true, emails });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro ao buscar emails', error: error.message });
+    }
+});
+
+app.post('/activeplayers', async (req, res) => {
+    const { password } = req.body;
+
+
+    if (password !== 'adminacessall') {
+        return res.status(403).json({ success: false, message: 'Acesso negado!' });
+    }
+    try {
+        const currentDate = new Date();
+
+        const activePlayers = await License.find({
+            expireDate: { $gt: currentDate }
+        }, 'playerid email country');
+
+        if (!activePlayers || activePlayers.length === 0) {
+            return res.status(404).json({ success: false, message: 'Nenhum player ativo encontrado.' });
+        }
+
+        res.json({ success: true, activePlayers });
+    } catch (error) {
+        res.status(500).json({ success: false, message: 'Erro ao buscar players ativos', error: error.message });
+    }
+});
+
 app.post('/gumroad', async (req, res) => {
     console.log("Dados recebidos:", req.body);
 
