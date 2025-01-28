@@ -278,7 +278,7 @@ app.post('/mercadopago/checkout', async (req, res) => {
         console.log(response)
 
         // Retorna o link de checkout
-        res.send({ checkoutUrl: response.body.init_point });
+        res.send({ checkoutUrl: response.init_point });
     } catch (error) {
         console.error('Erro ao criar preferência:', error);
         res.status(500).send({ error: 'Erro ao criar preferência' });
