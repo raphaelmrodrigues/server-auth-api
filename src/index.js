@@ -286,31 +286,45 @@ app.post('/mercadopago/checkout', async (req, res) => {
 });
 
 // Webhook do Mercado Pago
-app.post('/mercadopago/webhook', async (req, res) => {
+app.post('/mercadopago/webhook', express.json(), async (req, res) => {
     const { type, data } = req.body;
-    console.log('type: ', type)
-    console.log('data: ', data)
+
+    console.log('type: ', type);
+    console.log('data: ', data);
 
     if (type === 'payment') {
-        try {
-            // Busca detalhes do pagamento
-            const payment = await paymentAPI.get({ id: data.id });
-            console.log('payment: ', payment)
+        const paymentId = data.id;
 
-            if (payment.status === 'approved') {
+        try {
+            // Consulta os detalhes do pagamento
+            const response = await paymentAPI.get(paymentId); // Certifique-se de usar o cliente configurado corretamente
+            const payment = response?.body;
+
+            console.log('Detalhes do pagamento: ', payment);
+
+            if (payment?.status === 'approved') {
                 const { email } = payment.payer;
-                const planCode = payment.metadata.planCode;
+                const planCode = payment.metadata?.planCode;
+
                 const plans = {
                     '15DAYS': { duration: 15 },
                     '30DAYS': { duration: 30 },
                     '60DAYS': { duration: 60 },
                 };
+
                 const selectedPlan = plans[planCode];
 
+                if (!selectedPlan) {
+                    console.error('Plano inválido:', planCode);
+                    return res.status(400).send();
+                }
+
+                // Gera a licença
                 const licenseKey = uuidv4();
                 const expireDate = new Date();
                 expireDate.setDate(expireDate.getDate() + selectedPlan.duration);
 
+                // Salva a licença no banco
                 const newLicense = new License({
                     email,
                     licenseKey,
@@ -321,12 +335,14 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 await newLicense.save();
 
                 console.log('Pagamento aprovado, licença gerada:', licenseKey);
+            } else {
+                console.warn('Pagamento não aprovado ou pendente.');
             }
         } catch (error) {
-            console.error('Erro no webhook:', error);
-            return res.status(500).send();
+            console.error('Erro ao consultar detalhes do pagamento:', error);
         }
     }
+
     res.status(200).send();
 });
 
