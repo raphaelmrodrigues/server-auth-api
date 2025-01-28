@@ -271,11 +271,11 @@ app.post('/mercadopago/checkout', async (req, res) => {
             notification_url: `https://gldbotserver.com/mercadopago/webhook`,
             metadata: { planCode },
         };
-        console.log(preference)
+        console.log('preference: ', preference)
 
         // Cria a preferência usando o SDK
         const response = await preferenceAPI.create({ body: preference });
-        console.log(response)
+        console.log('response: ', response)
 
         // Retorna o link de checkout
         res.send({ checkoutUrl: response.init_point });
@@ -288,15 +288,18 @@ app.post('/mercadopago/checkout', async (req, res) => {
 // Webhook do Mercado Pago
 app.post('/mercadopago/webhook', async (req, res) => {
     const { type, data } = req.body;
+    console.log('type: ', type)
+    console.log('data: ', data)
 
     if (type === 'payment') {
         try {
             // Busca detalhes do pagamento
             const payment = await paymentAPI.get({ id: data.id });
+            console.log('payment: ', payment)
 
-            if (payment.body.status === 'approved') {
-                const { email } = payment.body.payer;
-                const planCode = payment.body.metadata.planCode;
+            if (payment.status === 'approved') {
+                const { email } = payment.payer;
+                const planCode = payment.metadata.planCode;
                 const plans = {
                     '15DAYS': { duration: 15 },
                     '30DAYS': { duration: 30 },
@@ -313,7 +316,6 @@ app.post('/mercadopago/webhook', async (req, res) => {
                     licenseKey,
                     plan: planCode,
                     expireDate,
-                    valid: 'yes',
                 });
 
                 await newLicense.save();
