@@ -49,6 +49,7 @@ const License = mongoose.model('license', {
     email: String,
     country: String,
     sessionId: String,
+    payment_id: String,
     resetToken: String,
     resetTokenExpiration: Date,
 })
@@ -321,6 +322,13 @@ app.post('/mercadopago/webhook', async (req, res) => {
                     return res.status(400).send();
                 }
 
+                // Verifica se já existe uma licença para o payment_id
+                const existingLicense = await License.findOne({ payment_id: paymentId });
+                if (existingLicense) {
+                    console.log('Licença já existe para este pagamento. Nenhuma ação será realizada.');
+                    return res.status(200).send();
+                }
+
                 // Gera a licença
                 const licenseKey = uuidv4();
                 const expireDate = new Date();
@@ -332,6 +340,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                     licenseKey,
                     plan: planCode,
                     expireDate,
+                    payment_id: paymentId,
                 });
 
                 await newLicense.save();
