@@ -268,7 +268,6 @@ app.post('/mercadopago/checkout', async (req, res) => {
                 pending: `https://gldbotserver.com/checkout.html`,
             },
             auto_return: 'approved',
-            notification_url: `https://gldbotserver.com/mercadopago/webhook`,
             metadata: { planCode },
         };
         console.log('preference: ', preference)
@@ -307,6 +306,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
             if (payment?.status === 'approved' || payment.date_approved !== null) {
                 const { email } = payment.payer;
                 const planCode = payment.metadata?.planCode;
+                console.log('email do payment: ', email)
 
                 const plans = {
                     '15DAYS': { duration: 15 },
