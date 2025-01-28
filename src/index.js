@@ -24,7 +24,6 @@ const upload = multer({ storage: storage }).single('attachment');
 
 const mercadoPagoClient = new MercadoPagoConfig({
     accessToken: process.env.MERCADO_PAGO_ACESS_TOKEN,
-    options: { timeout: 5000 },
 });
 const preferenceAPI = new Preference(mercadoPagoClient);
 const paymentAPI = new Payment(mercadoPagoClient);
@@ -269,12 +268,14 @@ app.post('/mercadopago/checkout', async (req, res) => {
                 pending: `https://gldbotserver.com/pending`,
             },
             auto_return: 'approved',
-            notification_url: `${process.env.YOUR_DOMAIN}/mercadopago/webhook`,
+            notification_url: `https://gldbotserver.com/mercadopago/webhook`,
             metadata: { planCode },
         };
+        console.log(preference)
 
         // Cria a preferência usando o SDK
         const response = await preferenceAPI.create({ body: preference });
+        console.log(response)
 
         // Retorna o link de checkout
         res.send({ checkoutUrl: response.body.init_point });
