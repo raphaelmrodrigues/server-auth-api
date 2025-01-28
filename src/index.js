@@ -233,7 +233,7 @@ app.get('/announcement', (req, res) => {
 });
 
 app.post('/mercadopago/checkout', async (req, res) => {
-    const { planCode, email } = req.body;
+    const { plan_code, email } = req.body;
 
     const plans = {
         '15DAYS': { price: 5.78, title: 'GLDbot - 15 dias', duration: 15 },
@@ -241,7 +241,7 @@ app.post('/mercadopago/checkout', async (req, res) => {
         '60DAYS': { price: 18.98, title: 'GLDbot - 60 dias', duration: 60 },
     };
 
-    const selectedPlan = plans[planCode];
+    const selectedPlan = plans[plan_code];
 
     if (!selectedPlan) {
         return res.status(400).send({ error: 'Plano inválido.' });
@@ -268,7 +268,7 @@ app.post('/mercadopago/checkout', async (req, res) => {
                 pending: `https://gldbotserver.com/checkout.html`,
             },
             auto_return: 'approved',
-            metadata: { planCode },
+            metadata: { plan_code, email },
         };
         console.log('preference: ', preference)
 
@@ -304,8 +304,8 @@ app.post('/mercadopago/webhook', async (req, res) => {
             console.log("Detalhes do pagamento: ", payment);
 
             if (payment?.status === 'approved' || payment.date_approved !== null) {
-                const { email } = payment.payer;
-                const planCode = payment.metadata?.planCode;
+                const email = payment.metadata.email;
+                const planCode = payment.metadata.plan_code;
                 console.log('email do payment: ', email)
 
                 const plans = {
