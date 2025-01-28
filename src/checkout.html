@@ -144,6 +144,16 @@
         background-color: #2b6cb0;
     }
 
+    .buttonPix {
+        background-color: buttonface;
+        padding: 5px 24px;
+        margin-top: 8px
+    }
+
+    .buttonPix:hover {
+        background-color: #d1d1d1;
+    }
+
     .plan img {
         height: 200px;
         object-fit: contain;
@@ -204,6 +214,9 @@
         <form id="form-15" method="POST">
             <button type="submit" id="checkout-button1">Comprar</button>
         </form>
+        <form id="form-pix-15" method="POST">
+            <button class="buttonPix"><img style="height: 30px;width: 70px;margin: 0;" src="./images/pix.png" alt="pix"></button>
+        </form>
     </div>
     <div class="plan featured">        <div class="badge">Mais Vendido</div>
         <img src="./images/gldicon.png" alt="Product Image">
@@ -215,6 +228,9 @@
         </ul>
         <form id="form-30" method="POST">
             <button type="submit" id="checkout-button2">Comprar</button>
+        </form>
+        <form id="form-pix-30" method="POST">
+            <button class="buttonPix"><img style="height: 30px;width: 70px;margin: 0;" src="./images/pix.png" alt="pix"></button>
         </form>
     </div>
     <div class="plan">
@@ -228,6 +244,9 @@
         <form id="form-60" method="POST">
             <button type="submit" id="checkout-button3">Comprar</button>
         </form>
+        <form id="form-pix-60" method="POST">
+            <button class="buttonPix"><img style="height: 30px;width: 70px;margin: 0;" src="./images/pix.png" alt="pix"></button>
+        </form>
     </div>
 </div>
 
@@ -239,6 +258,38 @@
     document.getElementById("form-15").action = `${baseUrl}/checkout15`;
     document.getElementById("form-30").action = `${baseUrl}/checkout30`;
     document.getElementById("form-60").action = `${baseUrl}/checkout60`;
+
+    async function redirectToMercadoPago(planCode) {
+        const response = await fetch(`${baseUrl}/mercadopago/checkout`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                planCode: planCode,
+                email: 'usuario@exemplo.com', // Substitua pelo email do usuário
+            }),
+        });
+
+        const data = await response.json();
+        if (data.checkoutUrl) {
+            window.location.href = data.checkoutUrl;
+        } else {
+            alert('Erro ao criar o checkout do Mercado Pago.');
+        }
+    }
+
+    document.getElementById('form-pix-15').onsubmit = (e) => {
+        e.preventDefault();
+        redirectToMercadoPago('15DAYS');
+    };
+    document.getElementById('form-pix-30').onsubmit = (e) => {
+        e.preventDefault();
+        redirectToMercadoPago('30DAYS');
+    };
+    document.getElementById('form-pix-60').onsubmit = (e) => {
+        e.preventDefault();
+        redirectToMercadoPago('60DAYS');
+    };
+
 </script>
 </body>
 </html>

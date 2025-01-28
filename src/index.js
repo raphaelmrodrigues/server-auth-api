@@ -10,6 +10,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);  // Usando a variável do .env
+const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const sgMail = require('@sendgrid/mail');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
@@ -21,6 +22,12 @@ const port = 4000;
 const storage = multer.memoryStorage();
 const upload = multer({ storage: storage }).single('attachment');
 
+const mercadoPagoClient = new MercadoPagoConfig({
+    accessToken: process.env.MERCADO_PAGO_ACESS_TOKEN,
+    options: { timeout: 5000 },
+});
+const preferenceAPI = new Preference(mercadoPagoClient);
+const paymentAPI = new Payment(mercadoPagoClient);
 
 const GLOBAL_EXPIRATION_DATE = process.env.GLOBAL_EXPIRATION_DATE;
 const GLOBAL_REFRESH_TOKEN = process.env.GLOBAL_REFRESH_TOKEN;
@@ -224,6 +231,100 @@ app.post('/announcement', async (req, res) => {
 
 app.get('/announcement', (req, res) => {
     return res.status(200).json({ success: true, announcement: globalAnnouncement });
+});
+
+app.post('/mercadopago/checkout', async (req, res) => {
+    const { planCode, email } = req.body;
+
+    const plans = {
+        '15DAYS': { price: 5.78, title: 'GLDbot - 15 dias', duration: 15 },
+        '30DAYS': { price: 9.89, title: 'GLDbot - 30 dias', duration: 30 },
+        '60DAYS': { price: 18.98, title: 'GLDbot - 60 dias', duration: 60 },
+    };
+
+    const selectedPlan = plans[planCode];
+
+    if (!selectedPlan) {
+        return res.status(400).send({ error: 'Plano inválido.' });
+    }
+
+    try {
+        // Cria a preferência de pagamento
+        const preference = {
+            items: [
+                {
+                    title: selectedPlan.title,
+                    quantity: 1,
+                    currency_id: 'BRL',
+                    unit_price: selectedPlan.price,
+                },
+            ],
+            payer: { email },
+            payment_methods: {
+                installments: 12, // Parcelamento em até 12x
+            },
+            back_urls: {
+                success: `https://gldbotserver.com/success`,
+                failure: `https://gldbotserver.com/failure`,
+                pending: `https://gldbotserver.com/pending`,
+            },
+            auto_return: 'approved',
+            notification_url: `${process.env.YOUR_DOMAIN}/mercadopago/webhook`,
+            metadata: { planCode },
+        };
+
+        // Cria a preferência usando o SDK
+        const response = await preferenceAPI.create({ body: preference });
+
+        // Retorna o link de checkout
+        res.send({ checkoutUrl: response.body.init_point });
+    } catch (error) {
+        console.error('Erro ao criar preferência:', error);
+        res.status(500).send({ error: 'Erro ao criar preferência' });
+    }
+});
+
+// Webhook do Mercado Pago
+app.post('/mercadopago/webhook', async (req, res) => {
+    const { type, data } = req.body;
+
+    if (type === 'payment') {
+        try {
+            // Busca detalhes do pagamento
+            const payment = await paymentAPI.get({ id: data.id });
+
+            if (payment.body.status === 'approved') {
+                const { email } = payment.body.payer;
+                const planCode = payment.body.metadata.planCode;
+                const plans = {
+                    '15DAYS': { duration: 15 },
+                    '30DAYS': { duration: 30 },
+                    '60DAYS': { duration: 60 },
+                };
+                const selectedPlan = plans[planCode];
+
+                const licenseKey = uuidv4();
+                const expireDate = new Date();
+                expireDate.setDate(expireDate.getDate() + selectedPlan.duration);
+
+                const newLicense = new License({
+                    email,
+                    licenseKey,
+                    plan: planCode,
+                    expireDate,
+                    valid: 'yes',
+                });
+
+                await newLicense.save();
+
+                console.log('Pagamento aprovado, licença gerada:', licenseKey);
+            }
+        } catch (error) {
+            console.error('Erro no webhook:', error);
+            return res.status(500).send();
+        }
+    }
+    res.status(200).send();
 });
 
 
