@@ -265,7 +265,7 @@ app.post('/mercadopago/checkout', async (req, res) => {
             back_urls: {
                 success: `https://gldbotserver.com/success.html`,
                 failure: `https://gldbotserver.com/checkout.html`,
-                pending: `https://gldbotserver.com/pending.html`,
+                pending: `https://gldbotserver.com/checkout.html`,
             },
             auto_return: 'approved',
             notification_url: `https://gldbotserver.com/mercadopago/webhook`,
@@ -286,21 +286,22 @@ app.post('/mercadopago/checkout', async (req, res) => {
 });
 
 // Webhook do Mercado Pago
-app.post('/mercadopago/webhook', express.json(), async (req, res) => {
+app.post('/mercadopago/webhook', async (req, res) => {
     const { type, data } = req.body;
+    console.log('req.body: ', req.body);
 
     console.log('type: ', type);
     console.log('data: ', data);
 
     if (type === 'payment') {
-        const paymentId = data.id;
+        const paymentId = req.body.data.id;
 
         try {
             // Consulta os detalhes do pagamento
-            const payment = await paymentAPI.get(paymentId);
+            const payment = await paymentAPI.get({id: paymentId});
             console.log("Detalhes do pagamento: ", payment);
 
-            if (payment?.status === 'approved') {
+            if (payment?.status === 'approved' || payment.date_approved !== null) {
                 const { email } = payment.payer;
                 const planCode = payment.metadata?.planCode;
 
