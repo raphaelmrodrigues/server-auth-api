@@ -290,6 +290,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
     const { type, data } = req.body;
     console.log('req.body: ', req.body);
 
+    // Adiciona um atraso de 5 segundos antes de consultar o pagamento
+    await new Promise((resolve) => setTimeout(resolve, 5000));
+
     console.log('type: ', type);
     console.log('data: ', data);
 
