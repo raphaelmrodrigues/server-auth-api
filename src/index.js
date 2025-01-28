@@ -268,6 +268,7 @@ app.post('/mercadopago/checkout', async (req, res) => {
                 pending: `https://gldbotserver.com/checkout.html`,
             },
             auto_return: 'approved',
+            notification_url: `https://gldbotserver.com/mercadopago/webhook`,
             metadata: { plan_code, email },
         };
         console.log('preference: ', preference)
