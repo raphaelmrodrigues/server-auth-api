@@ -263,9 +263,9 @@ app.post('/mercadopago/checkout', async (req, res) => {
                 installments: 12, // Parcelamento em até 12x
             },
             back_urls: {
-                success: `https://gldbotserver.com/success`,
-                failure: `https://gldbotserver.com/failure`,
-                pending: `https://gldbotserver.com/pending`,
+                success: `https://gldbotserver.com/success.html`,
+                failure: `https://gldbotserver.com/checkout.html`,
+                pending: `https://gldbotserver.com/pending.html`,
             },
             auto_return: 'approved',
             notification_url: `https://gldbotserver.com/mercadopago/webhook`,
@@ -297,10 +297,8 @@ app.post('/mercadopago/webhook', express.json(), async (req, res) => {
 
         try {
             // Consulta os detalhes do pagamento
-            const response = await paymentAPI.get(paymentId); // Certifique-se de usar o cliente configurado corretamente
-            const payment = response?.body;
-
-            console.log('Detalhes do pagamento: ', payment);
+            const payment = await paymentAPI.get(paymentId);
+            console.log("Detalhes do pagamento: ", payment);
 
             if (payment?.status === 'approved') {
                 const { email } = payment.payer;
