@@ -411,6 +411,7 @@ app.post('/sendMail', async (req, res) => {
         }
 
         const Data = new Date(dateExpire);
+        Data.setHours(Data.getHours() - 3); // Ajusta para GMT-3
         const formattedDate = formatDate(Data);
 
         const msg = {
@@ -422,17 +423,17 @@ app.post('/sendMail', async (req, res) => {
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; color: #333;">
                     <div style="text-align: center;">
-                        <img src="cid:gldicon" alt="GLDbot" style="width: 100px; margin-bottom: 20px;">
+                        <img src="cid:gldicon" alt="GLDbot" style="width: 120px; margin-bottom: 20px;">
                         <h2 style="color: #4CAF50;">Compra Realizada com Sucesso!</h2>
                     </div>
-                    <p>Olá <strong>${name}</strong>,</p>
+                    <p>Olá <strong style="font-size: 14px;">${name}</strong>,</p>
                     <p>Agradecemos por sua compra! Abaixo estão os detalhes da sua licença:</p>
                     <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); margin-bottom: 20px;">
                         <ul style="list-style-type: none; padding: 0;">
-                            <li><strong>Plano:</strong> ${description}</li>
-                            <li><strong>Data de Expiração:</strong> ${formattedDate}</li>
-                            <li><strong>Observação:</strong> Chave válida para uma única conta!</li>
-                            <li><strong>Chave da Licença:</strong> ${license}</li>
+                            <li><strong>📝 Plano:</strong> ${description}</li>
+                            <li><strong>📆 Data de Expiração:</strong> ${formattedDate}</li>
+                            <li><strong>⚠️ Observação:</strong> Chave válida para uma única conta!</li>
+                            <li><strong>🔑 Chave da Licença:</strong> ${license}</li>
                         </ul>
                     </div>
                     <p style="font-size: 0.9em; color: #555;">Por favor, guarde esta chave em segurança.</p>
