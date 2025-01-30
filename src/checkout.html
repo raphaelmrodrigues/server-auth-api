@@ -160,6 +160,119 @@
         margin-bottom: 1rem;
     }
 
+    /* Estilização geral do modal */
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.7);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+    }
+
+    /* Animação de entrada */
+    .modal.show {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .modal-content {
+        background: #fff;
+        padding: 20px;
+        width: 90%;
+        max-width: 400px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+        transform: scale(0.8);
+        transition: transform 0.3s ease-in-out;
+    }
+
+    .modal.show .modal-content {
+        transform: scale(1);
+    }
+
+    /* Botão de fechar */
+    .close {
+        color: #aaa;
+        float: right;
+        font-size: 24px;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .close:hover {
+        color: #000;
+    }
+
+    /* Input do e-mail */
+    .modal input[type="email"] {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ccc;
+        border-radius: 5px;
+        font-size: 16px;
+    }
+
+    /* Botão de enviar */
+    .modal button {
+        background: #3182ce;
+        color: white;
+        padding: 10px 15px;
+        border: none;
+        cursor: pointer;
+        width: 100%;
+        font-size: 16px;
+        border-radius: 5px;
+        transition: background 0.3s;
+    }
+
+    .modal button:hover {
+        background: #2b6cb0;
+    }
+
+    /* Informações pós-compra */
+    .modal-info {
+        margin-top: 15px;
+        font-size: 14px;
+        color: #333;
+        text-align: left;
+        background: #f8f8f8;
+        padding: 10px;
+        border-radius: 5px;
+    }
+
+    /* Estilização da imagem */
+    .preview-container {
+        margin-top: 15px;
+        display: flex;
+        justify-content: center;
+    }
+
+    .preview-img {
+        width: 150px;
+        height: auto;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: transform 0.3s ease-in-out;
+    }
+
+    /* Ampliação da imagem ao passar o mouse */
+    .preview-img:hover {
+        transform: scale(4);
+        position: relative;
+        z-index: 1001;
+    }
+
 
     /* Responsividade para dispositivos móveis */
     @media (max-width: 768px) {
@@ -250,6 +363,33 @@
     </div>
 </div>
 
+<!-- Modal para coletar o email -->
+<!-- Modal -->
+<div id="emailModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h2>Informe seu e-mail</h2>
+        <br>
+        <p>Digite seu e-mail para receber a licença após o pagamento: 🔑</p>
+        <input type="email" id="userEmail" placeholder="seuemail@exemplo.com" required>
+        <button id="submitEmail">Confirmar</button>
+
+        <!-- Informações pós-compra -->
+        <div class="modal-info">
+            <p><strong>📢 Atenção:</strong> Informe um e-mail válido! A licença será gerada após o pagamento PIX e enviada para o e-mail informado, conforme imagem abaixo.</p>
+            <br>
+            <p>💳 Se deseja pagar com cartão de crédito, utilize a opção "Comprar" acima. Esta opção é apenas para pagamentos via pix. </p>
+            <br>
+            <p>📧 Após o pagamento, verifique a caixa de entrada e/ou a lixeira do e-mail informado. O QRcode gerado pode ser pago em até 24h. Em caso de dúvidas, entre em contato: <strong>gldbotsuport@gmail.com</strong></p>
+        </div>
+
+        <!-- Imagem de pré-visualização -->
+        <div class="preview-container">
+            <img src="./images/botshow1.jpeg" alt="Exemplo de e-mail" class="preview-img">
+        </div>
+    </div>
+</div>
+
 <script>
     // Define a URL base
     const baseUrl = "https://gldbotserver.com";
@@ -259,36 +399,70 @@
     document.getElementById("form-30").action = `${baseUrl}/checkout30`;
     document.getElementById("form-60").action = `${baseUrl}/checkout60`;
 
-    async function redirectToMercadoPago(planCode) {
-        const response = await fetch(`${baseUrl}/mercadopago/checkout`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                plan_code: planCode,
-                email: 'usuario@exemplo.com', // Substitua pelo email do usuário
-            }),
+    document.addEventListener("DOMContentLoaded", () => {
+        const modal = document.getElementById("emailModal");
+        const closeModal = document.querySelector(".close");
+        const submitButton = document.getElementById("submitEmail");
+        const emailInput = document.getElementById("userEmail");
+        let selectedPlan = null; // Variável global para armazenar o plano selecionado
+
+        // Adiciona evento aos botões Pix para abrir o modal antes de redirecionar
+        document.getElementById('form-pix-15').onsubmit = (e) => {
+            e.preventDefault();
+            openEmailModal('15DAYS');
+        };
+
+        document.getElementById('form-pix-30').onsubmit = (e) => {
+            e.preventDefault();
+            openEmailModal('30DAYS');
+        };
+
+        document.getElementById('form-pix-60').onsubmit = (e) => {
+            e.preventDefault();
+            openEmailModal('60DAYS');
+        };
+
+        // Função para exibir o modal
+        function openEmailModal(planCode) {
+            selectedPlan = planCode;
+            modal.classList.add("show");
+        }
+
+        // Fecha o modal ao clicar no botão X
+        closeModal.addEventListener("click", () => {
+            modal.classList.remove("show");
         });
 
-        const data = await response.json();
-        if (data.checkoutUrl) {
-            window.location.href = data.checkoutUrl;
-        } else {
-            alert('Erro ao criar o checkout do Mercado Pago.');
-        }
-    }
+        // Fecha ao clicar fora do modal
+        window.addEventListener("click", (event) => {
+            if (event.target === modal) {
+                modal.classList.remove("show");
+            }
+        });
 
-    document.getElementById('form-pix-15').onsubmit = (e) => {
-        e.preventDefault();
-        redirectToMercadoPago('15DAYS');
-    };
-    document.getElementById('form-pix-30').onsubmit = (e) => {
-        e.preventDefault();
-        redirectToMercadoPago('30DAYS');
-    };
-    document.getElementById('form-pix-60').onsubmit = (e) => {
-        e.preventDefault();
-        redirectToMercadoPago('60DAYS');
-    };
+        // Confirma o e-mail e redireciona para o Mercado Pago
+        submitButton.addEventListener("click", async () => {
+            const email = emailInput.value.trim();
+            if (!email || !email.includes("@")) {
+                alert("Por favor, informe um e-mail válido.");
+                return;
+            }
+
+            // Redirecionamento para o checkout com o e-mail preenchido
+            const response = await fetch(`${baseUrl}/mercadopago/checkout`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ plan_code: selectedPlan, email })
+            });
+
+            const data = await response.json();
+            if (data.checkoutUrl) {
+                window.location.href = data.checkoutUrl;
+            } else {
+                alert("Erro ao criar o checkout do Mercado Pago.");
+            }
+        });
+    });
 
 </script>
 </body>

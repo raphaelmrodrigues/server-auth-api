@@ -50,6 +50,7 @@ const License = mongoose.model('license', {
     country: String,
     sessionId: String,
     payment_id: String,
+    payment_method: String,
     resetToken: String,
     resetTokenExpiration: Date,
 })
@@ -293,8 +294,6 @@ app.post('/mercadopago/webhook', async (req, res) => {
     // Adiciona um atraso de 5 segundos antes de consultar o pagamento
     await new Promise((resolve) => setTimeout(resolve, 5000));
 
-    console.log('type: ', type);
-    console.log('data: ', data);
 
     if (type === 'payment') {
         const paymentId = req.body.data.id;
@@ -307,7 +306,6 @@ app.post('/mercadopago/webhook', async (req, res) => {
             if (payment?.status === 'approved' || payment.date_approved !== null) {
                 const email = payment.metadata.email;
                 const planCode = payment.metadata.plan_code;
-                console.log('email do payment: ', email)
 
                 const plans = {
                     '15DAYS': { duration: 15 },
@@ -333,13 +331,24 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 const licenseKey = uuidv4();
                 const expireDate = new Date();
                 expireDate.setDate(expireDate.getDate() + selectedPlan.duration);
+                let country;
+                const payment_method = payment.payment_method.id;
+                if (payment.currency_id === "BRL") {
+                    country = "BRASIL";
+                } else {
+                    country = payment.currency_id;
+                }
 
                 // Salva a licença no banco
                 const newLicense = new License({
-                    email,
-                    licenseKey,
+                    playerid: "",
+                    licenseKey: licenseKey,
                     plan: planCode,
-                    expireDate,
+                    expireDate: expireDate,
+                    trial: false,
+                    email: email,
+                    country: country,
+                    payment_method: payment_method,
                     payment_id: paymentId,
                 });
 
