@@ -285,7 +285,8 @@ app.post('/mercadopago/checkout', async (req, res) => {
             ],
             payer: { email },
             payment_methods: {
-                installments: 12, // Parcelamento em até 12x
+                default_installments: 1, // Parcelamento padrão ao abrir o checkout
+                max_installments: 12    // Máximo de parcelas permitido
             },
             back_urls: {
                 success: `https://gldbotserver.com/success.html`,
