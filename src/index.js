@@ -359,7 +359,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 let country;
                 const payment_method = payment.payment_method.id;
                 if (payment.currency_id === "BRL") {
-                    country = "BRASIL";
+                    country = "Brasil";
                 } else {
                     country = payment.currency_id;
                 }
@@ -368,7 +368,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 const newLicense = new License({
                     playerid: "",
                     licenseKey: licenseKey,
-                    plan: planCode,
+                    plan: description,
                     expireDate: expireDate,
                     trial: false,
                     email: email,
