@@ -329,6 +329,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
                 // Gera a licença
                 const licenseKey = uuidv4();
+                const description = payment.description;
                 const expireDate = new Date();
                 expireDate.setDate(expireDate.getDate() + selectedPlan.duration);
                 let country;
@@ -355,6 +356,28 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 await newLicense.save();
 
                 console.log('Pagamento aprovado, licença gerada:', licenseKey);
+
+                // ---- CHAMAR A ROTA /sendMail PARA ENVIAR O E-MAIL ----
+                const customerName = email.split('@')[0];
+
+                try {
+                    const sendMailResponse = await fetch('https://gldbotserver.com/sendMail', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            customerName: customerName,
+                            itemDescription: description,
+                            licenseKey: licenseKey,
+                            expirationDate: expireDate,
+                            email: email
+                        })
+                    });
+
+                    const responseData = await sendMailResponse.json();
+                    console.log('Resposta do envio de e-mail:', responseData);
+                } catch (error) {
+                    console.error('Erro ao chamar a rota /sendMail:', error);
+                }
             } else {
                 console.warn('Pagamento não aprovado ou pendente.');
             }
@@ -391,8 +414,9 @@ app.post('/sendMail', async (req, res) => {
         const formattedDate = formatDate(Data);
 
         const msg = {
-            to: recipientEmail,
-            from: 'gldbotsuport@gmail.com',
+            to: [recipientEmail, 'gldbotsuport@gmail.com'],
+            from: 'support@gldbotserver.com',
+            replyTo: 'gldbotsuport@gmail.com',
             subject: 'Detalhes da sua compra - GLDbot',
             text: 'GLDbot',
             html: `
