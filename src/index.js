@@ -170,6 +170,29 @@ app.get('/license-info', async (req, res) => {
     }
 });
 
+app.get('/license-info-mp', async (req, res) => {
+    const payment_id = req.query.payment_id;
+    if (!payment_id) {
+        return res.status(400).json({ error: 'Session ID required' });
+    }
+    try {
+        const license = await License.findOne({ payment_id: payment_id });
+        if (!license) {
+            return res.status(404).json({ error: 'License not found' });
+        }
+        res.json({
+            licenseKey: license.licenseKey,
+            expirationDate: license.expireDate,
+            plan: license.plan,
+            customerName: license.customerName,
+            email: license.email,
+            country: license.country
+        });
+    } catch (error) {
+        res.status(500).json({ error: 'Server error' });
+    }
+});
+
 app.post('/contact', upload, async (req, res) => {
     const { name, email, message } = req.body;
 
@@ -358,7 +381,12 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 console.log('Pagamento aprovado, licença gerada:', licenseKey);
 
                 // ---- CHAMAR A ROTA /sendMail PARA ENVIAR O E-MAIL ----
-                const customerName = email.split('@')[0];
+                let customerName;
+                if (payment.card.cardholder.name) {
+                    customerName = payment.card.cardholder.name;
+                } else {
+                    customerName = email.split('@')[0];
+                }
 
                 try {
                     const sendMailResponse = await fetch('https://gldbotserver.com/sendMail', {
