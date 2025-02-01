@@ -383,7 +383,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
                 // ---- CHAMAR A ROTA /sendMail PARA ENVIAR O E-MAIL ----
                 let customerName;
-                if (payment.card.cardholder.name) {
+                if (payment.card && payment.card.cardholder && payment.card.cardholder.name) {
                     customerName = payment.card.cardholder.name;
                 } else {
                     customerName = email.split('@')[0];
