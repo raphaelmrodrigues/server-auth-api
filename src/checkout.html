@@ -395,9 +395,11 @@
     const baseUrl = "https://gldbotserver.com";
 
     // Define as URLs para cada formulário
+    /* Forma de pagamento pela STRIPE!
     document.getElementById("form-15").action = `${baseUrl}/checkout15`;
     document.getElementById("form-30").action = `${baseUrl}/checkout30`;
     document.getElementById("form-60").action = `${baseUrl}/checkout60`;
+    */
 
     document.addEventListener("DOMContentLoaded", () => {
         const modal = document.getElementById("emailModal");
@@ -405,6 +407,23 @@
         const submitButton = document.getElementById("submitEmail");
         const emailInput = document.getElementById("userEmail");
         let selectedPlan = null; // Variável global para armazenar o plano selecionado
+
+        // ------------------------Direcionamento para mercado pago --------------------------------!
+        document.getElementById('form-15').onsubmit = (e) => {
+            e.preventDefault();
+            openEmailModal('15DAYS');
+        };
+
+        document.getElementById('form-30').onsubmit = (e) => {
+            e.preventDefault();
+            openEmailModal('30DAYS');
+        };
+
+        document.getElementById('form-60').onsubmit = (e) => {
+            e.preventDefault();
+            openEmailModal('60DAYS');
+        };
+        // ------------------------Direcionamento para mercado pago --------------------------------!
 
         // Adiciona evento aos botões Pix para abrir o modal antes de redirecionar
         document.getElementById('form-pix-15').onsubmit = (e) => {
