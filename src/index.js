@@ -1,7 +1,6 @@
 require('dotenv').config();
 
 const express = require('express');
-const fetch = require("node-fetch");
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
