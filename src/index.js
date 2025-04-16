@@ -1055,31 +1055,6 @@ app.post('/ls', async (req, res) => {
     }
 });
 
-app.post("/proxy/gladiatus", async (req, res) => {
-    const { targetUrl, formData } = req.body;
-
-    if (!targetUrl || !formData) {
-        return res.status(400).json({ success: false, message: "URL ou dados não fornecidos." });
-    }
-
-    try {
-        const response = await fetch(targetUrl, {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-                "Cookie": req.headers.cookie || "", // se quiser repassar os cookies da sessão
-            },
-            body: new URLSearchParams(formData),
-        });
-
-        const responseBody = await response.text();
-        res.status(response.status).send(responseBody);
-    } catch (err) {
-        console.error("Erro no proxy:", err);
-        res.status(500).json({ success: false, message: "Erro ao processar proxy." });
-    }
-});
-
 app.post('/validate-key', async (req, res) => {
     const { idkps } = req.body;
 
