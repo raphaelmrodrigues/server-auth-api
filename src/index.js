@@ -328,6 +328,18 @@ app.post('/mercadopago/webhook', async (req, res) => {
             console.log("Detalhes do pagamento: ", payment);
 
             if (payment?.status === 'approved' || payment.date_approved !== null) {
+
+                if (payment.date_approved) {
+                    const approvedDate = new Date(payment.date_approved);
+                    const sevenDaysAgo = new Date();
+                    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+                    if (approvedDate < sevenDaysAgo) {
+                        console.warn(`Pagamento aprovado em ${approvedDate.toISOString()}, que é mais de 7 dias atrás. Ignorando notificação (provavelmente Liberação de Dinheiro).`);
+                        return res.status(200).send();
+                    }
+                }
+
                 const email = payment.metadata.email;
                 const planCode = payment.metadata.plan_code;
 
