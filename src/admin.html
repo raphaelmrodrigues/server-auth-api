@@ -4,6 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GLD Bot Admin Panel</title>
+  <!-- Incluindo Tailwind CSS (necessário para o estilo) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     /* Estilos personalizados para o painel */
@@ -24,8 +25,10 @@
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
 
+<!-- Container Principal do Painel -->
 <div id="admin-panel" class="container mx-auto p-4 md:p-8 hidden">
 
+  <!-- HEADER e Botão de Logout -->
   <header class="flex justify-between items-center mb-6">
     <h1 class="text-3xl font-extrabold text-gray-900">Painel de Administração</h1>
     <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded shadow-md transition duration-200">
@@ -33,6 +36,7 @@
     </button>
   </header>
 
+  <!-- Navegação (abas) -->
   <nav class="mb-6 border-b border-gray-200">
     <ul class="flex -mb-px">
       <li class="mr-2">
@@ -41,12 +45,14 @@
       <li class="mr-2">
         <a href="#" onclick="showPanel('sales-audit-section')" id="nav-audit" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Auditoria de Vendas</a>
       </li>
+      <!-- NOVA ABA DE CONTROLE DE LICENÇAS -->
       <li class="mr-2">
         <a href="#" onclick="showPanel('license-control-section')" id="nav-license-control" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Controle de Licenças</a>
       </li>
     </ul>
   </nav>
 
+  <!-- SEÇÃO 1: VISÃO GERAL -->
   <section id="sales-overview-section" class="p-4 bg-white rounded-lg shadow-xl">
     <h2 class="text-2xl font-semibold mb-4 text-gray-800">Visão Geral das Vendas</h2>
     <div id="sales-overview-content" class="text-gray-600">
@@ -54,8 +60,10 @@
     </div>
   </section>
 
+  <!-- SEÇÃO 2: AUDITORIA DE VENDAS -->
   <section id="sales-audit-section" class="hidden p-4 bg-white rounded-lg shadow-xl">
     <h2 class="text-2xl font-semibold mb-4 text-gray-800">Auditoria de Vendas (Webhooks)</h2>
+    <!-- Botões de Filtro -->
     <div class="flex flex-wrap gap-2 mb-6 p-2 bg-gray-100 rounded-lg shadow-inner">
       <button onclick="fetchSalesAudit('all')" class="filter-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200" data-days="all">Todas</button>
       <button onclick="fetchSalesAudit('1')" class="filter-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200" data-days="1">Hoje</button>
@@ -66,12 +74,15 @@
     <div id="sales-audit-count" class="text-lg font-medium text-gray-700 mb-4"></div>
     <p class="text-center text-gray-500" id="audit-loading">Selecione um filtro para carregar os logs de auditoria.</p>
     <div id="sales-audit-list" class="space-y-6 mt-4">
+      <!-- Cards de Auditoria serão renderizados aqui -->
     </div>
   </section>
 
+  <!-- NOVA SEÇÃO 3: CONTROLE DE LICENÇAS -->
   <section id="license-control-section" class="hidden p-4 bg-white rounded-lg shadow-xl">
     <h2 class="text-2xl font-semibold mb-4 text-gray-800">Controle de Licenças</h2>
 
+    <!-- Filtros de Busca -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-100 rounded-lg">
       <div>
         <label for="license-filter" class="block text-sm font-medium text-gray-700">Filtrar por Status</label>
@@ -92,8 +103,15 @@
       </div>
     </div>
 
+    <!-- (NOVO) CONTADOR DE LICENÇAS -->
+    <div id="license-count-container" class="text-lg font-medium text-gray-700 my-4 hidden">
+      Total de licenças encontradas: <span id="license-count" class="font-bold text-blue-600">0</span>
+    </div>
+
+    <!-- Notificação de Ação -->
     <div id="license-action-notification" class="mt-4 text-center p-3 rounded-md hidden"></div>
 
+    <!-- Tabela de Resultados -->
     <div id="license-results-container" class="overflow-x-auto mt-6">
       <p id="license-loading" class="text-center text-gray-500 hidden">Buscando licenças...</p>
       <table class="min-w-full divide-y divide-gray-200">
@@ -108,6 +126,7 @@
         </tr>
         </thead>
         <tbody id="license-results-table" class="bg-white divide-y divide-gray-200">
+        <!-- Linhas serão inseridas aqui via JS -->
         </tbody>
       </table>
     </div>
@@ -116,7 +135,7 @@
 </div>
 
 <script>
-  const API_DOMAIN = 'https://gldbotserver.com';
+  const API_DOMAIN = 'http://localhost:4000'; //'https://gldbotserver.com';
   const TOKEN_KEY = 'adminJwt';
 
   // --- Funções de Autenticação e Navegação ---
@@ -169,7 +188,6 @@
       if (allButton) allButton.click();
     }
 
-    // (NOVO) Se for a aba de licença, faz uma busca inicial
     if (panelId === 'license-control-section') {
       const defaultFilter = document.querySelector('#license-control-section option[value="unlinked_active"]');
       if (defaultFilter) defaultFilter.selected = true;
@@ -219,7 +237,7 @@
               <h3 class="text-xl font-semibold mt-6 mb-2">Métodos de Pagamento</h3>
               <ul id="sales-methods" class="space-y-2">
                  ${data.salesByMethod.map(item => {
-          let methodName = item._id.toUpperCase();
+          let methodName = (item._id || 'N/A').toUpperCase();
           if (item._id === 'account_money') methodName = 'Dinheiro em Conta (MP)';
           if (item._id === 'pix') methodName = 'PIX';
           if (item._id === 'consumer_credits') methodName = 'Mercado Crédito';
@@ -270,7 +288,7 @@
       if (response.ok) {
         const sales = await response.json();
         renderSalesAudit(sales);
-        countDisplay.textContent = `Vendas encontradas: ${sales.length}`;
+        countDisplay.textContent = `Logs encontrados: ${sales.length}`; // Atualiza o contador de logs
       } else if (response.status === 401 || response.status === 403) {
         logout();
       } else {
@@ -329,7 +347,8 @@
                         ${getStatusText(log.status)}
                     </span>
                 </div>
-                </div>
+                <!-- ... (restante dos detalhes do card) ... -->
+            </div>
       `;
     }).join('');
   }
@@ -342,7 +361,6 @@
   function formatBRT(dateString) {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    // O 'America/Sao_Paulo' lida corretamente com o horário de verão, se aplicável.
     return date.toLocaleString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
       day: '2-digit',
@@ -364,9 +382,14 @@
     const tableBody = document.getElementById('license-results-table');
     const notification = document.getElementById('license-action-notification');
 
+    // (NOVO) Busca os elementos de contagem
+    const countContainer = document.getElementById('license-count-container');
+    const countSpan = document.getElementById('license-count');
+
     loading.classList.remove('hidden');
     tableBody.innerHTML = '';
     notification.classList.add('hidden'); // Esconde notificações antigas
+    countContainer.classList.add('hidden'); // Esconde contagem antiga
 
     try {
       const response = await fetch(`${API_DOMAIN}/admin/licenses/search`, {
@@ -384,8 +407,13 @@
 
       if (data.success) {
         renderLicenses(data.licenses);
+        // (NOVO) Atualiza a contagem
+        countSpan.textContent = data.licenses.length;
+        countContainer.classList.remove('hidden');
       } else {
         tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">${data.message}</td></tr>`;
+        countSpan.textContent = '0';
+        countContainer.classList.remove('hidden');
       }
     } catch (error) {
       console.error('Erro ao buscar licenças:', error);
