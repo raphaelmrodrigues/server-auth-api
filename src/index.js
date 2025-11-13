@@ -742,9 +742,13 @@ app.post('/admin/licenses/search', authenticateAdminToken, async (req, res) => {
         switch (filter) {
             case 'active':
                 query.expireDate = { $gt: currentDate };
+                // CORREÇÃO: Garante que está vinculada (playerid NÃO é "")
+                query.playerid = { $exists: true, $ne: "" };
                 break;
             case 'inactive':
                 query.expireDate = { $lte: currentDate };
+                // CORREÇÃO: Garante que está vinculada (playerid NÃO é "")
+                query.playerid = { $exists: true, $ne: "" };
                 break;
             case 'unlinked_active':
                 query.playerid = "";
@@ -762,7 +766,6 @@ app.post('/admin/licenses/search', authenticateAdminToken, async (req, res) => {
 
         // 2. Construir o filtro de busca (se houver)
         if (searchTerm && searchTerm.trim() !== '') {
-            // $or permite buscar em qualquer um dos campos
             query.$or = [
                 { licenseKey: searchTerm },
                 { playerid: searchTerm }
