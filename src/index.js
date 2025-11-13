@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+const jwt = require('jsonwebtoken');
 const express = require('express');
 const mongoose = require('mongoose');
 const bcrypt = require('bcrypt');
@@ -28,6 +29,7 @@ const mercadoPagoClient = new MercadoPagoConfig({
 const preferenceAPI = new Preference(mercadoPagoClient);
 const paymentAPI = new Payment(mercadoPagoClient);
 
+const JWT_SECRET = process.env.JWT_SECRET;
 const GLOBAL_EXPIRATION_DATE = process.env.GLOBAL_EXPIRATION_DATE;
 const GLOBAL_REFRESH_TOKEN = process.env.GLOBAL_REFRESH_TOKEN;
 const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
@@ -53,8 +55,26 @@ const License = mongoose.model('license', {
     payment_method: String,
     resetToken: String,
     resetTokenExpiration: Date,
+    isAdmin: Boolean,
+    transaction_amount: Number,
 })
 
+// Modelo para Auditoria de Webhooks e Logs
+const saleAuditSchema = new mongoose.Schema({
+    timestamp: { type: Date, default: Date.now, required: true },
+    paymentId: { type: String, required: true },
+    webhookType: { type: String },
+    webhookData: { type: Object }, // Dados brutos do Webhook (req.body)
+    paymentDetails: { type: Object }, // Detalhes completos da API do Mercado Pago
+    email: { type: String },
+    planCode: { type: String },
+    status: { type: String, enum: ['approved', 'pending', 'ignored', 'error', 'update'] },
+    // Liga a um documento da coleção License
+    licenseLink: { type: mongoose.Schema.Types.ObjectId, ref: 'license', default: null },
+    auditNotes: { type: String }
+});
+
+const SaleAudit = mongoose.model('SaleAudit', saleAuditSchema);
 
 app.post ('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
     const sig = request.headers['stripe-signature'];
@@ -138,8 +158,95 @@ app.post ('/webhook', express.raw({type: 'application/json'}), async (request, r
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Middleware para verificar o JWT
+function authenticateAdminToken(req, res, next) {
+    const authHeader = req.headers['authorization'];
+    const token = authHeader && authHeader.split(' ')[1]; // Espera o formato: Bearer TOKEN
+
+    if (token == null) {
+        return res.status(401).json({ success: false, message: 'Acesso negado. Token não fornecido.' });
+    }
+
+    jwt.verify(token, JWT_SECRET, (err, user) => {
+        if (err) {
+            // Token inválido, expirado ou alterado
+            return res.status(403).json({ success: false, message: 'Token inválido ou expirado.' });
+        }
+
+        // Verifica se o usuário autenticado tem permissão de administrador
+        if (!user.isAdmin) {
+            return res.status(403).json({ success: false, message: 'Permissão insuficiente.' });
+        }
+
+        req.user = user; // Adiciona os dados do usuário à requisição
+        next(); // Continua para a rota protegida
+    });
+}
+
+app.post('/admin/login', async (req, res) => {
+    const { user, password } = req.body;
+
+    if (!user || !password) {
+        return res.status(400).json({ success: false, message: 'Usuário e senha são obrigatórios.' });
+    }
+
+    try {
+        // Busca o usuário E verifica se ele tem a permissão isAdmin
+        // NOTE: Mesmo que user: ... retorne algo, se isAdmin for false, ele é filtrado aqui.
+        const adminUser = await License.findOne({ user, isAdmin: true });
+
+        if (!adminUser) {
+            // Se não encontrou o usuário OU o usuário não é admin
+            return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+        }
+
+        // VERIFICAÇÃO ESSENCIAL: Garante que o campo password existe antes de usar bcrypt
+        if (!adminUser.password) {
+            console.error(`Admin user ${user} found but has no password hash.`);
+            return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+        }
+
+
+        // Verifica a senha (o campo password do adminUser é o hash)
+        const passwordMatch = await bcrypt.compare(password, adminUser.password);
+
+        if (!passwordMatch) {
+            return res.status(401).json({ success: false, message: 'Credenciais inválidas.' });
+        }
+
+        // 1. Cria o payload do JWT
+        const jwtPayload = {
+            id: adminUser._id,
+            user: adminUser.user,
+            isAdmin: adminUser.isAdmin
+        };
+
+        // 2. Cria o JWT com um tempo de expiração
+        const token = jwt.sign(jwtPayload, JWT_SECRET, { expiresIn: '1h' });
+
+        return res.status(200).json({
+            success: true,
+            message: 'Login bem-sucedido!',
+            token: token // Retorna o JWT para o frontend
+        });
+
+    } catch (error) {
+        console.error('Erro no login de administrador:', error);
+        return res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
+    }
+});
+
 app.get('/home-gld', async (req, res) => {
     return res.sendFile(path.join(__dirname, 'welcome.html'));
+});
+
+app.get('/gld-admin-login', async (req, res) => {
+    return res.sendFile(path.join(__dirname, 'admin_login.html'));
+});
+
+// Altere sua rota existente /gld-admin para forçar a checagem de login
+app.get('/gld-admin', async (req, res) => {
+    return res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
 app.get('/licenses', async (req, res) => {
@@ -314,6 +421,15 @@ app.post('/mercadopago/checkout', async (req, res) => {
 app.post('/mercadopago/webhook', async (req, res) => {
     const { type, data } = req.body;
     console.log('req.body: ', req.body);
+    const paymentId = req.body.data?.id;
+
+    let auditLogData = {
+        paymentId: paymentId || 'unknown',
+        webhookType: type,
+        webhookData: req.body,
+        status: 'pending',
+        auditNotes: 'Processamento iniciado.'
+    };
 
     // Adiciona um atraso de 5 segundos antes de consultar o pagamento
     await new Promise((resolve) => setTimeout(resolve, 5000));
@@ -326,8 +442,10 @@ app.post('/mercadopago/webhook', async (req, res) => {
             // Consulta os detalhes do pagamento
             const payment = await paymentAPI.get({id: paymentId});
             console.log("Detalhes do pagamento: ", payment);
+            auditLogData.paymentDetails = payment;
 
             if (payment?.status === 'approved' || payment.date_approved !== null) {
+                auditLogData.status = 'approved';
 
                 if (payment.date_approved) {
                     const approvedDate = new Date(payment.date_approved);
@@ -335,6 +453,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
                     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
 
                     if (approvedDate < sevenDaysAgo) {
+                        auditLogData.status = 'ignored';
+                        auditLogData.auditNotes = 'Pagamento aprovado há mais de 7 dias. Ignorando notificação (provavelmente Liberação de Dinheiro).';
+                        await new SaleAudit(auditLogData).save();
                         console.warn(`Pagamento aprovado em ${approvedDate.toISOString()}, que é mais de 7 dias atrás. Ignorando notificação (provavelmente Liberação de Dinheiro).`);
                         return res.status(200).send();
                     }
@@ -342,6 +463,8 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
                 const email = payment.metadata.email;
                 const planCode = payment.metadata.plan_code;
+                auditLogData.email = email;
+                auditLogData.planCode = planCode;
 
                 const plans = {
                     '15DAYS': { duration: 15 },
@@ -352,6 +475,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 const selectedPlan = plans[planCode];
 
                 if (!selectedPlan) {
+                    auditLogData.status = 'error';
+                    auditLogData.auditNotes = `Plano inválido: ${planCode}. Licença não gerada.`;
+                    await new SaleAudit(auditLogData).save();
                     console.error('Plano inválido:', planCode);
                     return res.status(400).send();
                 }
@@ -359,6 +485,11 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 // Verifica se já existe uma licença para o payment_id
                 const existingLicense = await License.findOne({ payment_id: paymentId });
                 if (existingLicense) {
+                    auditLogData.status = 'ignored';
+                    auditLogData.licenseLink = existingLicense._id; // Liga à licença encontrada
+                    auditLogData.auditNotes = 'Licença já existe para este pagamento. Nenhuma ação realizada (Webhook duplicado).';
+                    // Salva o log e retorna
+                    await new SaleAudit(auditLogData).save();
                     console.log('Licença já existe para este pagamento. Nenhuma ação será realizada.');
                     return res.status(200).send();
                 }
@@ -367,6 +498,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 const licenseKey = uuidv4();
                 const description = payment.description;
                 const expireDate = new Date();
+                const transactionAmount = payment.transaction_amount; // Captura o valor da transação
                 expireDate.setDate(expireDate.getDate() + selectedPlan.duration);
                 let country;
                 const payment_method = payment.payment_method.id;
@@ -387,11 +519,15 @@ app.post('/mercadopago/webhook', async (req, res) => {
                     country: country,
                     payment_method: payment_method,
                     payment_id: paymentId,
+                    transaction_amount: transactionAmount,
                 });
 
                 await newLicense.save();
 
                 console.log('Pagamento aprovado, licença gerada:', licenseKey);
+                auditLogData.licenseLink = newLicense._id;
+                auditLogData.auditNotes = 'Pagamento aprovado e nova licença gerada com sucesso.';
+
 
                 // ---- CHAMAR A ROTA /sendMail PARA ENVIAR O E-MAIL ----
                 let customerName;
@@ -420,13 +556,21 @@ app.post('/mercadopago/webhook', async (req, res) => {
                     console.error('Erro ao chamar a rota /sendMail:', error);
                 }
             } else {
+                auditLogData.status = 'pending';
+                auditLogData.auditNotes = 'Pagamento em status PENDENTE ou com falha. Nenhuma licença gerada.';
                 console.warn('Pagamento não aprovado ou pendente.');
             }
         } catch (error) {
+            auditLogData.status = 'error';
+            auditLogData.auditNotes = `ERRO FATAL: ${error.message}.`;
             console.error('Erro ao consultar detalhes do pagamento:', error);
+            try { await new SaleAudit(auditLogData).save(); } catch(e) { console.error("Falha ao salvar log de erro:", e); }
         }
+    } else if (type !== 'payment') {
+        auditLogData.status = 'ignored';
+        auditLogData.auditNotes = `Tipo de webhook ignorado: ${type}.`;
     }
-
+    await new SaleAudit(auditLogData).save();
     res.status(200).send();
 });
 
@@ -509,6 +653,172 @@ app.post('/sendMail', async (req, res) => {
     // Chama a função de envio de e-mail
     await enviarEmail(customerName, itemDescription, licenseKey, expirationDate, email);
     res.send({ message: 'E-mail enviado com sucesso!' });
+});
+
+app.post('/admin/sales-overview', authenticateAdminToken, async (req, res) => {
+    try {
+        const currentDate = new Date();
+
+        // 1. Total de Licenças (Total de Vendas)
+        const totalLicenses = await License.countDocuments({ trial: false });
+
+        // 2. Licenças Ativas (Pagamento Aprovado E Não Expirado)
+        const activeLicenses = await License.countDocuments({
+            expireDate: { $gt: currentDate },
+            trial: false
+        });
+
+        // 3. Vendas por Método de Pagamento (Aggregation)
+        const salesByMethod = await License.aggregate([
+            { $match: { payment_method: { $ne: null }, trial: false } },
+            { $group: {
+                    _id: "$payment_method",
+                    count: { $sum: 1 },
+                    totalRevenue: { $sum: "$transaction_amount" } // Soma a receita total por método
+                }},
+            { $sort: { count: -1 } }
+        ]);
+
+        // 4. Receita total de vendas pagas
+        const totalRevenueResult = await License.aggregate([
+            { $match: { transaction_amount: { $exists: true, $ne: null }, trial: false } },
+            { $group: {
+                    _id: null,
+                    total: { $sum: "$transaction_amount" }
+                }}
+        ]);
+
+        const totalRevenue = totalRevenueResult.length > 0 ? totalRevenueResult[0].total.toFixed(2) : '0.00';
+
+        const totalPaidSales = await License.countDocuments({ trial: false, payment_method: { $ne: null } });
+
+        return res.json({
+            success: true,
+            totalLicenses,
+            activeLicenses,
+            totalPaidSales,
+            totalRevenue,
+            salesByMethod,
+        });
+
+    } catch (error) {
+        console.error('Erro ao buscar estatísticas de vendas:', error);
+        return res.status(500).json({ success: false, message: 'Erro interno ao buscar dados.' });
+    }
+});
+
+app.get('/admin/sales', authenticateAdminToken, async (req, res) => {
+    try {
+        const { days } = req.query; // '1', '7', '14', '30', ou 'all'
+        let dateFilter = {};
+
+        if (days && days !== 'all') {
+            const date = new Date();
+            date.setDate(date.getDate() - parseInt(days, 10));
+            dateFilter = { timestamp: { $gte: date } };
+        }
+
+        // Busca, ordena e popula o campo licenseLink com os dados completos da licença
+        const sales = await SaleAudit.find(dateFilter)
+            .sort({ timestamp: -1 })
+            .populate('licenseLink') // Popula os dados da licença
+            .limit(100);
+
+        res.json(sales);
+
+    } catch (error) {
+        console.error('Erro ao buscar logs de auditoria:', error);
+        res.status(500).json({ message: 'Erro interno ao buscar logs de auditoria.' });
+    }
+});
+
+app.post('/admin/licenses/search', authenticateAdminToken, async (req, res) => {
+    try {
+        const { filter, searchTerm } = req.body;
+        const currentDate = new Date();
+        let query = {};
+
+        // 1. Construir o filtro de status
+        switch (filter) {
+            case 'active':
+                query.expireDate = { $gt: currentDate };
+                break;
+            case 'inactive':
+                query.expireDate = { $lte: currentDate };
+                break;
+            case 'unlinked_active':
+                query.playerid = "";
+                query.expireDate = { $gt: currentDate };
+                break;
+            case 'unlinked_inactive':
+                query.playerid = "";
+                query.expireDate = { $lte: currentDate };
+                break;
+            case 'all':
+            default:
+                // Nenhum filtro de data ou vínculo
+                break;
+        }
+
+        // 2. Construir o filtro de busca (se houver)
+        if (searchTerm && searchTerm.trim() !== '') {
+            // $or permite buscar em qualquer um dos campos
+            query.$or = [
+                { licenseKey: searchTerm },
+                { playerid: searchTerm }
+            ];
+        }
+
+        // 3. Executar a busca
+        const licenses = await License.find(query)
+            .select('licenseKey playerid expireDate email trial') // Seleciona apenas os campos necessários
+            .sort({ expireDate: -1 })
+            .limit(200); // Limita a 200 resultados para performance
+
+        res.json({ success: true, licenses });
+
+    } catch (error) {
+        console.error('Erro ao buscar licenças:', error);
+        res.status(500).json({ success: false, message: 'Erro interno no servidor' });
+    }
+});
+
+/**
+ * Rota para desvincular um playerid de uma licença.
+ * Recebe um corpo { licenseKey }
+ */
+app.post('/admin/licenses/unlink', authenticateAdminToken, async (req, res) => {
+    try {
+        const { licenseKey } = req.body;
+
+        if (!licenseKey) {
+            return res.status(400).json({ success: false, message: 'licenseKey é obrigatória.' });
+        }
+
+        const license = await License.findOne({ licenseKey: licenseKey });
+
+        if (!license) {
+            return res.status(404).json({ success: false, message: 'Licença não encontrada.' });
+        }
+
+        if (!license.playerid || license.playerid === "") {
+            return res.status(400).json({ success: false, message: 'Esta licença já está sem vínculo.' });
+        }
+
+        const oldPlayerId = license.playerid;
+        license.playerid = ""; // Remove o vínculo
+
+        await license.save();
+
+        res.json({
+            success: true,
+            message: `Vínculo com o PlayerID ${oldPlayerId} removido com sucesso!`
+        });
+
+    } catch (error) {
+        console.error('Erro ao desvincular licença:', error);
+        res.status(500).json({ success: false, message: 'Erro interno no servidor' });
+    }
 });
 
 app.post('/country', (req, res) => {
@@ -1247,7 +1557,7 @@ app.delete("/:id", async(req, res) => {
 })
 
 app.listen(port, () => {
-    mongoose.connect('mongodb+srv://raphaelmarquesr:fgJJOroDLWXZGgzh@server-auth-api.lzk3i.mongodb.net/?retryWrites=true&w=majority&appName=server-auth-api')
+    mongoose.connect(process.env.MONGO_URI)
     mongoose.connection.on('error', err => {
         console.error('Erro na conexão com o MongoDB:', err);
     });

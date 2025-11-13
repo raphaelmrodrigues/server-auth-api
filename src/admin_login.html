@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLDbot - Login Admin</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Estilos básicos para centralizar o modal */
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f7fa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+  </style>
+</head>
+<body>
+
+<div id="login-container" class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
+  <h2 class="text-2xl font-bold mb-6 text-gray-800 text-center">Acesso Administrativo</h2>
+  <input type="text" id="admin-username" placeholder="Usuário" class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+  <input type="password" id="admin-password" placeholder="Senha" class="w-full p-3 mb-6 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500">
+  <button onclick="login()" id="login-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition duration-200">Entrar</button>
+  <p id="login-error" class="text-red-500 mt-4 text-center hidden">Erro de conexão ou credenciais.</p>
+</div>
+
+<script>
+  // NOTE: Este script DEVE ser alterado para usar o domínio correto (gldbotserver.com)
+  const API_DOMAIN = 'https://gldbotserver.com';
+  const TOKEN_KEY = 'adminJwt';
+
+  function isAuthenticated() {
+    return !!localStorage.getItem(TOKEN_KEY);
+  }
+
+  // Se o usuário já tiver o token, redireciona para o painel principal
+  if (isAuthenticated()) {
+    window.location.href = `${API_DOMAIN}/gld-admin`;
+  }
+
+  async function login() {
+    const username = document.getElementById('admin-username').value;
+    const password = document.getElementById('admin-password').value;
+    const errorDisplay = document.getElementById('login-error');
+    errorDisplay.classList.add('hidden');
+    document.getElementById('login-btn').disabled = true;
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user: username, password: password }) // Nota: usa 'user', não 'username'
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        localStorage.setItem(TOKEN_KEY, data.token);
+        // Redireciona para o painel após o sucesso
+        window.location.href = `${API_DOMAIN}/gld-admin`;
+      } else {
+        const errorData = await response.json();
+        errorDisplay.textContent = errorData.message || 'Credenciais inválidas.';
+        errorDisplay.classList.remove('hidden');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      errorDisplay.textContent = 'Erro de conexão com o servidor.';
+      errorDisplay.classList.remove('hidden');
+    } finally {
+      document.getElementById('login-btn').disabled = false;
+    }
+  }
+</script>
+
+</body>
+</html>

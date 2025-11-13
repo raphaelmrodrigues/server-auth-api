@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GLD Bot Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Estilos personalizados para o painel */
+    .card-status-approved { border-left: 8px solid #10B981; }
+    .card-status-pending { border-left: 8px solid #F59E0B; }
+    .card-status-error { border-left: 8px solid #EF4444; }
+    .card-status-ignored { border-left: 8px solid #6B7280; }
+    .filter-btn.active { background-color: #3B82F6; color: white; }
+
+    /* Estilo para tabela de licenças */
+    #license-results-container th, #license-results-container td {
+      padding: 12px 16px;
+    }
+    #license-results-container tr:nth-child(even) {
+      background-color: #f9fafb;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen font-sans">
+
+<div id="admin-panel" class="container mx-auto p-4 md:p-8 hidden">
+
+  <header class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-extrabold text-gray-900">Painel de Administração</h1>
+    <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded shadow-md transition duration-200">
+      Sair
+    </button>
+  </header>
+
+  <nav class="mb-6 border-b border-gray-200">
+    <ul class="flex -mb-px">
+      <li class="mr-2">
+        <a href="#" onclick="showPanel('sales-overview-section')" id="nav-overview" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Visão Geral</a>
+      </li>
+      <li class="mr-2">
+        <a href="#" onclick="showPanel('sales-audit-section')" id="nav-audit" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Auditoria de Vendas</a>
+      </li>
+      <li class="mr-2">
+        <a href="#" onclick="showPanel('license-control-section')" id="nav-license-control" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Controle de Licenças</a>
+      </li>
+    </ul>
+  </nav>
+
+  <section id="sales-overview-section" class="p-4 bg-white rounded-lg shadow-xl">
+    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Visão Geral das Vendas</h2>
+    <div id="sales-overview-content" class="text-gray-600">
+      <p>Carregando dados...</p>
+    </div>
+  </section>
+
+  <section id="sales-audit-section" class="hidden p-4 bg-white rounded-lg shadow-xl">
+    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Auditoria de Vendas (Webhooks)</h2>
+    <div class="flex flex-wrap gap-2 mb-6 p-2 bg-gray-100 rounded-lg shadow-inner">
+      <button onclick="fetchSalesAudit('all')" class="filter-btn bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded transition duration-200" data-days="all">Todas</button>
+      <button onclick="fetchSalesAudit('1')" class="filter-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200" data-days="1">Hoje</button>
+      <button onclick="fetchSalesAudit('7')" class="filter-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200" data-days="7">Últimos 7 dias</button>
+      <button onclick="fetchSalesAudit('14')" class="filter-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200" data-days="14">Últimos 14 dias</button>
+      <button onclick="fetchSalesAudit('30')" class="filter-btn bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded transition duration-200" data-days="30">Últimos 30 dias</button>
+    </div>
+    <div id="sales-audit-count" class="text-lg font-medium text-gray-700 mb-4"></div>
+    <p class="text-center text-gray-500" id="audit-loading">Selecione um filtro para carregar os logs de auditoria.</p>
+    <div id="sales-audit-list" class="space-y-6 mt-4">
+    </div>
+  </section>
+
+  <section id="license-control-section" class="hidden p-4 bg-white rounded-lg shadow-xl">
+    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Controle de Licenças</h2>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 p-4 bg-gray-100 rounded-lg">
+      <div>
+        <label for="license-filter" class="block text-sm font-medium text-gray-700">Filtrar por Status</label>
+        <select id="license-filter" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+          <option value="unlinked_active">Ativas (Sem Vínculo)</option>
+          <option value="active">Ativas (Vinculadas)</option>
+          <option value="inactive">Inativas (Vinculadas)</option>
+          <option value="unlinked_inactive">Inativas (Sem Vínculo)</option>
+          <option value="all">Todas as Licenças</option>
+        </select>
+      </div>
+      <div>
+        <label for="search-term" class="block text-sm font-medium text-gray-700">Buscar (License Key ou PlayerID)</label>
+        <input type="text" id="search-term" placeholder="Deixe em branco para buscar todos" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+      </div>
+      <div class="self-end">
+        <button onclick="searchLicenses()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded transition duration-200">Buscar</button>
+      </div>
+    </div>
+
+    <div id="license-action-notification" class="mt-4 text-center p-3 rounded-md hidden"></div>
+
+    <div id="license-results-container" class="overflow-x-auto mt-6">
+      <p id="license-loading" class="text-center text-gray-500 hidden">Buscando licenças...</p>
+      <table class="min-w-full divide-y divide-gray-200">
+        <thead class="bg-gray-50">
+        <tr>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">License Key</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PlayerID</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Expira em (BRT)</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Email</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Trial</th>
+          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ação</th>
+        </tr>
+        </thead>
+        <tbody id="license-results-table" class="bg-white divide-y divide-gray-200">
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const API_DOMAIN = 'https://gldbotserver.com';
+  const TOKEN_KEY = 'adminJwt';
+
+  // --- Funções de Autenticação e Navegação ---
+
+  function isAuthenticated() {
+    return !!localStorage.getItem(TOKEN_KEY);
+  }
+
+  function checkAuth() {
+    if (!isAuthenticated()) {
+      window.location.href = `${API_DOMAIN}/gld-admin-login`;
+    } else {
+      document.getElementById('admin-panel').classList.remove('hidden');
+    }
+  }
+
+  async function login() {
+    window.location.href = `${API_DOMAIN}/gld-admin-login`;
+  }
+
+  function logout() {
+    localStorage.removeItem(TOKEN_KEY);
+    window.location.href = `${API_DOMAIN}/gld-admin-login`;
+  }
+
+  function showPanel(panelId) {
+    document.querySelectorAll('#admin-panel section').forEach(section => {
+      section.classList.add('hidden');
+    });
+
+    const targetPanel = document.getElementById(panelId);
+    if (targetPanel) {
+      targetPanel.classList.remove('hidden');
+    }
+
+    document.querySelectorAll('nav a').forEach(nav => {
+      nav.classList.remove('border-blue-600', 'text-blue-600');
+      nav.classList.add('border-transparent', 'text-gray-500');
+    });
+
+    const navId = `nav-${panelId.replace('-section', '')}`;
+    const activeNav = document.getElementById(navId);
+
+    if (activeNav) {
+      activeNav.classList.add('border-blue-600', 'text-blue-600');
+    }
+
+    if (panelId === 'sales-audit-section') {
+      const allButton = document.querySelector('#sales-audit-section .filter-btn[data-days="all"]');
+      if (allButton) allButton.click();
+    }
+
+    // (NOVO) Se for a aba de licença, faz uma busca inicial
+    if (panelId === 'license-control-section') {
+      const defaultFilter = document.querySelector('#license-control-section option[value="unlinked_active"]');
+      if (defaultFilter) defaultFilter.selected = true;
+      searchLicenses();
+    }
+  }
+
+  // --- Funções de Dados (Visão Geral) ---
+  async function fetchSalesOverview() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const overviewContent = document.getElementById('sales-overview-content');
+    overviewContent.innerHTML = '<p class="text-center">Carregando...</p>';
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/sales-overview`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 401 || response.status === 403) {
+        logout();
+        return;
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        overviewContent.innerHTML = `
+              <div class="grid grid-cols-3 gap-4">
+                  <div class="bg-blue-100 p-4 rounded-lg">
+                      <h3 class="font-semibold text-blue-800">Total de Licenças</h3>
+                      <p class="text-3xl font-bold text-blue-600">${data.totalLicenses}</p>
+                  </div>
+                  <div class="bg-green-100 p-4 rounded-lg">
+                      <h3 class="font-semibold text-green-800">Ativas Agora</h3>
+                      <p class="text-3xl font-bold text-green-600">${data.activeLicenses}</p>
+                  </div>
+                  <div class="bg-yellow-100 p-4 rounded-lg">
+                      <h3 class="font-semibold text-yellow-800">Vendas Pagas</h3>
+                      <p class="text-3xl font-bold text-yellow-600">${data.totalPaidSales}</p>
+                  </div>
+              </div>
+              <p class="mt-4 text-gray-600 font-bold text-lg">Receita Total de Vendas: R$ ${data.totalRevenue || '0.00'}</p>
+              <h3 class="text-xl font-semibold mt-6 mb-2">Métodos de Pagamento</h3>
+              <ul id="sales-methods" class="space-y-2">
+                 ${data.salesByMethod.map(item => {
+          let methodName = item._id.toUpperCase();
+          if (item._id === 'account_money') methodName = 'Dinheiro em Conta (MP)';
+          if (item._id === 'pix') methodName = 'PIX';
+          if (item._id === 'consumer_credits') methodName = 'Mercado Crédito';
+          return `
+                    <li class="flex justify-between bg-gray-100 p-2 rounded-md text-sm">
+                        <span>${methodName}</span>
+                        <span>Vendas: ${item.count}</span>
+                    </li>
+                 `}).join('')}
+              </ul>
+          `;
+      } else {
+        overviewContent.innerHTML = `<p class="text-red-500">Erro: ${data.message}</p>`;
+      }
+
+    } catch (error) {
+      console.error('Erro ao buscar visão geral:', error);
+      overviewContent.innerHTML = '<p class="text-red-500">Erro ao carregar dados. Verifique a conexão e o console.</p>';
+    }
+  }
+
+  // --- Funções de Auditoria ---
+  async function fetchSalesAudit(days = 'all') {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const listContainer = document.getElementById('sales-audit-list');
+    const loadingIndicator = document.getElementById('audit-loading');
+    const countDisplay = document.getElementById('sales-audit-count');
+
+    document.querySelectorAll('#sales-audit-section .filter-btn').forEach(btn => {
+      btn.classList.remove('active', 'bg-blue-500', 'hover:bg-blue-600', 'text-white');
+      btn.classList.add('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800');
+    });
+    const activeButton = document.querySelector(`#sales-audit-section .filter-btn[data-days="${days}"]`);
+    if (activeButton) {
+      activeButton.classList.add('active', 'bg-blue-500', 'hover:bg-blue-600', 'text-white');
+      activeButton.classList.remove('bg-gray-200', 'hover:bg-gray-300', 'text-gray-800');
+    }
+
+    loadingIndicator.textContent = 'Carregando logs...';
+    listContainer.innerHTML = '';
+    countDisplay.textContent = '';
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/sales?days=${days}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.ok) {
+        const sales = await response.json();
+        renderSalesAudit(sales);
+        countDisplay.textContent = `Vendas encontradas: ${sales.length}`;
+      } else if (response.status === 401 || response.status === 403) {
+        logout();
+      } else {
+        listContainer.innerHTML = '<p class="text-red-500 text-center">Erro ao carregar auditoria. Tente novamente.</p>';
+      }
+    } catch (error) {
+      console.error('Erro ao buscar auditoria de vendas:', error);
+      listContainer.innerHTML = '<p class="text-red-500 text-center">Erro de conexão ao buscar auditoria.</p>';
+    } finally {
+      loadingIndicator.textContent = '';
+    }
+  }
+
+  function renderSalesAudit(sales) {
+    const listContainer = document.getElementById('sales-audit-list');
+    if (sales.length === 0) {
+      listContainer.innerHTML = '<p class="text-center text-gray-500">Nenhum log de auditoria encontrado.</p>';
+      return;
+    }
+    listContainer.innerHTML = sales.map(log => {
+      const statusClass = `card-status-${log.status}`;
+      const paymentDetails = log.paymentDetails || {};
+      const license = log.licenseLink || null;
+      const paymentAmount = paymentDetails.transaction_amount ? parseFloat(paymentDetails.transaction_amount).toFixed(2) : 'N/A';
+      const currency = paymentDetails.currency_id || 'BRL';
+
+      const getStatusText = (status) => {
+        switch(status) {
+          case 'approved': return 'APROVADO';
+          case 'pending': return 'PENDENTE';
+          case 'ignored': return 'IGNORADO';
+          case 'error': return 'ERRO FATAL';
+          default: return 'DESCONHECIDO';
+        }
+      };
+
+      const renderLicenseInfo = (lic) => {
+        if (!lic) return '<p class="text-sm text-red-500">Licença não gerada ou não encontrada.</p>';
+        return `
+            <div class="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
+                <p class="font-bold text-green-800">Licença Gerada:</p>
+                <p class="text-sm"><strong>Chave:</strong> <span class="break-all">${lic.licenseKey}</span></p>
+                <p class="text-sm"><strong>Expira em:</strong> ${new Date(lic.expireDate).toLocaleDateString('pt-BR')}</p>
+                <p class="text-sm"><strong>Plano:</strong> ${lic.plan}</p>
+                <p class="text-sm"><strong>Email:</strong> ${lic.email}</p>
+                <p class="text-sm"><strong>País:</strong> ${lic.country}</p>
+            </div>
+        `;
+      };
+
+      return `
+            <div class="bg-white p-6 rounded-xl shadow-lg transition duration-300 hover:shadow-xl ${statusClass}">
+                <div class="flex justify-between items-start mb-3 border-b pb-2">
+                    <h3 class="text-xl font-bold text-gray-800">Webhook ID: ${log.paymentId}</h3>
+                    <span class="px-3 py-1 text-sm font-semibold rounded-full text-white ${log.status === 'approved' ? 'bg-green-500' : log.status === 'pending' ? 'bg-yellow-500' : log.status === 'ignored' ? 'bg-gray-500' : 'bg-red-500'}">
+                        ${getStatusText(log.status)}
+                    </span>
+                </div>
+                </div>
+      `;
+    }).join('');
+  }
+
+  // --- NOVAS FUNÇÕES (CONTROLE DE LICENÇA) ---
+
+  /**
+   * Formata a data para o fuso horário de Brasília (UTC-3)
+   */
+  function formatBRT(dateString) {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    // O 'America/Sao_Paulo' lida corretamente com o horário de verão, se aplicável.
+    return date.toLocaleString('pt-BR', {
+      timeZone: 'America/Sao_Paulo',
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  }
+
+  /**
+   * Busca as licenças no backend com base nos filtros
+   */
+  async function searchLicenses() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const filter = document.getElementById('license-filter').value;
+    const searchTerm = document.getElementById('search-term').value;
+    const loading = document.getElementById('license-loading');
+    const tableBody = document.getElementById('license-results-table');
+    const notification = document.getElementById('license-action-notification');
+
+    loading.classList.remove('hidden');
+    tableBody.innerHTML = '';
+    notification.classList.add('hidden'); // Esconde notificações antigas
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/licenses/search`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ filter, searchTerm })
+      });
+
+      if (response.status === 401 || response.status === 403) return logout();
+
+      const data = await response.json();
+
+      if (data.success) {
+        renderLicenses(data.licenses);
+      } else {
+        tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">${data.message}</td></tr>`;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar licenças:', error);
+      tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">Erro de conexão.</td></tr>`;
+    } finally {
+      loading.classList.add('hidden');
+    }
+  }
+
+  /**
+   * Renderiza a tabela de licenças
+   */
+  function renderLicenses(licenses) {
+    const tableBody = document.getElementById('license-results-table');
+    if (licenses.length === 0) {
+      tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-gray-500">Nenhuma licença encontrada.</td></tr>`;
+      return;
+    }
+
+    tableBody.innerHTML = licenses.map(lic => {
+      const isLinked = lic.playerid && lic.playerid !== "";
+      const isTrial = lic.trial;
+      const isExpired = new Date(lic.expireDate) < new Date();
+
+      return `
+              <tr class="${isExpired ? 'bg-gray-100 text-gray-400' : 'bg-white'}">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${lic.licenseKey}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm ${isLinked ? 'text-gray-700' : 'text-gray-400 italic'}">
+                      ${isLinked ? lic.playerid : '(sem vínculo)'}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatBRT(lic.expireDate)}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${lic.email || 'N/A'}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      ${isTrial ? '<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs">Sim</span>' : '<span class="px-2 py-1 bg-green-200 text-green-800 rounded-full text-xs">Não</span>'}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                      ${isLinked ? `<button onclick="unlinkLicense('${lic.licenseKey}')" class="text-red-600 hover:text-red-900 font-medium">Desvincular</button>` : ''}
+                  </td>
+              </tr>
+          `;
+    }).join('');
+  }
+
+  /**
+   * Desvincula um playerid de uma licença
+   */
+  async function unlinkLicense(licenseKey) {
+    if (!confirm(`Tem certeza que deseja desvincular a licença ${licenseKey}? O playerID será removido.`)) {
+      return;
+    }
+
+    const token = localStorage.getItem(TOKEN_KEY);
+    const notification = document.getElementById('license-action-notification');
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/licenses/unlink`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ licenseKey })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        notification.textContent = data.message;
+        notification.className = 'mt-4 text-center p-3 rounded-md bg-green-100 text-green-800';
+      } else {
+        notification.textContent = data.message;
+        notification.className = 'mt-4 text-center p-3 rounded-md bg-red-100 text-red-800';
+      }
+      notification.classList.remove('hidden');
+
+      // Recarrega a busca atual para refletir a mudança
+      searchLicenses();
+
+    } catch (error) {
+      console.error('Erro ao desvincular:', error);
+      notification.textContent = 'Erro de conexão ao tentar desvincular.';
+      notification.className = 'mt-4 text-center p-3 rounded-md bg-red-100 text-red-800';
+      notification.classList.remove('hidden');
+    }
+  }
+
+  // --- INICIALIZAÇÃO CORRIGIDA ---
+  document.getElementById('logout-button').addEventListener('click', logout);
+
+  window.onload = function() {
+    checkAuth(); // Verifica se está logado
+
+    if (isAuthenticated()) {
+      showPanel('sales-overview-section');
+      fetchSalesOverview();
+    }
+  };
+</script>
+</body>
+</html>
