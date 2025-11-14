@@ -28,7 +28,7 @@
 </div>
 
 <script>
-  // NOTE: Este script DEVE ser alterado para usar o domínio correto (gldbotserver.com)
+
   const API_DOMAIN = 'https://gldbotserver.com';
   const TOKEN_KEY = 'adminJwt';
 
@@ -36,7 +36,6 @@
     return !!localStorage.getItem(TOKEN_KEY);
   }
 
-  // Se o usuário já tiver o token, redireciona para o painel principal
   if (isAuthenticated()) {
     window.location.href = `${API_DOMAIN}/gld-admin`;
   }
@@ -58,7 +57,7 @@
       if (response.ok) {
         const data = await response.json();
         localStorage.setItem(TOKEN_KEY, data.token);
-        // Redireciona para o painel após o sucesso
+
         window.location.href = `${API_DOMAIN}/gld-admin`;
       } else {
         const errorData = await response.json();

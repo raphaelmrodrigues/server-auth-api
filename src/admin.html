@@ -92,6 +92,10 @@
       </div>
     </div>
 
+    <div id="license-count-container" class="text-lg font-medium text-gray-700 my-4 hidden">
+      Total de licenças encontradas: <span id="license-count" class="font-bold text-blue-600">0</span>
+    </div>
+
     <div id="license-action-notification" class="mt-4 text-center p-3 rounded-md hidden"></div>
 
     <div id="license-results-container" class="overflow-x-auto mt-6">
@@ -169,7 +173,6 @@
       if (allButton) allButton.click();
     }
 
-    // (NOVO) Se for a aba de licença, faz uma busca inicial
     if (panelId === 'license-control-section') {
       const defaultFilter = document.querySelector('#license-control-section option[value="unlinked_active"]');
       if (defaultFilter) defaultFilter.selected = true;
@@ -219,7 +222,7 @@
               <h3 class="text-xl font-semibold mt-6 mb-2">Métodos de Pagamento</h3>
               <ul id="sales-methods" class="space-y-2">
                  ${data.salesByMethod.map(item => {
-          let methodName = item._id.toUpperCase();
+          let methodName = (item._id || 'N/A').toUpperCase();
           if (item._id === 'account_money') methodName = 'Dinheiro em Conta (MP)';
           if (item._id === 'pix') methodName = 'PIX';
           if (item._id === 'consumer_credits') methodName = 'Mercado Crédito';
@@ -242,6 +245,15 @@
   }
 
   // --- Funções de Auditoria ---
+
+  // (NOVA FUNÇÃO) Alterna a visibilidade dos detalhes JSON
+  function toggleAuditDetails(elementId) {
+    const detailsElement = document.getElementById(elementId);
+    if (detailsElement) {
+      detailsElement.classList.toggle('hidden');
+    }
+  }
+
   async function fetchSalesAudit(days = 'all') {
     const token = localStorage.getItem(TOKEN_KEY);
     const listContainer = document.getElementById('sales-audit-list');
@@ -270,7 +282,7 @@
       if (response.ok) {
         const sales = await response.json();
         renderSalesAudit(sales);
-        countDisplay.textContent = `Vendas encontradas: ${sales.length}`;
+        countDisplay.textContent = `Logs encontrados: ${sales.length}`;
       } else if (response.status === 401 || response.status === 403) {
         logout();
       } else {
@@ -284,18 +296,21 @@
     }
   }
 
+  // (FUNÇÃO ATUALIZADA) Renderiza o card completo da auditoria
   function renderSalesAudit(sales) {
     const listContainer = document.getElementById('sales-audit-list');
     if (sales.length === 0) {
       listContainer.innerHTML = '<p class="text-center text-gray-500">Nenhum log de auditoria encontrado.</p>';
       return;
     }
+
     listContainer.innerHTML = sales.map(log => {
       const statusClass = `card-status-${log.status}`;
       const paymentDetails = log.paymentDetails || {};
       const license = log.licenseLink || null;
       const paymentAmount = paymentDetails.transaction_amount ? parseFloat(paymentDetails.transaction_amount).toFixed(2) : 'N/A';
       const currency = paymentDetails.currency_id || 'BRL';
+      const uniqueDetailsId = 'details-' + log._id; // ID único para o container de detalhes
 
       const getStatusText = (status) => {
         switch(status) {
@@ -307,13 +322,14 @@
         }
       };
 
+      // (Re-adicionada) Função auxiliar para exibir dados da licença
       const renderLicenseInfo = (lic) => {
         if (!lic) return '<p class="text-sm text-red-500">Licença não gerada ou não encontrada.</p>';
         return `
             <div class="mt-3 p-3 bg-green-50 rounded-lg border border-green-200">
                 <p class="font-bold text-green-800">Licença Gerada:</p>
                 <p class="text-sm"><strong>Chave:</strong> <span class="break-all">${lic.licenseKey}</span></p>
-                <p class="text-sm"><strong>Expira em:</strong> ${new Date(lic.expireDate).toLocaleDateString('pt-BR')}</p>
+                <p class="text-sm"><strong>Expira em:</strong> ${formatBRT(lic.expireDate)}</p>
                 <p class="text-sm"><strong>Plano:</strong> ${lic.plan}</p>
                 <p class="text-sm"><strong>Email:</strong> ${lic.email}</p>
                 <p class="text-sm"><strong>País:</strong> ${lic.country}</p>
@@ -321,28 +337,61 @@
         `;
       };
 
+      // (CARD ATUALIZADO)
       return `
             <div class="bg-white p-6 rounded-xl shadow-lg transition duration-300 hover:shadow-xl ${statusClass}">
                 <div class="flex justify-between items-start mb-3 border-b pb-2">
-                    <h3 class="text-xl font-bold text-gray-800">Webhook ID: ${log.paymentId}</h3>
+                    <h3 class="text-xl font-bold text-gray-800 cursor-pointer hover:text-blue-600" onclick="toggleAuditDetails('${uniqueDetailsId}')">
+                        Webhook ID: ${log.paymentId}
+                        <span class="text-xs font-normal text-blue-500">(clique para expandir)</span>
+                    </h3>
                     <span class="px-3 py-1 text-sm font-semibold rounded-full text-white ${log.status === 'approved' ? 'bg-green-500' : log.status === 'pending' ? 'bg-yellow-500' : log.status === 'ignored' ? 'bg-gray-500' : 'bg-red-500'}">
                         ${getStatusText(log.status)}
                     </span>
                 </div>
+
+                <div class="grid md:grid-cols-2 gap-4 text-gray-700">
+                    <div>
+                        <p class="font-semibold mb-1">Detalhes do Webhook:</p>
+                        <p class="text-sm"><strong>Timestamp:</strong> ${formatBRT(log.timestamp)}</p>
+                        <p class="text-sm"><strong>Tipo:</strong> ${log.webhookType}</p>
+                        <p class="text-sm"><strong>Email Cliente:</strong> ${log.email || 'N/A'}</p>
+                        <p class="text-sm"><strong>Plano:</strong> ${log.planCode || 'N/A'}</p>
+                    </div>
+                    <div>
+                        <p class="font-semibold mb-1">Detalhes do Pagamento (MP):</p>
+                        <p class="text-sm"><strong>Valor:</strong> ${currency} ${paymentAmount}</p>
+                        <p class="text-sm"><strong>Método de Pagamento:</strong> ${paymentDetails.payment_method_id || 'N/A'}</p>
+                        <p class="text-sm"><strong>Status MP:</strong> ${paymentDetails.status || 'N/A'}</p>
+                        <p class="text-sm"><strong>Data Aprovação:</strong> ${paymentDetails.date_approved ? formatBRT(paymentDetails.date_approved) : 'N/A'}</p>
+                    </div>
                 </div>
+
+                <div class="mt-4 pt-4 border-t border-gray-100">
+                    <p class="font-semibold text-gray-800">Notas de Auditoria:</p>
+                    <p class="text-sm italic text-gray-600">${log.auditNotes}</p>
+                </div>
+
+                ${renderLicenseInfo(license)}
+
+                <div id="${uniqueDetailsId}" class="hidden mt-4 pt-4 border-t border-gray-200">
+                    <h4 class="font-semibold text-gray-800">Dados Brutos (Webhook Data)</h4>
+                    <pre class="bg-gray-100 p-3 rounded-lg mt-2 overflow-x-auto text-xs">${JSON.stringify(log.webhookData, null, 2)}</pre>
+
+                    <h4 class="font-semibold text-gray-800 mt-4">Dados Brutos (Payment Details)</h4>
+                    <pre class="bg-gray-100 p-3 rounded-lg mt-2 overflow-x-auto text-xs">${JSON.stringify(log.paymentDetails, null, 2)}</pre>
+                </div>
+            </div>
       `;
     }).join('');
   }
 
-  // --- NOVAS FUNÇÕES (CONTROLE DE LICENÇA) ---
 
-  /**
-   * Formata a data para o fuso horário de Brasília (UTC-3)
-   */
+  // --- Funções (Controle de Licença) ---
+
   function formatBRT(dateString) {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
-    // O 'America/Sao_Paulo' lida corretamente com o horário de verão, se aplicável.
     return date.toLocaleString('pt-BR', {
       timeZone: 'America/Sao_Paulo',
       day: '2-digit',
@@ -353,9 +402,6 @@
     });
   }
 
-  /**
-   * Busca as licenças no backend com base nos filtros
-   */
   async function searchLicenses() {
     const token = localStorage.getItem(TOKEN_KEY);
     const filter = document.getElementById('license-filter').value;
@@ -363,10 +409,13 @@
     const loading = document.getElementById('license-loading');
     const tableBody = document.getElementById('license-results-table');
     const notification = document.getElementById('license-action-notification');
+    const countContainer = document.getElementById('license-count-container');
+    const countSpan = document.getElementById('license-count');
 
     loading.classList.remove('hidden');
     tableBody.innerHTML = '';
-    notification.classList.add('hidden'); // Esconde notificações antigas
+    notification.classList.add('hidden');
+    countContainer.classList.add('hidden');
 
     try {
       const response = await fetch(`${API_DOMAIN}/admin/licenses/search`, {
@@ -384,8 +433,12 @@
 
       if (data.success) {
         renderLicenses(data.licenses);
+        countSpan.textContent = data.licenses.length;
+        countContainer.classList.remove('hidden');
       } else {
         tableBody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-red-500">${data.message}</td></tr>`;
+        countSpan.textContent = '0';
+        countContainer.classList.remove('hidden');
       }
     } catch (error) {
       console.error('Erro ao buscar licenças:', error);
@@ -395,9 +448,6 @@
     }
   }
 
-  /**
-   * Renderiza a tabela de licenças
-   */
   function renderLicenses(licenses) {
     const tableBody = document.getElementById('license-results-table');
     if (licenses.length === 0) {
@@ -429,9 +479,6 @@
     }).join('');
   }
 
-  /**
-   * Desvincula um playerid de uma licença
-   */
   async function unlinkLicense(licenseKey) {
     if (!confirm(`Tem certeza que deseja desvincular a licença ${licenseKey}? O playerID será removido.`)) {
       return;
@@ -461,7 +508,6 @@
       }
       notification.classList.remove('hidden');
 
-      // Recarrega a busca atual para refletir a mudança
       searchLicenses();
 
     } catch (error) {
@@ -472,11 +518,10 @@
     }
   }
 
-  // --- INICIALIZAÇÃO CORRIGIDA ---
   document.getElementById('logout-button').addEventListener('click', logout);
 
   window.onload = function() {
-    checkAuth(); // Verifica se está logado
+    checkAuth();
 
     if (isAuthenticated()) {
       showPanel('sales-overview-section');

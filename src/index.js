@@ -776,7 +776,7 @@ app.post('/admin/licenses/search', authenticateAdminToken, async (req, res) => {
         const licenses = await License.find(query)
             .select('licenseKey playerid expireDate email trial') // Seleciona apenas os campos necessários
             .sort({ expireDate: -1 })
-            .limit(200); // Limita a 200 resultados para performance
+            .limit(500); // Limita a 500 resultados para performance
 
         res.json({ success: true, licenses });
 
