@@ -1559,6 +1559,9 @@ app.delete("/:id", async(req, res) => {
     return res.send(license)
 })
 
+const { registerBotProxyRoutes } = require('./bot-proxy');
+registerBotProxyRoutes(app);
+
 app.listen(port, () => {
     mongoose.connect(process.env.MONGO_URI)
     mongoose.connection.on('error', err => {
