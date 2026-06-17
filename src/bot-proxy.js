@@ -21,9 +21,50 @@ const ASSET_MIME = {
     'char-item-bg.jpg': 'image/jpeg',
 };
 
-function registerBotProxyRoutes(app) {
+function registerBotProxyRoutes(app, deps = {}) {
+    const {
+        jwtSecret,
+        globalToken,
+        License,
+        verifyLicenseSession,
+        assertLicenseActive,
+    } = deps;
+
+    async function ensureLicensedSimulate(playerId, tkz_lcr, res) {
+        if (!jwtSecret || !License || !verifyLicenseSession || !assertLicenseActive) {
+            return true;
+        }
+        if (!playerId || !tkz_lcr) {
+            res.status(403).json({ error: 'Unauthorized' });
+            return false;
+        }
+        try {
+            if (String(tkz_lcr).indexOf('.') < 0) {
+                if (!globalToken || tkz_lcr !== globalToken) {
+                    res.status(403).json({ error: 'Unauthorized' });
+                    return false;
+                }
+            } else {
+                verifyLicenseSession(jwtSecret, tkz_lcr, playerId);
+            }
+            const licenseData = await assertLicenseActive(License, playerId);
+            if (!licenseData) {
+                res.status(403).json({ error: 'License expired' });
+                return false;
+            }
+            return true;
+        } catch (err) {
+            res.status(403).json({ error: 'Unauthorized' });
+            return false;
+        }
+    }
+
     app.post('/bot/simulate', async (req, res) => {
         try {
+            const { playerId, tkz_lcr } = req.body || {};
+            if (!await ensureLicensedSimulate(playerId, tkz_lcr, res)) {
+                return;
+            }
             const upstream = await fetch(FOCII_SIMU_URL, {
                 method: 'POST',
                 headers: {

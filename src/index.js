@@ -13,6 +13,16 @@ const multer = require('multer');
 const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);  // Usando a variável do .env
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const sgMail = require('@sendgrid/mail');
+const {
+    issueLicenseSession,
+    verifyLicenseSession,
+    assertLicenseActive,
+} = require('./license-session');
+const {
+    recordSessionOk,
+    recordSessionFail,
+    getDashboard,
+} = require('./bot-monitor');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const app = express();
@@ -36,6 +46,21 @@ const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
 const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
 const endpointSecret = process.env.ENDPOINT_SECRET;
 var globalAnnouncement = '';
+
+function formatLicenseStillValidMessage(licenseKey, expireDate) {
+    const expiry = new Date(expireDate);
+    const formattedExpiry = isNaN(expiry.getTime())
+        ? String(expireDate)
+        : expiry.toLocaleString('en-US', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+    return `License ${licenseKey} is still valid until ${formattedExpiry}.`;
+}
 
 
 const License = mongoose.model('license', {
@@ -249,6 +274,14 @@ app.get('/gld-admin', async (req, res) => {
     return res.sendFile(path.join(__dirname, 'admin.html'));
 });
 
+app.get('/privacy', async (req, res) => {
+    return res.sendFile(path.join(__dirname, 'privacy.html'));
+});
+
+app.get('/privacy-policy', (req, res) => {
+    res.redirect(301, '/privacy');
+});
+
 app.get('/licenses', async (req, res) => {
     const licenses = await License.find()
     return res.send(licenses)
@@ -347,21 +380,52 @@ app.post('/contact', upload, async (req, res) => {
     }
 });
 
-app.post('/announcement', async (req, res) => {
+app.post('/announcement', authenticateAdminToken, async (req, res) => {
     const { announcement } = req.body;
 
-    if (!announcement || typeof announcement !== 'string') {
+    if (announcement !== undefined && typeof announcement !== 'string') {
         return res.status(400).json({ success: false, message: 'Invalid announcement string' });
     }
 
-    globalAnnouncement = announcement;
+    globalAnnouncement = announcement || '';
 
-    return res.status(200).json({ success: true, message: 'Announcement saved successfully' });
+    return res.status(200).json({
+        success: true,
+        message: 'Announcement saved successfully',
+        announcement: globalAnnouncement,
+    });
 });
 
 
 app.get('/announcement', (req, res) => {
     return res.status(200).json({ success: true, announcement: globalAnnouncement });
+});
+
+app.get('/admin/announcement', authenticateAdminToken, (req, res) => {
+    return res.status(200).json({
+        success: true,
+        announcement: globalAnnouncement,
+        updatedAt: globalAnnouncement ? null : null,
+    });
+});
+
+app.post('/admin/announcement', authenticateAdminToken, async (req, res) => {
+    const { announcement } = req.body;
+    if (announcement !== undefined && typeof announcement !== 'string') {
+        return res.status(400).json({ success: false, message: 'Texto de anúncio inválido.' });
+    }
+    globalAnnouncement = announcement || '';
+    return res.json({
+        success: true,
+        message: globalAnnouncement
+            ? 'Anúncio publicado com sucesso.'
+            : 'Anúncio removido. Os usuários verão a mensagem padrão do bot.',
+        announcement: globalAnnouncement,
+    });
+});
+
+app.get('/admin/bot-monitor', authenticateAdminToken, (req, res) => {
+    return res.json({ success: true, ...getDashboard() });
 });
 
 app.post('/mercadopago/checkout', async (req, res) => {
@@ -1383,28 +1447,26 @@ app.post('/validate-key', async (req, res) => {
     const { idkps } = req.body;
 
     try {
-        const licenseData = await License.findOne({ playerid: idkps });
+        const licenseData = await assertLicenseActive(License, idkps);
 
         if (licenseData) {
-            const currentDate = new Date();
-
-            // Verifica se a data de expiração é maior que a data atual
-            if (currentDate <= new Date(licenseData.expireDate)) {
-                return res.json({
-                    valid: true,
-                    p: licenseData.expireDate,
-                    globalAnnouncement: String(globalAnnouncement),
-                    token: GLOBAL_TOKEN,
-                    expirationDate: GLOBAL_EXPIRATION_DATE,
-                    refreshToken: GLOBAL_REFRESH_TOKEN,}); // Retorna true se a licença for válida
-            } else {
-                return res.json({ valid: false, message: 'Expired license Key' }); // Retorna false se a licença expirou
-            }
-        } else {
-            return res.json({ valid: false, message: 'Invalid license Key or player without access' });
+            const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
+            recordSessionOk('validate-key', idkps);
+            return res.json({
+                valid: true,
+                p: session.p,
+                token: session.token,
+                qs: session.qs,
+                globalAnnouncement: String(globalAnnouncement),
+                expirationDate: GLOBAL_EXPIRATION_DATE,
+                refreshToken: GLOBAL_REFRESH_TOKEN,
+            });
         }
+        recordSessionFail('validate-key', idkps, 'invalid_or_expired');
+        return res.json({ valid: false, message: 'Invalid license Key or player without access' });
     } catch (error) {
         console.error("Erro ao buscar licença:", error);
+        recordSessionFail('validate-key', req.body?.idkps, 'server_error');
         res.status(500).json({ valid: false, message: 'Server error' });
     }
 });
@@ -1460,23 +1522,58 @@ app.post('/validate-license', async (req, res) => {
         if (licenseData) {
             const currentDate = new Date();
             if (currentDate <= new Date(licenseData.expireDate)) {
+                const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
+                recordSessionOk('validate-license', idkps);
                 return res.json({
                     valid: true,
-                    token: GLOBAL_TOKEN,
+                    token: session.token,
+                    qs: session.qs,
                     expirationDate: GLOBAL_EXPIRATION_DATE,
                     refreshToken: GLOBAL_REFRESH_TOKEN,
-                    p: licenseData.expireDate,
+                    p: session.p,
                     globalAnnouncement: String(globalAnnouncement)
                 });
             } else {
+                recordSessionFail('validate-license', idkps, 'expired');
                 return res.json({ valid: false, message: 'Expired license Key' });
             }
         } else {
+            recordSessionFail('validate-license', idkps, 'invalid');
             return res.json({ valid: false, message: 'Invalid license Key or player without access' });
         }
     } catch (error) {
         console.error('Erro na validação da licença:', error);
+        recordSessionFail('validate-license', req.body?.idkps, 'server_error');
         return res.status(500).json({ valid: false, message: 'Server error' });
+    }
+});
+
+app.post('/v-s', async (req, res) => {
+    const { idkps, tk } = req.body;
+    if (!idkps || !tk) {
+        recordSessionFail('v-s', idkps, 'missing_params');
+        return res.json({ ok: false });
+    }
+    try {
+        verifyLicenseSession(JWT_SECRET, tk, idkps);
+        const licenseData = await assertLicenseActive(License, idkps);
+        if (!licenseData) {
+            recordSessionFail('v-s', idkps, 'license_expired');
+            return res.json({ ok: false });
+        }
+        const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
+        recordSessionOk('v-s', idkps);
+        return res.json({
+            ok: true,
+            p: session.p,
+            token: session.token,
+            qs: session.qs,
+            globalAnnouncement: String(globalAnnouncement),
+        });
+    } catch (error) {
+        const reason = error.name === 'TokenExpiredError' ? 'jwt_expired' : 'jwt_invalid';
+        recordSessionFail('v-s', idkps, reason);
+        return res.json({ ok: false });
     }
 });
 
@@ -1535,7 +1632,10 @@ app.post('/get-trial', async (req, res) => {
 
             return res.json({ success: true, trialKey: newLicenseKey });
         } else {
-            return res.json({ success: false, message: 'License is still valid' });
+            return res.json({
+                success: false,
+                message: formatLicenseStillValidMessage(licenseData.licenseKey, licenseData.expireDate)
+            });
         }
     } catch (error) {
         console.error('Error handling /get-trial:', error);
@@ -1560,7 +1660,13 @@ app.delete("/:id", async(req, res) => {
 })
 
 const { registerBotProxyRoutes } = require('./bot-proxy');
-registerBotProxyRoutes(app);
+registerBotProxyRoutes(app, {
+    jwtSecret: JWT_SECRET,
+    globalToken: GLOBAL_TOKEN,
+    License,
+    verifyLicenseSession,
+    assertLicenseActive,
+});
 
 app.listen(port, () => {
     mongoose.connect(process.env.MONGO_URI)

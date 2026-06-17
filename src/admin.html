@@ -20,6 +20,55 @@
     #license-results-container tr:nth-child(even) {
       background-color: #f9fafb;
     }
+
+    .admin-card {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    }
+    .admin-card-header {
+      padding: 1rem 1.25rem;
+      border-bottom: 1px solid #f3f4f6;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+    .admin-card-body { padding: 1.25rem; }
+    .announcement-preview {
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #e2e8f0;
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+      min-height: 72px;
+      border: 1px solid #334155;
+    }
+    .announcement-preview-empty {
+      color: #94a3b8;
+      font-style: italic;
+    }
+    .monitor-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.2rem 0.65rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .monitor-pill.ok { background: #dcfce7; color: #166534; }
+    .monitor-pill.fail { background: #fee2e2; color: #991b1b; }
+    .monitor-pulse {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: #22c55e;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.9); }
+    }
+    #bot-monitor-events tr:hover { background: #f8fafc; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
@@ -44,13 +93,48 @@
       <li class="mr-2">
         <a href="#" onclick="showPanel('license-control-section')" id="nav-license-control" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Controle de Licenças</a>
       </li>
+      <li class="mr-2">
+        <a href="#" onclick="showPanel('bot-monitor-section')" id="nav-bot-monitor" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Monitoramento do Bot</a>
+      </li>
     </ul>
   </nav>
 
-  <section id="sales-overview-section" class="p-4 bg-white rounded-lg shadow-xl">
-    <h2 class="text-2xl font-semibold mb-4 text-gray-800">Visão Geral das Vendas</h2>
-    <div id="sales-overview-content" class="text-gray-600">
-      <p>Carregando dados...</p>
+  <section id="sales-overview-section" class="space-y-6">
+    <div class="p-4 md:p-6 bg-white rounded-lg shadow-xl">
+      <h2 class="text-2xl font-semibold mb-4 text-gray-800">Visão Geral das Vendas</h2>
+      <div id="sales-overview-content" class="text-gray-600">
+        <p>Carregando dados...</p>
+      </div>
+    </div>
+
+    <div class="admin-card shadow-xl">
+      <div class="admin-card-header">
+        <div>
+          <h2 class="text-xl font-semibold text-gray-800">Anúncio Global do Bot</h2>
+          <p class="text-sm text-gray-500 mt-1">Exibido na extensão para todos os usuários licenciados. Deixe vazio para usar a mensagem padrão.</p>
+        </div>
+        <span id="announcement-status-badge" class="monitor-pill ok hidden">Ativo</span>
+      </div>
+      <div class="admin-card-body space-y-4">
+        <div>
+          <label for="announcement-active-preview" class="block text-sm font-medium text-gray-700 mb-2">Anúncio ativo (preview)</label>
+          <div id="announcement-active-preview" class="announcement-preview announcement-preview-empty">Carregando anúncio...</div>
+        </div>
+        <div>
+          <label for="announcement-input" class="block text-sm font-medium text-gray-700 mb-2">Editar anúncio</label>
+          <textarea id="announcement-input" rows="4" maxlength="500" placeholder="Ex.: Manutenção programada domingo às 22h. O bot pode ficar instável por alguns minutos." class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800"></textarea>
+          <div class="flex justify-between mt-2 text-xs text-gray-500">
+            <span>Máx. 500 caracteres · suporta texto simples</span>
+            <span><span id="announcement-char-count">0</span>/500</span>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button onclick="saveAnnouncement()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg transition">Publicar anúncio</button>
+          <button onclick="clearAnnouncement()" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-2 px-5 rounded-lg transition">Limpar anúncio</button>
+          <button onclick="loadAnnouncement()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-5 rounded-lg transition">Recarregar</button>
+        </div>
+        <div id="announcement-notification" class="hidden text-sm rounded-lg px-4 py-3"></div>
+      </div>
     </div>
   </section>
 
@@ -117,11 +201,101 @@
     </div>
   </section>
 
+  <section id="bot-monitor-section" class="hidden space-y-6">
+    <div class="p-4 md:p-6 bg-white rounded-lg shadow-xl">
+      <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
+        <div>
+          <h2 class="text-2xl font-semibold text-gray-800">Monitoramento do Bot</h2>
+          <p class="text-sm text-gray-500 mt-1">Dados em tempo real com base nos heartbeats <code class="bg-gray-100 px-1 rounded">/v-s</code> e validações de licença. Sem impacto na performance da extensão.</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <span class="text-xs text-gray-500 flex items-center gap-2"><span class="monitor-pulse"></span> Auto-refresh 30s</span>
+          <button onclick="fetchBotMonitor()" class="bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold py-2 px-4 rounded-lg">Atualizar agora</button>
+        </div>
+      </div>
+
+      <div id="bot-monitor-stats" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <p class="text-gray-500 col-span-full">Carregando monitoramento...</p>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3 class="font-semibold text-gray-800">Players online (estimado)</h3>
+            <span id="bot-monitor-online-meta" class="text-xs text-gray-500"></span>
+          </div>
+          <div class="admin-card-body overflow-x-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+                <tr>
+                  <th class="px-3 py-2 text-left">Player ID</th>
+                  <th class="px-3 py-2 text-left">Último sinal</th>
+                  <th class="px-3 py-2 text-left">Origem</th>
+                </tr>
+              </thead>
+              <tbody id="bot-monitor-online-table" class="divide-y divide-gray-100">
+                <tr><td colspan="3" class="px-3 py-4 text-gray-500">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3 class="font-semibold text-gray-800">Estatísticas 24h (validação)</h3>
+          </div>
+          <div class="admin-card-body">
+            <ul id="bot-monitor-stats-list" class="space-y-2 text-sm text-gray-700">
+              <li class="text-gray-500">—</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-card mt-6">
+        <div class="admin-card-header">
+          <h3 class="font-semibold text-gray-800">Eventos recentes de validação</h3>
+          <select id="bot-monitor-event-filter" onchange="renderBotMonitorEvents()" class="text-sm border border-gray-300 rounded-md px-2 py-1">
+            <option value="all">Todos</option>
+            <option value="failure">Somente falhas</option>
+            <option value="success">Somente sucessos</option>
+          </select>
+        </div>
+        <div class="admin-card-body overflow-x-auto">
+          <table class="min-w-full text-sm" id="bot-monitor-events">
+            <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+              <tr>
+                <th class="px-3 py-2 text-left">Horário (BRT)</th>
+                <th class="px-3 py-2 text-left">Tipo</th>
+                <th class="px-3 py-2 text-left">Player ID</th>
+                <th class="px-3 py-2 text-left">Motivo</th>
+                <th class="px-3 py-2 text-left">Endpoint</th>
+              </tr>
+            </thead>
+            <tbody id="bot-monitor-events-table" class="divide-y divide-gray-100">
+              <tr><td colspan="5" class="px-3 py-4 text-gray-500">—</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <script>
   const API_DOMAIN = 'https://gldbotserver.com';
   const TOKEN_KEY = 'adminJwt';
+  let botMonitorData = null;
+  let botMonitorTimer = null;
+  let currentPanelId = 'sales-overview-section';
+
+  const NAV_MAP = {
+    'sales-overview-section': 'nav-overview',
+    'sales-audit-section': 'nav-audit',
+    'license-control-section': 'nav-license-control',
+    'bot-monitor-section': 'nav-bot-monitor',
+  };
 
   // --- Funções de Autenticação e Navegação ---
 
@@ -147,7 +321,13 @@
   }
 
   function showPanel(panelId) {
-    document.querySelectorAll('#admin-panel section').forEach(section => {
+    currentPanelId = panelId;
+    if (botMonitorTimer) {
+      clearInterval(botMonitorTimer);
+      botMonitorTimer = null;
+    }
+
+    document.querySelectorAll('#admin-panel > section').forEach(section => {
       section.classList.add('hidden');
     });
 
@@ -161,11 +341,10 @@
       nav.classList.add('border-transparent', 'text-gray-500');
     });
 
-    const navId = `nav-${panelId.replace('-section', '')}`;
-    const activeNav = document.getElementById(navId);
-
+    const activeNav = document.getElementById(NAV_MAP[panelId]);
     if (activeNav) {
       activeNav.classList.add('border-blue-600', 'text-blue-600');
+      activeNav.classList.remove('border-transparent', 'text-gray-500');
     }
 
     if (panelId === 'sales-audit-section') {
@@ -177,6 +356,16 @@
       const defaultFilter = document.querySelector('#license-control-section option[value="unlinked_active"]');
       if (defaultFilter) defaultFilter.selected = true;
       searchLicenses();
+    }
+
+    if (panelId === 'sales-overview-section') {
+      fetchSalesOverview();
+      loadAnnouncement();
+    }
+
+    if (panelId === 'bot-monitor-section') {
+      fetchBotMonitor();
+      botMonitorTimer = setInterval(fetchBotMonitor, 30000);
     }
   }
 
@@ -241,6 +430,248 @@
     } catch (error) {
       console.error('Erro ao buscar visão geral:', error);
       overviewContent.innerHTML = '<p class="text-red-500">Erro ao carregar dados. Verifique a conexão e o console.</p>';
+    }
+  }
+
+  // --- Anúncio Global ---
+
+  function escapeHtml(text) {
+    return String(text || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function updateAnnouncementPreview(text) {
+    const preview = document.getElementById('announcement-active-preview');
+    const badge = document.getElementById('announcement-status-badge');
+    const trimmed = (text || '').trim();
+
+    if (!preview) return;
+
+    if (trimmed) {
+      preview.classList.remove('announcement-preview-empty');
+      preview.innerHTML = `<span class="inline-block text-xs uppercase tracking-wide text-amber-300 mb-2">Aviso ativo</span><div>${escapeHtml(trimmed)}</div>`;
+      badge?.classList.remove('hidden');
+    } else {
+      preview.classList.add('announcement-preview-empty');
+      preview.textContent = 'Nenhum anúncio ativo. Os usuários verão a mensagem padrão do GladiusBot.';
+      badge?.classList.add('hidden');
+    }
+  }
+
+  function updateAnnouncementCharCount() {
+    const input = document.getElementById('announcement-input');
+    const counter = document.getElementById('announcement-char-count');
+    if (input && counter) counter.textContent = String(input.value.length);
+  }
+
+  function showAnnouncementNotification(message, isError) {
+    const el = document.getElementById('announcement-notification');
+    if (!el) return;
+    el.textContent = message;
+    el.className = isError
+      ? 'text-sm rounded-lg px-4 py-3 bg-red-50 text-red-700 border border-red-100'
+      : 'text-sm rounded-lg px-4 py-3 bg-green-50 text-green-700 border border-green-100';
+    el.classList.remove('hidden');
+  }
+
+  async function loadAnnouncement() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const input = document.getElementById('announcement-input');
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/announcement`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.status === 401 || response.status === 403) return logout();
+
+      const data = await response.json();
+      if (data.success) {
+        const text = data.announcement || '';
+        if (input) input.value = text;
+        updateAnnouncementPreview(text);
+        updateAnnouncementCharCount();
+      } else {
+        showAnnouncementNotification(data.message || 'Erro ao carregar anúncio.', true);
+      }
+    } catch (error) {
+      console.error('Erro ao carregar anúncio:', error);
+      showAnnouncementNotification('Erro de conexão ao carregar anúncio.', true);
+    }
+  }
+
+  async function saveAnnouncement() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const input = document.getElementById('announcement-input');
+    const text = input ? input.value : '';
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/announcement`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ announcement: text })
+      });
+
+      if (response.status === 401 || response.status === 403) return logout();
+
+      const data = await response.json();
+      if (data.success) {
+        updateAnnouncementPreview(data.announcement || '');
+        showAnnouncementNotification(data.message || 'Anúncio salvo.', false);
+      } else {
+        showAnnouncementNotification(data.message || 'Erro ao salvar anúncio.', true);
+      }
+    } catch (error) {
+      console.error('Erro ao salvar anúncio:', error);
+      showAnnouncementNotification('Erro de conexão ao salvar anúncio.', true);
+    }
+  }
+
+  async function clearAnnouncement() {
+    const input = document.getElementById('announcement-input');
+    if (input) input.value = '';
+    updateAnnouncementCharCount();
+    await saveAnnouncement();
+  }
+
+  // --- Monitoramento do Bot ---
+
+  function formatReasonLabel(reason) {
+    const map = {
+      ok: 'OK',
+      invalid_or_expired: 'Licença inválida/expirada',
+      expired: 'Licença expirada',
+      invalid: 'Licença inválida',
+      jwt_invalid: 'JWT inválido',
+      jwt_expired: 'Sessão JWT expirada',
+      license_expired: 'Licença expirada no DB',
+      missing_params: 'Parâmetros ausentes',
+      server_error: 'Erro no servidor',
+    };
+    return map[reason] || reason || '—';
+  }
+
+  function renderBotMonitorEvents() {
+    const tbody = document.getElementById('bot-monitor-events-table');
+    const filter = document.getElementById('bot-monitor-event-filter')?.value || 'all';
+    if (!tbody || !botMonitorData) return;
+
+    let events = botMonitorData.recentEvents || [];
+    if (filter !== 'all') events = events.filter(e => e.type === filter);
+
+    if (events.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-gray-500 text-center">Nenhum evento no período.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = events.map(ev => {
+      const isFail = ev.type === 'failure';
+      return `
+        <tr>
+          <td class="px-3 py-2 whitespace-nowrap">${formatBRT(ev.ts)}</td>
+          <td class="px-3 py-2"><span class="monitor-pill ${isFail ? 'fail' : 'ok'}">${isFail ? 'Falha' : 'Sucesso'}</span></td>
+          <td class="px-3 py-2 font-mono text-xs">${escapeHtml(ev.playerId || '—')}</td>
+          <td class="px-3 py-2">${escapeHtml(formatReasonLabel(ev.reason))}</td>
+          <td class="px-3 py-2"><code class="text-xs bg-gray-100 px-1 rounded">${escapeHtml(ev.source)}</code></td>
+        </tr>
+      `;
+    }).join('');
+  }
+
+  function renderBotMonitor(data) {
+    botMonitorData = data;
+    const statsEl = document.getElementById('bot-monitor-stats');
+    const onlineTable = document.getElementById('bot-monitor-online-table');
+    const statsList = document.getElementById('bot-monitor-stats-list');
+    const onlineMeta = document.getElementById('bot-monitor-online-meta');
+
+    if (statsEl) {
+      statsEl.innerHTML = `
+        <div class="bg-emerald-50 border border-emerald-100 p-4 rounded-xl">
+          <p class="text-sm font-medium text-emerald-800">Online agora</p>
+          <p class="text-3xl font-bold text-emerald-600">${data.onlineCount || 0}</p>
+          <p class="text-xs text-emerald-700 mt-1">Heartbeat nos últimos ${data.heartbeatTtlMinutes || 10} min</p>
+        </div>
+        <div class="bg-red-50 border border-red-100 p-4 rounded-xl">
+          <p class="text-sm font-medium text-red-800">Falhas (última hora)</p>
+          <p class="text-3xl font-bold text-red-600">${data.failuresLastHour || 0}</p>
+          <p class="text-xs text-red-700 mt-1">Tentativas inválidas / JWT / licença</p>
+        </div>
+        <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+          <p class="text-sm font-medium text-blue-800">Ativações (última hora)</p>
+          <p class="text-3xl font-bold text-blue-600">${data.successesLastHour || 0}</p>
+          <p class="text-xs text-blue-700 mt-1">validate-key / validate-license OK</p>
+        </div>
+        <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+          <p class="text-sm font-medium text-slate-800">Heartbeats 24h</p>
+          <p class="text-3xl font-bold text-slate-700">${data.stats24h?.['v-s:ok'] || 0}</p>
+          <p class="text-xs text-slate-600 mt-1">Sessões renovadas via /v-s</p>
+        </div>
+      `;
+    }
+
+    if (onlineMeta) {
+      onlineMeta.textContent = `Atualizado: ${formatBRT(data.serverTime)}`;
+    }
+
+    if (onlineTable) {
+      const players = data.onlinePlayers || [];
+      if (players.length === 0) {
+        onlineTable.innerHTML = '<tr><td colspan="3" class="px-3 py-4 text-gray-500 text-center">Nenhum player com sinal recente.</td></tr>';
+      } else {
+        onlineTable.innerHTML = players.map(p => `
+          <tr>
+            <td class="px-3 py-2 font-mono text-xs">${escapeHtml(p.playerId)}</td>
+            <td class="px-3 py-2">há ${p.agoSec}s <span class="text-gray-400">(${formatBRT(p.lastSeen)})</span></td>
+            <td class="px-3 py-2"><code class="text-xs bg-gray-100 px-1 rounded">${escapeHtml(p.source)}</code></td>
+          </tr>
+        `).join('');
+      }
+    }
+
+    if (statsList) {
+      const entries = Object.entries(data.stats24h || {});
+      if (entries.length === 0) {
+        statsList.innerHTML = '<li class="text-gray-500">Sem dados nas últimas 24h.</li>';
+      } else {
+        statsList.innerHTML = entries
+          .sort((a, b) => b[1] - a[1])
+          .map(([key, val]) => `<li class="flex justify-between bg-gray-50 px-3 py-2 rounded-md"><span>${escapeHtml(key)}</span><strong>${val}</strong></li>`)
+          .join('');
+      }
+    }
+
+    renderBotMonitorEvents();
+  }
+
+  async function fetchBotMonitor() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const statsEl = document.getElementById('bot-monitor-stats');
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/bot-monitor`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.status === 401 || response.status === 403) return logout();
+
+      const data = await response.json();
+      if (data.success) {
+        renderBotMonitor(data);
+      } else if (statsEl) {
+        statsEl.innerHTML = `<p class="text-red-500 col-span-full">${escapeHtml(data.message || 'Erro ao carregar monitoramento.')}</p>`;
+      }
+    } catch (error) {
+      console.error('Erro ao buscar monitoramento:', error);
+      if (statsEl) {
+        statsEl.innerHTML = '<p class="text-red-500 col-span-full">Erro de conexão ao carregar monitoramento.</p>';
+      }
     }
   }
 
@@ -519,13 +950,13 @@
   }
 
   document.getElementById('logout-button').addEventListener('click', logout);
+  document.getElementById('announcement-input')?.addEventListener('input', updateAnnouncementCharCount);
 
   window.onload = function() {
     checkAuth();
 
     if (isAuthenticated()) {
       showPanel('sales-overview-section');
-      fetchSalesOverview();
     }
   };
 </script>
