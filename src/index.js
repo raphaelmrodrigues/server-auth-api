@@ -644,7 +644,7 @@ app.post('/sendMail', async (req, res) => {
     console.log('Received Parameters:', { customerName, itemDescription, licenseKey, expirationDate, email });
 
     const enviarEmail = async (name, description, license, dateExpire, recipientEmail) => {
-        const imagePath = path.join(__dirname, 'images/gldicon.png');
+        const imagePath = path.join(__dirname, 'images/gladiusbot-icon-128.png');
         const imageData = fs.readFileSync(imagePath).toString('base64');
 
         function formatDate(date) {
@@ -672,7 +672,7 @@ app.post('/sendMail', async (req, res) => {
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; color: #333;">
                     <div style="text-align: center;">
-                        <img src="cid:gldicon" alt="GLDbot" style="width: 120px; margin-bottom: 20px;">
+                        <img src="cid:gladiusboticon" alt="GladiusBot" style="width: 120px; margin-bottom: 20px;">
                         <h2 style="color: #4CAF50;">Compra Realizada com Sucesso!</h2>
                     </div>
                     <p>Olá <strong style="font-size: 14px;">${name}</strong>,</p>
@@ -694,11 +694,11 @@ app.post('/sendMail', async (req, res) => {
             `,
             attachments: [
                 {
-                    filename: 'gldicon.png',
+                    filename: 'gladiusbot-icon-128.png',
                     content: imageData,
                     type: 'image/png',
                     disposition: 'inline',
-                    content_id: 'gldicon'
+                    content_id: 'gladiusboticon'
                 }
             ]
         };

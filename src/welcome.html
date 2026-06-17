@@ -1,794 +1,336 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Link para fonte medieval (Google Fonts) -->
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="./images/gldicon.png">
-    <title>GLDbot - Gladiatus Bot</title>
+    <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
+    <title>GladiusBot — Gladiatus Automation</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
-    <style>
-        /* Configurações gerais */
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            border: 5px solid black;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            font-family: Arial, sans-serif;
-            background-image: url(https://s3-static.geo.gfsrv.net/browsergamelobby/gladiatus/6.2.1-r1/media/main_BG.8de4dd1a.jpg);
-            background-size: cover;
-            background-position: center;
-            color: #fff;
-            position: relative;
-        }
-
-        .container {
-            animation: 2s ease-in-out 0s infinite normal none running breathing-light;
-            text-align: center;
-            background-color: rgba(0, 0, 0, 0.6);
-            padding: 2rem;
-            border-radius: 10px;
-            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
-            z-index: 1;
-            position: relative;
-        }
-
-        /* Título estilo romano */
-        .roman-title {
-            font-family: 'Times New Roman', serif;
-            font-size: 3rem;
-            color: #d4af37; /* Dourado */
-            font-weight: bold;
-            letter-spacing: 2px;
-            margin-bottom: 2rem;
-        }
-
-        /* Estilizando o select em dourado */
-        #country-select {
-            padding: 0.5rem;
-            font-size: 1rem;
-            width: 100%;
-            max-width: 300px;
-            color: #d4af37;
-            background-color: #333;
-            border: 2px solid #d4af37; /* Borda dourada */
-            border-radius: 5px;
-            text-align-last: center;
-            cursor: pointer;
-            appearance: none;
-            background-image: linear-gradient(45deg, transparent 50%, #d4af37 50%),
-            linear-gradient(135deg, #d4af37 50%, transparent 50%);
-            background-position: calc(100% - 15px) calc(1em), calc(100% - 10px) calc(1em);
-            background-size: 5px 5px, 5px 5px;
-            background-repeat: no-repeat;
-        }
-
-        /* Estilo do botão */
-        #submit-button {
-            padding: 0.5rem 1rem;
-            font-size: 1rem;
-            color: #d4af37;
-            background-color: #333;
-            border: 2px solid #d4af37;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-
-        .flag-icon {
-            margin-right: 8px;
-            font-size: 2rem;
-            vertical-align: middle;
-        }
-
-        /* Efeito de hover para o select */
-        #country-select:hover {
-            background-color: #444;
-            color: #d4af37; /* Texto dourado ao passar o mouse */
-        }
-        #country-select {
-            padding: 0.5rem;
-            font-size: 1rem;
-            width: 100%;
-            max-width: 300px;
-            color: #d4af37;
-            background-color: #333;
-            border: 2px solid #d4af37; /* Borda dourada */
-            border-radius: 5px;
-            text-align-last: center; /* Centraliza o texto do item selecionado */
-            cursor: pointer;
-            appearance: none;
-            background-image: linear-gradient(45deg, transparent 50%, #d4af37 50%),
-            linear-gradient(135deg, #d4af37 50%, transparent 50%);
-            background-position: calc(100% - 15px) calc(1em), calc(100% - 10px) calc(1em);
-            background-size: 5px 5px, 5px 5px;
-            background-repeat: no-repeat;
-            max-height: 200px;
-            overflow-y: auto; /* Adiciona a barra de rolagem vertical */
-            -webkit-appearance: none; /* Remove estilos padrão do navegador */
-            scrollbar-width: thin; /* Firefox */
-            scrollbar-color: #d4af37 #333; /* Cores para a barra de rolagem no Firefox */
-        }
-
-        /* Estilizando a barra de rolagem para navegadores WebKit (Chrome, Safari) */
-        #country-select::-webkit-scrollbar {
-            width: 10px;
-        }
-
-        #country-select::-webkit-scrollbar-track {
-            background-color: #333; /* Cor de fundo da área de rolagem */
-        }
-
-        #country-select::-webkit-scrollbar-thumb {
-            background-color: #d4af37; /* Cor da barra de rolagem */
-            border-radius: 10px;
-        }
-
-        /* Estilizando as opções do select */
-        #country-select option {
-            background-color: #333; /* Cor de fundo das opções */
-            color: #d4af37; /* Cor do texto das opções */
-            text-align: center; /* Centraliza o texto nas opções */
-        }
-
-        /* Garantindo que o select abra sempre para baixo */
-        #country-select {
-            position: relative;
-        }
-
-        #country-select option {
-            background-color: #333; /* Cor de fundo das opções */
-            color: #d4af37; /* Cor do texto das opções */
-        }
-
-        .sidebar {
-            position: absolute;
-            width: 223px;
-            top: 0;
-            left: 23px;
-            display: flex;
-            flex-direction: column;
-            background: url(//gf2.geo.gfsrv.net/cdn78/c22a8b33d6e837288acdf4ac202d85.jpg) 100%;
-            background-size: 100%;
-            padding: 1rem;
-            box-shadow: 0px 0px 15px rgba(0, 0, 0, 0.5);
-            z-index: 10;
-        }
-
-        .sidebar button {
-            margin: 10px 0;
-            padding: 0.5rem;
-            font-size: 1rem;
-            color: #d4af37;
-            background-color: #333;
-            border: 2px solid #d4af37;
-            border-radius: 5px;
-            cursor: pointer;
-            width: 100%;
-        }
-
-        .sidebar button:hover {
-            background-color: #444;
-        }
-
-
-        /* Título estilo romano */
-        .roman-title {
-            font-family: 'Times New Roman', serif;
-            font-size: 3rem;
-            color: #d4af37; /* Dourado */
-            font-weight: bold;
-            letter-spacing: 2px;
-            margin-bottom: 2rem;
-        }
-        div#sidebar_footer {
-            background-image: url(//gf2.geo.gfsrv.net/cdn47/aab533927a85bd855b890347492e65.gif);
-            width: 226px;
-            height: 52px;
-            position: absolute;
-            bottom: 915px;
-            left: 20px;
-            top: 264px;
-            z-index: 10;
-        }
-
-        #slideshow {
-            position: relative;
-            width: 1200px;
-            height: 600px;
-            top: 150px;
-            margin: 20px auto;
-            border: 4px solid #6b3e26;
-            background-color: #f0e1c3;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
-            font-family: 'Old English Text MT', serif;
-            font-size: 18px;
-            color: #55391e;
-        }
-
-        #slideshow::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            border: 5px solid #a37f4a;
-            pointer-events: none;
-        }
-
-        .slide {
-            display: none;
-            width: 100%;
-            height: 100%;
-            text-align: center;
-        }
-
-        .slide img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: sepia(40%) saturate(90%);
-            border-radius: 5px;
-        }
-
-        #slideshow .slide.active {
-            display: block;
-        }
-
-        /* Transições de imagem */
-        #slideshow .slide img {
-            transition: opacity 1s ease-in-out;
-        }
-
-        /* Ajustes para a lista de opções */
-        #country-select::-ms-expand {
-            display: none; /* Oculta o ícone padrão do select no IE */
-        }
-
-        @media (max-width: 1024px) {
-            body {
-                background-size: cover; /* Reduz a imagem para caber na tela */
-            }
-            #slideshow {
-                width: 700px;
-                height: 400px;
-            }
-            .frame {
-                width: 580px;
-                height: 320px;
-            }
-        }
-
-        @media (max-width: 768px) {
-            body {
-                background-size: cover; /* Reduz ainda mais para telas pequenas */
-            }
-            #slideshow {
-                width: 500px;
-                height: 300px;
-            }
-            .mobile {
-                width: 550px!important;
-                height: 650px!important;;
-            }
-            .roman-title {
-                font-size: 1.5rem;
-            }
-        }
-
-
-
-        @media (max-width: 480px) {
-            body {
-                background-size: cover; /* Ajuste para dispositivos móveis */
-            }
-            #slideshow {
-                width: 500px;
-                height: 300px;
-            }
-            .mobile {
-                width: 450px!important;
-                height: 550px!important;
-                top: 90px;
-            }
-            .frame {
-                width: 340px;
-                height: 200px;
-            }
-            #contact-section {
-                position: relative;
-                top: 300px;
-            }
-            .video-container {
-                position: relative;
-                top: 100px;
-            }
-        }
-        @keyframes breathing-light {
-            0%, 100% {
-                box-shadow: 0 0 11px 5px rgba(255, 255, 0, 0.7);
-            }
-            50% {
-                box-shadow: 0 0 11px 10px rgba(255, 255, 0, 0.5);
-            }
-        }
-        .breathing-light {
-            animation: breathing-light 2s ease-in-out infinite;
-        }
-
-    </style>
+    <link rel="stylesheet" href="site.css">
 </head>
-<body>
-<div class="sidebar">
-    <button id="back" style="display: none;">Back</button>
-    <button id="contactus" style="display: block;">Contact us</button>
-    <button id="tutorial" style="display: block">Tutorial</button>
-    <button id="download" style="display: block">Download Bot</button>
-    <button id="buyButton" style="display: block; animation: 2s ease-in-out 0s infinite normal none running breathing-light;">Buy</button>
-</div>
-<div id="sidebar_footer"></div>
+<body class="app">
 
-<div id="contact-section" style="display: none; max-width: 80%; margin: 20px auto; padding: 30px; border: 3px solid #8B4513; border-radius: 15px; font-family: 'Cinzel', serif; color: #fff;">
-    <h2 style="text-align: center; font-size: 2rem; color: #FFD700; text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.7);">Entre em Contato</h2>
-    <form id="contact-form" enctype="multipart/form-data">
-        <!-- Nome do usuário -->
-        <div style="margin-bottom: 20px;">
-            <label for="name" style="display: block; font-weight: bold; margin-bottom: 10px;">Nome:</label>
-            <input type="text" id="name" name="name" placeholder="Seu nome"
-                   style="width: 100%; padding: 15px; border: 2px solid #8B4513; border-radius: 8px; background: #F5DEB3; color: #333; font-size: 1rem;" required>
-        </div>
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <img class="sidebar-logo-full" src="./images/gladiusbot-logo.svg" alt="GladiusBot">
+        <span class="sidebar-version">v3.0.1</span>
+    </div>
+    <nav class="sidebar-nav">
+        <button type="button" id="back" style="display: none;"><i class="fas fa-arrow-left"></i> Back</button>
+        <button type="button" id="contactus"><i class="fas fa-envelope"></i> Contact us</button>
+        <button type="button" id="tutorial"><i class="fas fa-play-circle"></i> Tutorial</button>
+        <button type="button" id="download"><i class="fas fa-download"></i> Download Bot</button>
+        <button type="button" id="buyButton" class="is-accent"><i class="fas fa-shopping-cart"></i> Buy</button>
+    </nav>
+    <div class="sidebar-footer-links">
+        <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+    </div>
+</aside>
 
-        <!-- E-mail do usuário -->
-        <div style="margin-bottom: 20px;">
-            <label for="email" style="display: block; font-weight: bold; margin-bottom: 10px;">E-mail:</label>
-            <input type="email" id="email" name="email" placeholder="Seu e-mail"
-                   style="width: 100%; padding: 15px; border: 2px solid #8B4513; border-radius: 8px; background: #F5DEB3; color: #333; font-size: 1rem;" required>
-        </div>
+<main class="site-main">
 
-        <!-- Corpo da mensagem -->
-        <div style="margin-bottom: 20px;">
-            <label for="message" style="display: block; font-weight: bold; margin-bottom: 10px;">Mensagem:</label>
-            <textarea id="message" name="message" rows="6" placeholder="Escreva sua mensagem aqui..."
-                      style="width: 100%; padding: 15px; border: 2px solid #8B4513; border-radius: 8px; background: #F5DEB3; color: #333; font-size: 1rem;" required></textarea>
-        </div>
-
-        <!-- Flex container para alinhar o anexo e o botão -->
-        <div style="display: flex; justify-content: center; align-items: center; gap: 10px;">
-            <!-- Campo de anexo -->
-            <div style="display: flex; align-items: center;">
-                <label for="attachment" style="display: inline-block; margin-right: 10px; font-size: 1rem; color: #FFD700; cursor: pointer;">
-                    <i class="fas fa-paperclip"></i> <!-- Ícone de anexo -->
-                    Anexar Arquivo
-                    <div id="attachment-message" style="display: none; color: #FFD700; font-size: 1rem; margin-left: 10px;">
-                        <br>
-                        Item anexado!
-                    </div>
-                </label>
-                <input type="file" id="attachment" name="attachment" style="display: none; border: 2px solid #8B4513; border-radius: 8px; padding: 10px; background-color: #F5DEB3;" onchange="showAttachmentMessage()">
+    <section id="hero-view" class="site-view is-active">
+        <div class="hero-panel">
+            <div class="hero-copy">
+                <h1>Automation for <span>Gladiatus</span></h1>
+                <p>GladiusBot runs expeditions, arena, circus, smeltery and daily routines while you focus on strategy. Licensed, secure and built for serious players.</p>
+                <ul class="hero-features">
+                    <li>Expedition, dungeon, arena & circus automation</li>
+                    <li>Smeltery, market, heal & underworld tools</li>
+                    <li>1-day free trial · License saved in Extras tab</li>
+                </ul>
             </div>
-
-            <!-- Exibir a mensagem "Item anexado!" -->
-
-
-            <!-- Botão de envio -->
-            <button type="submit"
-                    style="background-color: #8B4513; color: #FFD700; padding: 15px 30px; border: 2px solid #FFD700; border-radius: 10px; font-size: 1.2rem; cursor: pointer; box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);">
-                Enviar
-            </button>
+            <div class="hero-visual hero-showcase" id="hero-showcase">
+                <img class="hero-showcase-img is-primary is-active" src="./images/gladius_bot_1.png" alt="GladiusBot interface preview">
+                <img class="hero-showcase-img is-secondary" src="./images/gladius_bot_2.png" alt="GladiusBot interface preview">
+            </div>
         </div>
-    </form>
-</div>
+    </section>
 
+    <section id="video" class="site-view video-panel">
+        <h2><i class="fas fa-play-circle"></i> Tutorial</h2>
+        <iframe class="frame" src="https://www.youtube.com/embed/vsWShm2GRo4"
+                title="GladiusBot tutorial"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowfullscreen></iframe>
+    </section>
 
-<div id="slideshow">
-    <div id="show1" class="slide">
-        <img src="./images/botshow1.jpeg" alt="Propaganda 1">
-    </div>
-    <div id="show2" class="slide">
-        <img src="./images/slideshow2.jpeg" alt="Propaganda 2">
-    </div>
-    <div id="show3" class="slide">
-        <img src="./images/slideshow3.jpeg" alt="Propaganda 3">
-    </div>
-    <div id="show4" class="slide">
-        <img src="./images/slideshow4.jpeg" alt="Propaganda 4">
-    </div>
-</div>
+    <section id="contact-section" class="site-view contact-panel">
+        <h2>Contact us</h2>
+        <form id="contact-form" enctype="multipart/form-data">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" placeholder="Your name" required>
+            </div>
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="your@email.com" required>
+            </div>
+            <div class="form-group">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="5" placeholder="How can we help?" required></textarea>
+            </div>
+            <div class="form-actions">
+                <label for="attachment" class="attach-label">
+                    <i class="fas fa-paperclip"></i> Attach file
+                    <span id="attachment-message"><br>File attached!</span>
+                </label>
+                <input type="file" id="attachment" name="attachment" style="display: none;" onchange="showAttachmentMessage()">
+                <button type="submit" class="btn-primary">Send message</button>
+            </div>
+        </form>
+    </section>
 
-<div id="video" class="video-container" style="display:none">
-    <iframe class="frame" width="980" height="720" src="https://www.youtube.com/embed/vsWShm2GRo4"
-            title="YouTube video player"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowfullscreen>
-    </iframe>
-</div>
+    <section id="container" class="site-view country-panel">
+        <h2>Select your country</h2>
+        <p class="subtitle">We will redirect you to the best payment option for your region.</p>
+        <div class="country-row">
+            <span id="selected-flag" class="fi fi-es flag-icon"></span>
+            <select id="country-select">
+                <option value="es" data-flag="es">Spain</option>
+                <option value="us" data-flag="us">United States</option>
+                <option value="br" data-flag="br">Brazil</option>
+                <option value="ca" data-flag="ca">Canada</option>
+                <option value="fr" data-flag="fr">France</option>
+                <option value="de" data-flag="de">Germany</option>
+                <option value="tr" data-flag="tr">Turkey</option>
+                <option value="jp" data-flag="jp">Japan</option>
+                <option value="in" data-flag="in">India</option>
+                <option value="cn" data-flag="cn">China</option>
+                <option value="it" data-flag="it">Italy</option>
+                <option value="gb" data-flag="gb">United Kingdom</option>
+                <option value="ru" data-flag="ru">Russia</option>
+                <option value="au" data-flag="au">Australia</option>
+                <option value="mx" data-flag="mx">Mexico</option>
+                <option value="kr" data-flag="kr">South Korea</option>
+                <option value="se" data-flag="se">Sweden</option>
+                <option value="no" data-flag="no">Norway</option>
+                <option value="nl" data-flag="nl">Netherlands</option>
+                <option value="ch" data-flag="ch">Switzerland</option>
+                <option value="pl" data-flag="pl">Poland</option>
+                <option value="gr" data-flag="gr">Greece</option>
+                <option value="be" data-flag="be">Belgium</option>
+                <option value="pt" data-flag="pt">Portugal</option>
+                <option value="cz" data-flag="cz">Czech Republic</option>
+                <option value="at" data-flag="at">Austria</option>
+                <option value="dk" data-flag="dk">Denmark</option>
+                <option value="fi" data-flag="fi">Finland</option>
+                <option value="ar" data-flag="ar">Argentina</option>
+                <option value="cl" data-flag="cl">Chile</option>
+                <option value="co" data-flag="co">Colombia</option>
+                <option value="ve" data-flag="ve">Venezuela</option>
+                <option value="pe" data-flag="pe">Peru</option>
+                <option value="uy" data-flag="uy">Uruguay</option>
+                <option value="ec" data-flag="ec">Ecuador</option>
+                <option value="sa" data-flag="sa">Saudi Arabia</option>
+                <option value="ae" data-flag="ae">United Arab Emirates</option>
+                <option value="kw" data-flag="kw">Kuwait</option>
+                <option value="qa" data-flag="qa">Qatar</option>
+                <option value="bh" data-flag="bh">Bahrain</option>
+                <option value="om" data-flag="om">Oman</option>
+                <option value="il" data-flag="il">Israel</option>
+                <option value="eg" data-flag="eg">Egypt</option>
+                <option value="ma" data-flag="ma">Morocco</option>
+                <option value="tn" data-flag="tn">Tunisia</option>
+                <option value="ke" data-flag="ke">Kenya</option>
+                <option value="ng" data-flag="ng">Nigeria</option>
+                <option value="za" data-flag="za">South Africa</option>
+                <option value="dz" data-flag="dz">Algeria</option>
+                <option value="pk" data-flag="pk">Pakistan</option>
+                <option value="bd" data-flag="bd">Bangladesh</option>
+                <option value="lk" data-flag="lk">Sri Lanka</option>
+                <option value="np" data-flag="np">Nepal</option>
+                <option value="mm" data-flag="mm">Myanmar</option>
+                <option value="kh" data-flag="kh">Cambodia</option>
+                <option value="vn" data-flag="vn">Vietnam</option>
+                <option value="th" data-flag="th">Thailand</option>
+                <option value="sg" data-flag="sg">Singapore</option>
+                <option value="my" data-flag="my">Malaysia</option>
+                <option value="ph" data-flag="ph">Philippines</option>
+                <option value="id" data-flag="id">Indonesia</option>
+                <option value="ro" data-flag="ro">Romania</option>
+                <option value="hu" data-flag="hu">Hungary</option>
+                <option value="bg" data-flag="bg">Bulgaria</option>
+                <option value="hr" data-flag="hr">Croatia</option>
+                <option value="rs" data-flag="rs">Serbia</option>
+                <option value="mk" data-flag="mk">North Macedonia</option>
+                <option value="ua" data-flag="ua">Ukraine</option>
+                <option value="sk" data-flag="sk">Slovakia</option>
+                <option value="lt" data-flag="lt">Lithuania</option>
+                <option value="ee" data-flag="ee">Estonia</option>
+                <option value="lv" data-flag="lv">Latvia</option>
+                <option value="by" data-flag="by">Belarus</option>
+                <option value="py" data-flag="py">Paraguay</option>
+                <option value="bo" data-flag="bo">Bolivia</option>
+                <option value="gy" data-flag="gy">Guyana</option>
+                <option value="sr" data-flag="sr">Suriname</option>
+                <option value="do" data-flag="do">Dominican Republic</option>
+                <option value="hn" data-flag="hn">Honduras</option>
+                <option value="ni" data-flag="ni">Nicaragua</option>
+                <option value="cr" data-flag="cr">Costa Rica</option>
+                <option value="sv" data-flag="sv">El Salvador</option>
+                <option value="gt" data-flag="gt">Guatemala</option>
+                <option value="bz" data-flag="bz">Belize</option>
+                <option value="pa" data-flag="pa">Panama</option>
+                <option value="jm" data-flag="jm">Jamaica</option>
+                <option value="tt" data-flag="tt">Trinidad and Tobago</option>
+            </select>
+            <button type="button" id="submit-button">GO</button>
+        </div>
+    </section>
 
-</div>
-
-<div id="container" class="container" style="display: none;">
-    <h1 class="roman-title">GLDbot - Gladiatus Bot</h1>
-    <h2 style="color:#d4af37;">Select your country</h2><br>
-    <div style="display: flex; align-items: center; justify-content: center;">
-        <span id="selected-flag" class="fi fi-es flag-icon"></span> <!-- Bandeira inicial -->
-        <select id="country-select">
-            <!-- Opções de países -->
-            <option value="es" data-flag="es">Spain</option>
-            <option value="us" data-flag="us">United States</option>
-            <option value="br" data-flag="br">Brazil</option>
-            <option value="ca" data-flag="ca">Canada</option>
-            <option value="fr" data-flag="fr">France</option>
-            <option value="de" data-flag="de">Germany</option>
-            <option value="tr" data-flag="tr">Turkey</option>
-            <option value="jp" data-flag="jp">Japan</option>
-            <option value="in" data-flag="in">India</option>
-            <option value="cn" data-flag="cn">China</option>
-            <option value="it" data-flag="it">Italy</option>
-            <option value="gb" data-flag="gb">United Kingdom</option>
-            <option value="ru" data-flag="ru">Russia</option>
-            <option value="au" data-flag="au">Australia</option>
-            <option value="mx" data-flag="mx">Mexico</option>
-            <option value="kr" data-flag="kr">South Korea</option>
-            <option value="se" data-flag="se">Sweden</option>
-            <option value="no" data-flag="no">Norway</option>
-            <option value="nl" data-flag="nl">Netherlands</option>
-            <option value="ch" data-flag="ch">Switzerland</option>
-            <option value="pl" data-flag="pl">Poland</option>
-            <option value="gr" data-flag="gr">Greece</option>
-            <option value="be" data-flag="be">Belgium</option>
-            <option value="pt" data-flag="pt">Portugal</option>
-            <option value="cz" data-flag="cz">Czech Republic</option>
-            <option value="at" data-flag="at">Austria</option>
-            <option value="dk" data-flag="dk">Denmark</option>
-            <option value="fi" data-flag="fi">Finland</option>
-            <option value="ar" data-flag="ar">Argentina</option>
-            <option value="cl" data-flag="cl">Chile</option>
-            <option value="co" data-flag="co">Colombia</option>
-            <option value="ve" data-flag="ve">Venezuela</option>
-            <option value="pe" data-flag="pe">Peru</option>
-            <option value="uy" data-flag="uy">Uruguay</option>
-            <option value="ec" data-flag="ec">Ecuador</option>
-            <option value="sa" data-flag="sa">Saudi Arabia</option>
-            <option value="ae" data-flag="ae">United Arab Emirates</option>
-            <option value="kw" data-flag="kw">Kuwait</option>
-            <option value="qa" data-flag="qa">Qatar</option>
-            <option value="bh" data-flag="bh">Bahrain</option>
-            <option value="om" data-flag="om">Oman</option>
-            <option value="il" data-flag="il">Israel</option>
-            <option value="eg" data-flag="eg">Egypt</option>
-            <option value="ma" data-flag="ma">Morocco</option>
-            <option value="tn" data-flag="tn">Tunisia</option>
-            <option value="ke" data-flag="ke">Kenya</option>
-            <option value="ng" data-flag="ng">Nigeria</option>
-            <option value="za" data-flag="za">South Africa</option>
-            <option value="dz" data-flag="dz">Algeria</option>
-            <option value="ke" data-flag="ke">Kenya</option>
-            <option value="pk" data-flag="pk">Pakistan</option>
-            <option value="bd" data-flag="bd">Bangladesh</option>
-            <option value="lk" data-flag="lk">Sri Lanka</option>
-            <option value="np" data-flag="np">Nepal</option>
-            <option value="mm" data-flag="mm">Myanmar</option>
-            <option value="kh" data-flag="kh">Cambodia</option>
-            <option value="vn" data-flag="vn">Vietnam</option>
-            <option value="th" data-flag="th">Thailand</option>
-            <option value="sg" data-flag="sg">Singapore</option>
-            <option value="my" data-flag="my">Malaysia</option>
-            <option value="ph" data-flag="ph">Philippines</option>
-            <option value="id" data-flag="id">Indonesia</option>
-            <option value="ro" data-flag="ro">Romania</option>
-            <option value="hu" data-flag="hu">Hungary</option>
-            <option value="bg" data-flag="bg">Bulgaria</option>
-            <option value="hr" data-flag="hr">Croatia</option>
-            <option value="rs" data-flag="rs">Serbia</option>
-            <option value="mk" data-flag="mk">North Macedonia</option>
-            <option value="ua" data-flag="ua">Ukraine</option>
-            <option value="pl" data-flag="pl">Poland</option>
-            <option value="cz" data-flag="cz">Czech Republic</option>
-            <option value="sk" data-flag="sk">Slovakia</option>
-            <option value="lt" data-flag="lt">Lithuania</option>
-            <option value="ee" data-flag="ee">Estonia</option>
-            <option value="lv" data-flag="lv">Latvia</option>
-            <option value="by" data-flag="by">Belarus</option>
-            <option value="it" data-flag="it">Italy</option>
-            <option value="es" data-flag="es">Spain</option>
-            <option value="fr" data-flag="fr">France</option>
-            <option value="de" data-flag="de">Germany</option>
-            <option value="ch" data-flag="ch">Switzerland</option>
-            <option value="se" data-flag="se">Sweden</option>
-            <option value="nl" data-flag="nl">Netherlands</option>
-            <option value="be" data-flag="be">Belgium</option>
-            <option value="pt" data-flag="pt">Portugal</option>
-            <option value="at" data-flag="at">Austria</option>
-            <option value="no" data-flag="no">Norway</option>
-            <option value="dk" data-flag="dk">Denmark</option>
-            <option value="fi" data-flag="fi">Finland</option>
-            <option value="ar" data-flag="ar">Argentina</option>
-            <option value="cl" data-flag="cl">Chile</option>
-            <option value="co" data-flag="co">Colombia</option>
-            <option value="pe" data-flag="pe">Peru</option>
-            <option value="ec" data-flag="ec">Ecuador</option>
-            <option value="py" data-flag="py">Paraguay</option>
-            <option value="bo" data-flag="bo">Bolivia</option>
-            <option value="uy" data-flag="uy">Uruguay</option>
-            <option value="gy" data-flag="gy">Guyana</option>
-            <option value="sr" data-flag="sr">Suriname</option>
-            <option value="ve" data-flag="ve">Venezuela</option>
-            <option value="do" data-flag="do">Dominican Republic</option>
-            <option value="hn" data-flag="hn">Honduras</option>
-            <option value="ni" data-flag="ni">Nicaragua</option>
-            <option value="cr" data-flag="cr">Costa Rica</option>
-            <option value="sv" data-flag="sv">El Salvador</option>
-            <option value="gt" data-flag="gt">Guatemala</option>
-            <option value="bz" data-flag="bz">Belize</option>
-            <option value="pa" data-flag="pa">Panama</option>
-            <option value="jm" data-flag="jm">Jamaica</option>
-            <option value="tt" data-flag="tt">Trinidad and Tobago</option>
-        </select>
-        <button id="submit-button">GO</button>
-    </div>
-</div>
+</main>
 
 <script>
-    function showAttachmentMessage() {
-        const message = document.getElementById('attachment-message');
-        message.style.display = 'inline';
+    const views = {
+        hero: document.getElementById('hero-view'),
+        video: document.getElementById('video'),
+        contact: document.getElementById('contact-section'),
+        country: document.getElementById('container')
+    };
+
+    (function initHeroShowcase() {
+        const imgs = document.querySelectorAll('.hero-showcase-img');
+        if (imgs.length < 2) return;
+        let idx = 0;
+        setInterval(function () {
+            imgs[idx].classList.remove('is-active');
+            idx = (idx + 1) % imgs.length;
+            imgs[idx].classList.add('is-active');
+        }, 5000);
+    })();
+
+    const btnBack = document.getElementById('back');
+    const btnContact = document.getElementById('contactus');
+    const btnTutorial = document.getElementById('tutorial');
+    const btnDownload = document.getElementById('download');
+    const btnBuy = document.getElementById('buyButton');
+
+    function showView(name) {
+        Object.values(views).forEach(v => v.classList.remove('is-active'));
+        if (views[name]) views[name].classList.add('is-active');
     }
 
-    // Download
-    document.getElementById("download").addEventListener("click", function () {
-        const link = document.createElement("a");
-        link.href = "./GLDbot.zip"; // Caminho do arquivo a ser baixado
-        link.download = "GLDbot.zip"; // Nome do arquivo ao ser baixado
+    function setSidebarHome() {
+        btnBack.style.display = 'none';
+        btnContact.style.display = 'block';
+        btnTutorial.style.display = 'block';
+        btnDownload.style.display = 'block';
+        btnBuy.style.display = 'block';
+    }
+
+    function setSidebarSub() {
+        btnBack.style.display = 'flex';
+    }
+
+    function showAttachmentMessage() {
+        document.getElementById('attachment-message').style.display = 'inline';
+    }
+
+    document.getElementById('download').addEventListener('click', function () {
+        const link = document.createElement('a');
+        link.href = './GLDbot.zip';
+        link.download = 'GLDbot.zip';
         link.click();
     });
 
-    // Alterna os slideshows
-    let currentSlide = 0;
-    const slides = document.querySelectorAll("#slideshow .slide");
-    const slideshowContainer = document.getElementById("slideshow");
-
-    function showSlide(index) {
-        slides.forEach((slide, i) => {
-            slide.classList.toggle("active", i === index);
-        });
-
-        // Adiciona o estilo à div "slideshow" se "show2" ou "show3" estiver ativo
-        if (slides[index].id === "show3" || slides[index].id === "show4") {
-            slideshowContainer.style.width = "550px";
-            slideshowContainer.style.height = "850px";
-            slideshowContainer.classList.add("mobile");
-        } else {
-            slideshowContainer.style.width = "";
-            slideshowContainer.style.height = "";
-            slideshowContainer.classList.remove("mobile");
-        }
-    }
-
-    function nextSlide() {
-        currentSlide = (currentSlide + 1) % slides.length;
-        showSlide(currentSlide);
-    }
-
-    setInterval(nextSlide, 3000); // Troca de imagem a cada 3 segundos
-
-    // Exibir a primeira imagem no carregamento
-    showSlide(currentSlide);
-
-    document.getElementById("tutorial").addEventListener("click", function() {
-        const carouselContainer = document.getElementById("slideshow");
-        const countriesContainer = document.getElementById("container");
-        const videoContainer = document.getElementById("video");
-        const contact = document.getElementById("contact-section");
-
-        // Alterna display dos containers
-        if (videoContainer.style.display === "none") {
-            videoContainer.style.display = "block";
-            countriesContainer.style.display = "none";
-            carouselContainer.style.display = "none";
-            contact.style.display = "none";
-            document.getElementById("back").style.display = "block";
-            document.getElementById("back").style.marginTop = "";
-            document.getElementById("back").style.marginBottom = "";
-            document.getElementById("download").style.display = "block";
-            document.getElementById("contactus").style.display = "block";
-            document.getElementById("tutorial").style.display = "none";
-            document.getElementById("buyButton").style.display = "block";
-        }
+    document.getElementById('tutorial').addEventListener('click', function () {
+        showView('video');
+        setSidebarSub();
+        btnTutorial.style.display = 'none';
     });
 
-    document.getElementById("back").addEventListener("click", function() {
-        const carouselContainer = document.getElementById("slideshow");
-        const countriesContainer = document.getElementById("container");
-        const videoContainer = document.getElementById("video");
-        const contact = document.getElementById("contact-section");
-
-        // Alterna display dos containers
-        if (countriesContainer.style.display === "block"||videoContainer.style.display === "block"||contact.style.display === "block") {
-            videoContainer.style.display = "none";
-            countriesContainer.style.display = "none";
-            carouselContainer.style.display = "block";
-            contact.style.display = "none";
-            document.getElementById("back").style.display = "none";
-            document.getElementById("sidebar_footer").style.top = "264px";
-            document.getElementById("download").style.display = "block";
-            document.getElementById("tutorial").style.display = "block";
-            document.getElementById("buyButton").style.display = "block";
-            document.getElementById("contactus").style.display = "block";
-        }
+    document.getElementById('back').addEventListener('click', function () {
+        showView('hero');
+        setSidebarHome();
     });
 
-    document.getElementById("contactus").addEventListener("click", function() {
-        const carouselContainer = document.getElementById("slideshow");
-        const countriesContainer = document.getElementById("container");
-        const videoContainer = document.getElementById("video");
-        const contact = document.getElementById("contact-section");
-
-        // Alterna display dos containers
-        if (countriesContainer.style.display === "block"||videoContainer.style.display === "block"||carouselContainer.style.display === "block"||contact.style.display === "none") {
-            videoContainer.style.display = "none";
-            countriesContainer.style.display = "none";
-            carouselContainer.style.display = "none";
-            contact.style.display = "block";
-            document.getElementById("back").style.marginTop = "";
-            document.getElementById("back").style.marginBottom = "";
-            document.getElementById("back").style.display = "block";
-            document.getElementById("download").style.display = "block";
-            document.getElementById("tutorial").style.display = "block";
-            document.getElementById("buyButton").style.display = "block";
-            document.getElementById("contactus").style.display = "none";
-        }
+    document.getElementById('contactus').addEventListener('click', function () {
+        showView('contact');
+        setSidebarSub();
+        btnContact.style.display = 'none';
     });
 
-    // Alterna os botões
-    document.getElementById("buyButton").addEventListener("click", function() {
-        const carouselContainer = document.getElementById("slideshow");
-        const countriesContainer = document.getElementById("container");
-        const videoContainer = document.getElementById("video");
-        const contact = document.getElementById("contact-section");
-
-        // Alterna display dos containers
-        if (countriesContainer.style.display === "none") {
-            countriesContainer.style.display = "block";
-            videoContainer.style.display = "none";
-            carouselContainer.style.display = "none";
-            contact.style.display = "none";
-            document.getElementById("back").style.display = "block";
-            document.getElementById("back").style.marginTop = "60px";
-            document.getElementById("back").style.marginBottom = "76px";
-            document.getElementById("sidebar_footer").style.top = "206px";
-            document.getElementById("download").style.display = "none";
-            document.getElementById("tutorial").style.display = "none";
-            document.getElementById("buyButton").style.display = "none";
-            document.getElementById("contactus").style.display = "none";
-        }
+    document.getElementById('buyButton').addEventListener('click', function () {
+        showView('country');
+        setSidebarSub();
+        btnDownload.style.display = 'none';
+        btnTutorial.style.display = 'none';
+        btnBuy.style.display = 'none';
+        btnContact.style.display = 'none';
     });
+
     const select = document.getElementById('country-select');
     const flagIcon = document.getElementById('selected-flag');
     const submitButton = document.getElementById('submit-button');
 
-    // Atualiza a bandeira ao selecionar um país
-    select.addEventListener('change', function() {
-        const selectedOption = select.options[select.selectedIndex];
-        const flagCode = selectedOption.getAttribute('data-flag');
-        flagIcon.className = `fi fi-${flagCode} flag-icon`;
+    select.addEventListener('change', function () {
+        const opt = select.options[select.selectedIndex];
+        flagIcon.className = 'fi fi-' + opt.getAttribute('data-flag') + ' flag-icon';
     });
 
-    // mostra os países
-    submitButton.addEventListener('click', async function() {
-        const selectedCountry = select.value;
-
+    submitButton.addEventListener('click', async function () {
         try {
             const response = await fetch('https://gldbotserver.com/country', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ country: selectedCountry })
+                body: JSON.stringify({ country: select.value })
             });
-
             if (response.ok) {
                 const data = await response.json();
-
                 if (data.redirectTo === 'checkout') {
                     window.location.href = 'checkout.html';
                 } else if (data.redirectTo === 'gumroad') {
                     window.location.href = 'https://sgldbot.gumroad.com/l/gladiatusbot';
                 }
             } else {
-                console.error('Erro ao enviar a requisição:', response.statusText);
+                console.error('Request error:', response.statusText);
             }
         } catch (error) {
-            console.error('Erro ao enviar a requisição:', error);
+            console.error('Request error:', error);
         }
     });
 
-    function showMedievalAlert(message, isSuccess) {
-        // Remove qualquer alerta anterior
-        const existingAlert = document.getElementById('medieval-alert');
-        if (existingAlert) existingAlert.remove();
+    function showSiteAlert(message, type) {
+        const existing = document.getElementById('site-alert');
+        if (existing) existing.remove();
 
-        // Cria o container do alerta
+        const isSuccess = type === true;
+        const isWaiting = type === 'waiting';
         const alertDiv = document.createElement('div');
-        alertDiv.id = 'medieval-alert';
-        alertDiv.style.position = 'fixed';
-        alertDiv.style.top = '10%';
-        alertDiv.style.left = '50%';
-        alertDiv.style.transform = 'translate(-50%, -50%)';
-        alertDiv.style.maxWidth = '400px';
-        alertDiv.style.width = '90%';
-        alertDiv.style.padding = '20px';
-        alertDiv.style.border = '3px solid #4d3e36';
-        alertDiv.style.backgroundColor = isSuccess ? '#e4dbc8' : '#f8d7da';
-        alertDiv.style.color = isSuccess ? '#2f4f2f' : '#842029';
-        alertDiv.style.fontFamily = `'MedievalSharp', cursive`;
-        alertDiv.style.fontSize = '18px';
-        alertDiv.style.borderRadius = '10px';
-        alertDiv.style.boxShadow = '0 4px 8px rgba(0, 0, 0, 0.3)';
-        alertDiv.style.textAlign = 'center';
-        alertDiv.style.zIndex = '1000';
-
-        // Adiciona o conteúdo ao alerta
-        alertDiv.innerHTML = `
-        <div style="margin-bottom: 10px;">
-            ${isSuccess === 'waiting' ? 'Aguarde...' : isSuccess ? 'Sucesso!' : 'Erro!'}
-        </div>
-        <p>${message}</p>
-        <button id="close-alert-btn" style="
-            margin-top: 10px;
-            padding: 10px 20px;
-            font-size: 16px;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            background-color: ${isSuccess ? '#6c757d' : '#d4a5a5'};
-            color: white;
-        ">Fechar</button>
-    `;
-
-        // Adiciona o alerta ao corpo do documento
+        alertDiv.id = 'site-alert';
+        alertDiv.className = 'site-alert ' + (isWaiting ? 'is-waiting' : isSuccess ? 'is-success' : 'is-error');
+        alertDiv.innerHTML =
+            '<div style="font-weight:600;margin-bottom:0.35rem;">' +
+            (isWaiting ? 'Please wait…' : isSuccess ? 'Success' : 'Error') +
+            '</div><p>' + message + '</p>' +
+            '<button type="button" id="close-alert-btn">Close</button>';
         document.body.appendChild(alertDiv);
-
-        // Fecha o alerta ao clicar no botão
-        document.getElementById('close-alert-btn').addEventListener('click', () => {
-            alertDiv.remove();
-        });
+        document.getElementById('close-alert-btn').addEventListener('click', () => alertDiv.remove());
     }
 
     document.getElementById('contact-form').addEventListener('submit', function (e) {
-        e.preventDefault(); // Impede o recarregamento da página
-
+        e.preventDefault();
         const formData = new FormData();
         formData.append('name', document.getElementById('name').value);
         formData.append('email', document.getElementById('email').value);
         formData.append('message', document.getElementById('message').value);
         const attachment = document.getElementById('attachment').files[0];
-        if (attachment) {
-            formData.append('attachment', attachment);
-        }
-        showMedievalAlert('Enviando a mensagem...', 'waiting');
+        if (attachment) formData.append('attachment', attachment);
 
-        fetch('https://gldbotserver.com/contact', {
-            method: 'POST',
-            body: formData // Use FormData para enviar o arquivo junto com os outros dados
-        })
-            .then(response => response.json())
+        showSiteAlert('Sending your message…', 'waiting');
+
+        fetch('https://gldbotserver.com/contact', { method: 'POST', body: formData })
+            .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    showMedievalAlert('Recebemos sua mensagem, aguarde a resposta via e-mail.', true);
+                    showSiteAlert('Message received. We will reply by email.', true);
                 } else {
-                    showMedievalAlert('Mensagem não enviada, tente novamente.', false);
+                    showSiteAlert('Could not send. Please try again.', false);
                 }
             })
-            .catch(error => {
-                showMedievalAlert('Erro ao enviar a mensagem: ' + error.message, false);
-            });
+            .catch(err => showSiteAlert('Error: ' + err.message, false));
     });
 </script>
 </body>
