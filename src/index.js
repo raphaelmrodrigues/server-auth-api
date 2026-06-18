@@ -23,6 +23,15 @@ const {
     recordSessionFail,
     getDashboard,
 } = require('./bot-monitor');
+const {
+    DEFAULT_SUBJECT,
+    buildBroadcastEmailHtml,
+    aggregateCustomerEmails,
+    sendBroadcastEmails,
+    isValidEmail,
+    normalizeEmail,
+    getCustomerEmailStats,
+} = require('./email-broadcast');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const app = express();
@@ -428,6 +437,88 @@ app.get('/admin/bot-monitor', authenticateAdminToken, (req, res) => {
     return res.json({ success: true, ...getDashboard() });
 });
 
+app.get('/admin/customer-emails', authenticateAdminToken, async (req, res) => {
+    try {
+        const filter = ['all', 'active', 'inactive'].includes(req.query.filter)
+            ? req.query.filter
+            : 'all';
+        const customers = await aggregateCustomerEmails(License, filter);
+        const counts = await getCustomerEmailStats(License);
+        return res.json({ success: true, filter, counts, customers });
+    } catch (error) {
+        console.error('Erro ao buscar e-mails de clientes:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao buscar e-mails de clientes.' });
+    }
+});
+
+app.post('/admin/broadcast-email', authenticateAdminToken, async (req, res) => {
+    try {
+        const { subject, message, mode, filter, recipients } = req.body;
+        const trimmedMessage = String(message || '').trim();
+
+        if (!trimmedMessage) {
+            return res.status(400).json({ success: false, message: 'A mensagem é obrigatória.' });
+        }
+        if (trimmedMessage.length > 8000) {
+            return res.status(400).json({ success: false, message: 'Mensagem muito longa (máx. 8000 caracteres).' });
+        }
+
+        let targetEmails = [];
+
+        if (mode === 'selected') {
+            if (!Array.isArray(recipients) || recipients.length === 0) {
+                return res.status(400).json({ success: false, message: 'Selecione ao menos um destinatário.' });
+            }
+            targetEmails = recipients.map(normalizeEmail).filter(isValidEmail);
+        } else {
+            const listFilter = ['all', 'active', 'inactive'].includes(filter) ? filter : 'all';
+            const customers = await aggregateCustomerEmails(License, listFilter);
+            targetEmails = customers.map((c) => c.email);
+        }
+
+        if (targetEmails.length === 0) {
+            return res.status(400).json({ success: false, message: 'Nenhum destinatário válido encontrado.' });
+        }
+
+        const html = buildBroadcastEmailHtml(trimmedMessage);
+        const result = await sendBroadcastEmails(
+            sgMail,
+            targetEmails,
+            String(subject || '').trim() || DEFAULT_SUBJECT,
+            html
+        );
+
+        if (result.sent === 0) {
+            return res.status(500).json({
+                success: false,
+                message: 'Falha ao enviar os e-mails.',
+                ...result,
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: `Campanha enviada: ${result.sent} de ${result.total} e-mail(s). Cada destinatário recebe individualmente (sem lista visível).`,
+            ...result,
+        });
+    } catch (error) {
+        console.error('Erro no broadcast de e-mail:', error);
+        return res.status(500).json({ success: false, message: 'Erro interno ao enviar campanha.' });
+    }
+});
+
+app.get('/admin/broadcast-email/preview', authenticateAdminToken, (req, res) => {
+    const message = String(req.query.message || '').trim();
+    if (!message) {
+        return res.status(400).json({ success: false, message: 'Informe uma mensagem para preview.' });
+    }
+    return res.json({
+        success: true,
+        subject: DEFAULT_SUBJECT,
+        html: buildBroadcastEmailHtml(message),
+    });
+});
+
 app.post('/mercadopago/checkout', async (req, res) => {
     const { plan_code, email } = req.body;
 
@@ -646,6 +737,7 @@ app.post('/sendMail', async (req, res) => {
     const enviarEmail = async (name, description, license, dateExpire, recipientEmail) => {
         const imagePath = path.join(__dirname, 'images/gladiusbot-icon-128.png');
         const imageData = fs.readFileSync(imagePath).toString('base64');
+        const planLabel = String(description || '').replace(/GLDbot/gi, 'GladiusBot');
 
         function formatDate(date) {
             const options = {
@@ -667,8 +759,8 @@ app.post('/sendMail', async (req, res) => {
             to: [recipientEmail, 'gldbotsuport@gmail.com'],
             from: 'support@gldbotserver.com',
             replyTo: 'gldbotsuport@gmail.com',
-            subject: 'Detalhes da sua compra - GLDbot',
-            text: 'GLDbot',
+            subject: 'Detalhes da sua compra - GladiusBot',
+            text: 'GladiusBot',
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; color: #333;">
                     <div style="text-align: center;">
@@ -679,16 +771,16 @@ app.post('/sendMail', async (req, res) => {
                     <p>Agradecemos por sua compra! Abaixo estão os detalhes da sua licença:</p>
                     <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); margin-bottom: 20px;">
                         <ul style="list-style-type: none; padding: 0;">
-                            <li><strong>📝 Plano:</strong> ${description}</li>
+                            <li><strong>📝 Plano:</strong> ${planLabel}</li>
                             <li><strong>📆 Data de Expiração:</strong> ${formattedDate}</li>
                             <li><strong>⚠️ Observação:</strong> Chave válida para uma única conta!</li>
                             <li><strong>🔑 Chave da Licença:</strong> ${license}</li>
                         </ul>
                     </div>
                     <p style="font-size: 0.9em; color: #555;">Por favor, guarde esta chave em segurança.</p>
-                    <p>Atenciosamente,<br>Equipe GLDbot</p>
+                    <p>Atenciosamente,<br>Equipe GladiusBot</p>
                     <footer style="text-align: center; margin-top: 20px; font-size: 0.8em; color: #999;">
-                        <p>&copy; ${new Date().getFullYear()} GLDbot. Todos os direitos reservados.</p>
+                        <p>&copy; ${new Date().getFullYear()} GladiusBot. Todos os direitos reservados.</p>
                     </footer>
                 </div>
             `,
@@ -957,16 +1049,16 @@ app.post('/teste', async (req, res) => {
     res.status(200).send('Webhook received');
 });
 
-app.get('/emails', async (req, res) => {
+app.get('/emails', authenticateAdminToken, async (req, res) => {
     try {
-        // Busca todos os emails únicos no banco de dados
-        const emails = await License.distinct('email');
-        if (!emails || emails.length === 0) {
+        const customers = await aggregateCustomerEmails(License, 'all');
+        const emails = customers.map((c) => c.email);
+        if (!emails.length) {
             return res.status(404).json({ success: false, message: 'Nenhum email encontrado.' });
         }
-        res.json({ success: true, emails });
+        return res.json({ success: true, emails });
     } catch (error) {
-        res.status(500).json({ success: false, message: 'Erro ao buscar emails', error: error.message });
+        return res.status(500).json({ success: false, message: 'Erro ao buscar emails', error: error.message });
     }
 });
 
