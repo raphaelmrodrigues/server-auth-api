@@ -1,164 +1,280 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
-    <title>GladiusBot - Shop</title>
-    <link rel="stylesheet" href="styles.css">
+    <link rel="apple-touch-icon" href="./images/gladiusbot-icon-128.png">
+    <title>GladiusBot — Shop</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
 <style>
-    /* Reset básico */
+    :root {
+        --gld-bg: #14100a;
+        --gld-panel: #f4e4c1;
+        --gld-wood: #5c3a1c;
+        --gld-wood-dark: #2a1a0e;
+        --gld-gold: #ffcc66;
+        --gld-accent: #ba9700;
+        --gld-border: #876e3e;
+        --gld-text: #3d2a1a;
+        --gld-text-muted: #6b4f32;
+        --gld-font: Tahoma, "Segoe UI", Arial, sans-serif;
+        --gld-font-display: Georgia, "Times New Roman", serif;
+    }
+
     * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
     }
 
-    /* Estilos do corpo */
     body {
-        font-family: 'Arial', sans-serif;
-        background-color: #f1f3f8;
+        font-family: var(--gld-font);
+        background:
+            radial-gradient(ellipse 70% 40% at 50% 0%, rgb(186 151 0 / 0.1), transparent 55%),
+            linear-gradient(180deg, #1a120a 0%, #0e0a06 100%);
+        min-height: 100vh;
+        color: var(--gld-text);
+        padding: 1.25rem 1rem 2rem;
+    }
+
+    .checkout-shell {
+        width: 100%;
+        max-width: 980px;
+        margin: 0 auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .checkout-top {
+        width: 100%;
+        margin-bottom: 0.85rem;
+    }
+
+    .checkout-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1.05rem;
+        font-size: 0.84rem;
+        font-weight: 600;
+        font-family: var(--gld-font-display);
+        letter-spacing: 0.03em;
+        color: #fff8cf;
+        text-decoration: none;
+        background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 100%);
+        border: 1px solid rgb(255 204 102 / 0.4);
+        border-radius: 4px;
+        box-shadow: 0 4px 14px rgb(0 0 0 / 0.3), inset 0 1px 0 rgb(255 255 255 / 0.1);
+        transition: background 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+    }
+
+    .checkout-back i {
+        font-size: 0.78rem;
+        color: var(--gld-gold);
+    }
+
+    .checkout-back:hover {
+        color: #fff;
+        border-color: var(--gld-gold);
+        background: linear-gradient(180deg, #6b4528 0%, #4a3020 100%);
+        box-shadow: 0 6px 18px rgb(0 0 0 / 0.35);
+    }
+
+    .checkout-back:active { transform: scale(0.98); }
+
+    .checkout-header {
+        text-align: center;
+        padding: 0.85rem 1.15rem 0.65rem;
+        margin-bottom: 0;
+        background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 55%, #2a1a0e 100%);
+        border: 2px solid var(--gld-border);
+        border-radius: 4px;
+        box-shadow: 0 8px 24px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.1);
+        color: #f4e4c1;
+        width: 100%;
+        flex-shrink: 0;
+    }
+
+    .checkout-brand {
         display: flex;
         flex-direction: column;
         align-items: center;
-        padding: 2rem;
-        color: #2d3748;
+        gap: 0.4rem;
+        margin-bottom: 0.45rem;
     }
 
-    /* Estilo do cabeçalho */
-    header {
-        text-align: center;
-        margin-bottom: 3rem;
-        padding: 1.5rem;
-        background: linear-gradient(135deg, #2d3748, #4a5568);
-        border-radius: 12px;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-        color: #f0f4f8;
-        max-width: 800px;
-        width: 100%;
+    .checkout-brand img.checkout-mark {
+        width: 48px;
+        height: 48px;
+        filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.45));
     }
 
-    header h1 {
-        font-size: 2.4rem;
-        color: #ffffff;
-        margin-bottom: 0.3rem;
-        font-weight: bold;
-        text-shadow: 1px 1px 6px rgba(0, 0, 0, 0.3);
+    .checkout-header h1 {
+        margin: 0;
+        font-family: var(--gld-font-display);
+        font-size: 1.3rem;
+        color: var(--gld-gold);
+        font-weight: 700;
+        text-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+        letter-spacing: 0.05em;
     }
 
-    header p {
-        color: #d4d7dd;
-        font-size: 1rem;
-        margin-top: 0.5rem;
-    }
-
-    /* Estilo da tabela de preços */
-    .pricing-table {
+    .checkout-trust {
         display: flex;
-        gap: 1.5rem;
+        align-items: center;
         justify-content: center;
         flex-wrap: wrap;
+        gap: 0.85rem;
+        margin-top: 0.35rem;
+        padding: 0.45rem 0.35rem 0;
+        border-top: 1px solid rgb(255 204 102 / 0.18);
     }
 
-    /* Estilo dos planos */
-    .plan {
-        background-color: #ffffff;
-        padding: 2rem;
-        width: 280px;
-        border-radius: 12px;
-        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-        text-align: center;
-        transition: all 0.3s ease-in-out;
+    .checkout-trust img {
+        width: clamp(56px, 8.5%, 84px);
+        height: auto;
+        opacity: 0.92;
+    }
+
+    .checkout-trust img.trust-stripe-wide {
+        width: clamp(118px, 21%, 195px);
+        height: auto;
+    }
+
+    .pricing-table {
+        display: flex;
+        gap: 1.25rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        width: 100%;
         position: relative;
-        border: 1px solid transparent;
+        z-index: 1;
+        margin-top: 3.5rem;
+        padding-top: 0;
+    }
+
+    .plan {
+        background: linear-gradient(180deg, #f4e4c1 0%, #ebe0c4 100%);
+        padding: 1.75rem 1.5rem 1.5rem;
+        width: 280px;
+        border-radius: 4px;
+        box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);
+        text-align: center;
+        transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+        position: relative;
+        border: 2px solid var(--gld-border);
     }
 
     .plan:hover {
-        transform: scale(1.04);
-        border-color: #3182ce;
+        transform: translateY(-4px);
+        border-color: var(--gld-gold);
+        box-shadow: 0 14px 36px rgb(0 0 0 / 0.4);
     }
 
     .plan.featured {
-        border: 2px solid #3182ce;
-        background-color: #f0f8ff;
-    }
-
-    .plan.featured:hover {
-        background-color: #e1effe;
+        border-color: var(--gld-gold);
+        background: linear-gradient(180deg, #fff8cf 0%, #f4e4c1 100%);
     }
 
     .plan .badge {
         position: absolute;
-        top: -15px;
+        top: -13px;
         left: 50%;
         transform: translateX(-50%);
-        background-color: #3182ce;
-        color: #ffffff;
-        padding: 0.4rem 1rem;
-        font-size: 0.85rem;
-        border-radius: 12px;
-        font-weight: bold;
+        background: linear-gradient(180deg, #ffcc66, #ba9700);
+        color: #1a1008;
+        padding: 0.35rem 0.9rem;
+        font-size: 0.75rem;
+        border-radius: 3px;
+        font-weight: 700;
+        font-family: var(--gld-font-display);
+        letter-spacing: 0.06em;
+        border: 1px solid #d4a742;
+        white-space: nowrap;
     }
 
     .plan h2 {
-        font-size: 1.5rem;
-        color: #2d3748;
-        margin-bottom: 0.5rem;
+        font-family: var(--gld-font-display);
+        font-size: 1.25rem;
+        color: var(--gld-text);
+        margin-bottom: 0.45rem;
     }
 
     .plan .price {
+        font-family: var(--gld-font-display);
         font-size: 2rem;
-        color: #3182ce;
-        margin-bottom: 1.2rem;
-        font-weight: bold;
+        color: var(--gld-accent);
+        margin-bottom: 1rem;
+        font-weight: 700;
     }
 
-    .plan ul {
-        list-style-type: none;
-        margin-bottom: 1.5rem;
-        padding: 0;
+    .plan-notice {
+        margin-bottom: 1.15rem;
+        padding: 0.65rem 0.7rem;
+        background: rgb(92 58 28 / 0.06);
+        border: 1px solid rgb(135 110 62 / 0.35);
+        border-radius: 3px;
     }
 
-    .plan li {
-        font-size: 0.95rem;
-        color: #4a5568;
-        margin: 0.6rem 0;
+    .plan-notice-title {
+        margin: 0 0 0.35rem;
+        text-align: center;
+        font-family: var(--gld-font-display);
+        font-size: 0.88rem;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        color: #5c3a1c;
     }
 
-    /* Botão de compra */
+    .plan-notice-text {
+        margin: 0;
+        text-align: center;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        color: var(--gld-text-muted);
+    }
+
     button {
-        padding: 0.8rem 1.6rem;
-        border: none;
-        background-color: #3182ce;
-        color: #ffffff;
-        font-size: 1rem;
-        font-weight: bold;
-        border-radius: 8px;
+        padding: 0.75rem 1.5rem;
+        border: 1px solid #876e3e;
+        background: linear-gradient(180deg, #ffcc66, #ba9700);
+        color: #1a1008;
+        font-size: 0.95rem;
+        font-weight: 700;
+        font-family: var(--gld-font-display);
+        border-radius: 3px;
         cursor: pointer;
-        transition: background-color 0.3s ease;
+        transition: opacity 0.15s, transform 0.1s;
     }
 
     button:hover {
-        background-color: #2b6cb0;
+        opacity: 0.92;
+        background: linear-gradient(180deg, #ffe08a, #d4a742);
     }
 
+    button:active { transform: scale(0.98); }
+
     .buttonPix {
-        background-color: buttonface;
-        padding: 5px 24px;
-        margin-top: 8px
+        background: #fffef8;
+        padding: 5px 20px;
+        margin-top: 8px;
+        border: 1px solid #c9a66b;
     }
 
     .buttonPix:hover {
-        background-color: #d1d1d1;
+        background: #f4e4c1;
     }
 
     .plan-icon {
-        width: 160px;
-        height: 160px;
+        width: 96px;
+        height: 96px;
         object-fit: contain;
-        margin-bottom: 1rem;
+        margin-bottom: 0.85rem;
+        filter: drop-shadow(0 3px 8px rgb(0 0 0 / 0.2));
     }
 
     /* Estilização geral do modal */
@@ -171,7 +287,6 @@
         width: 100%;
         height: 100%;
         background-color: rgba(0, 0, 0, 0.7);
-        display: flex;
         align-items: center;
         justify-content: center;
         opacity: 0;
@@ -179,8 +294,8 @@
         transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
     }
 
-    /* Animação de entrada */
     .modal.show {
+        display: flex;
         opacity: 1;
         visibility: visible;
     }
@@ -226,19 +341,20 @@
 
     /* Botão de enviar */
     .modal button {
-        background: #3182ce;
-        color: white;
+        background: linear-gradient(180deg, #ffcc66, #ba9700);
+        color: #1a1008;
         padding: 10px 15px;
-        border: none;
+        border: 1px solid #876e3e;
         cursor: pointer;
         width: 100%;
         font-size: 16px;
-        border-radius: 5px;
-        transition: background 0.3s;
+        font-weight: 700;
+        border-radius: 3px;
+        transition: opacity 0.15s;
     }
 
     .modal button:hover {
-        background: #2b6cb0;
+        opacity: 0.92;
     }
 
     /* Informações pós-compra */
@@ -288,17 +404,17 @@
     }
 
     @media (max-width: 480px) {
-        header h1 {
-            font-size: 1.8rem;
+        .checkout-header h1 {
+            font-size: 1.15rem;
         }
 
-        header p {
-            font-size: 1rem;
+        .pricing-table {
+            margin-top: 2.5rem;
         }
 
         .plan-icon {
-            width: 128px;
-            height: 128px;
+            width: 80px;
+            height: 80px;
         }
 
         button {
@@ -308,24 +424,31 @@
     }
 </style>
 
-<header>
-    <div class="icon">
-        <img style="width: 10%" src="./images/stripe.png" alt="Confiança e segurança"> <!-- Caminho para o ícone de segurança -->
-        <img style="width: 25%" src="./images/stripe-v2.png" alt="Confiança e segurança">
+<div class="checkout-shell">
+    <div class="checkout-top">
+        <a class="checkout-back" href="welcome.html"><i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao início</a>
     </div>
-    <h1>Planos Disponíveis</h1>
-    <p>Pagamentos disponíveis em moeda local, confira no checkout!</p>
-</header>
+
+    <header class="checkout-header">
+        <div class="checkout-brand">
+            <img class="checkout-mark" src="./images/gladiusbot-mark.svg" alt="GladiusBot" width="48" height="48">
+            <h1>Planos disponíveis</h1>
+        </div>
+        <div class="checkout-trust">
+            <img src="./images/stripe.png" alt="Secure payments">
+            <img class="trust-stripe-wide" src="./images/stripe-v2.png" alt="Stripe">
+        </div>
+    </header>
 
 <div class="pricing-table">
     <div class="plan">
         <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
         <h2>GLDbot - 15 dias</h2>
         <p class="price">R$5,78</p>
-        <ul>
-            <li><strong>Atenção</strong></li>
-            <li>Verifique seu e-mail após a compra! A licença será enviada após confirmação do pagamento.</li>
-        </ul>
+        <div class="plan-notice">
+            <p class="plan-notice-title">Atenção</p>
+            <p class="plan-notice-text">Verifique seu e-mail após a compra. A licença será enviada assim que o pagamento for confirmado.</p>
+        </div>
         <form id="form-15" method="POST">
             <button type="submit" id="checkout-button1">Comprar</button>
         </form>
@@ -337,10 +460,10 @@
         <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
         <h2>GLDbot - 30 dias</h2>
         <p class="price">R$9,89</p>
-        <ul>
-            <li><strong>Atenção</strong></li>
-            <li>Verifique seu e-mail após a compra! A licença será enviada após confirmação do pagamento.</li>
-        </ul>
+        <div class="plan-notice">
+            <p class="plan-notice-title">Atenção</p>
+            <p class="plan-notice-text">Verifique seu e-mail após a compra. A licença será enviada assim que o pagamento for confirmado.</p>
+        </div>
         <form id="form-30" method="POST">
             <button type="submit" id="checkout-button2">Comprar</button>
         </form>
@@ -352,10 +475,10 @@
         <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
         <h2>GLDbot - 60 dias</h2>
         <p class="price">R$18,98</p>
-        <ul>
-            <li><strong>Atenção</strong></li>
-            <li>Verifique seu e-mail após a compra! A licença será enviada após confirmação do pagamento.</li>
-        </ul>
+        <div class="plan-notice">
+            <p class="plan-notice-title">Atenção</p>
+            <p class="plan-notice-text">Verifique seu e-mail após a compra. A licença será enviada assim que o pagamento for confirmado.</p>
+        </div>
         <form id="form-60" method="POST">
             <button type="submit" id="checkout-button3">Comprar</button>
         </form>
@@ -363,6 +486,7 @@
             <button class="buttonPix"><img style="height: 30px;width: 70px;margin: 0;" src="./images/pix.png" alt="pix"></button>
         </form>
     </div>
+</div>
 </div>
 
 <!-- Modal para coletar o email -->

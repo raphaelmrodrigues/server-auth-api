@@ -1451,7 +1451,7 @@ app.post('/validate-key', async (req, res) => {
 
         if (licenseData) {
             const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
-            recordSessionOk('validate-key', idkps);
+            recordSessionOk('validate-key', idkps, { trial: !!licenseData.trial });
             return res.json({
                 valid: true,
                 p: session.p,
@@ -1523,7 +1523,7 @@ app.post('/validate-license', async (req, res) => {
             const currentDate = new Date();
             if (currentDate <= new Date(licenseData.expireDate)) {
                 const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
-                recordSessionOk('validate-license', idkps);
+                recordSessionOk('validate-license', idkps, { trial: !!licenseData.trial });
                 return res.json({
                     valid: true,
                     token: session.token,
@@ -1549,7 +1549,7 @@ app.post('/validate-license', async (req, res) => {
 });
 
 app.post('/v-s', async (req, res) => {
-    const { idkps, tk } = req.body;
+    const { idkps, tk, botVersion, serverId, country, botActive } = req.body;
     if (!idkps || !tk) {
         recordSessionFail('v-s', idkps, 'missing_params');
         return res.json({ ok: false });
@@ -1562,7 +1562,13 @@ app.post('/v-s', async (req, res) => {
             return res.json({ ok: false });
         }
         const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
-        recordSessionOk('v-s', idkps);
+        recordSessionOk('v-s', idkps, {
+            botVersion,
+            serverId,
+            country,
+            botActive,
+            trial: !!licenseData.trial,
+        });
         return res.json({
             ok: true,
             p: session.p,

@@ -1,53 +1,64 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 128" role="img" aria-label="GladiusBOT logo">
   <defs>
     <linearGradient id="mark-bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#1a2433"/>
-      <stop offset="100%" stop-color="#0b0f14"/>
+      <stop offset="0%" stop-color="#5c3a1c"/>
+      <stop offset="55%" stop-color="#3d2814"/>
+      <stop offset="100%" stop-color="#2a1a0e"/>
+    </linearGradient>
+    <linearGradient id="mark-inner" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7a4e26" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#1a1008" stop-opacity="0.2"/>
     </linearGradient>
     <linearGradient id="mark-ring" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="50%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#38bdf8"/>
+      <stop offset="0%" stop-color="#876e3e"/>
+      <stop offset="35%" stop-color="#ffcc66"/>
+      <stop offset="65%" stop-color="#d4a742"/>
+      <stop offset="100%" stop-color="#876e3e"/>
     </linearGradient>
-    <linearGradient id="mark-letters" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#7dd3fc"/>
-      <stop offset="45%" stop-color="#e8eef5"/>
-      <stop offset="100%" stop-color="#5eead4"/>
+    <linearGradient id="mark-letters" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#fff8cf"/>
+      <stop offset="40%" stop-color="#ffcc66"/>
+      <stop offset="100%" stop-color="#ba9700"/>
     </linearGradient>
     <linearGradient id="logo-name" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#7dd3fc"/>
-      <stop offset="55%" stop-color="#e8eef5"/>
-      <stop offset="100%" stop-color="#cbd5e1"/>
+      <stop offset="0%" stop-color="#f4e4c1"/>
+      <stop offset="100%" stop-color="#ebe0c4"/>
     </linearGradient>
     <linearGradient id="logo-accent" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#38bdf8"/>
-      <stop offset="50%" stop-color="#34d399"/>
-      <stop offset="100%" stop-color="#38bdf8"/>
+      <stop offset="0%" stop-color="#ffe08a"/>
+      <stop offset="45%" stop-color="#ffcc66"/>
+      <stop offset="100%" stop-color="#d4a742"/>
     </linearGradient>
     <filter id="mark-glow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#38bdf8" flood-opacity="0.35"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="2.5" flood-color="#2a1a0e" flood-opacity="0.55"/>
+      <feDropShadow dx="0" dy="1" stdDeviation="1.5" flood-color="#ffcc66" flood-opacity="0.28"/>
     </filter>
     <filter id="logo-shadow" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0b0f14" flood-opacity="0.45"/>
+      <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#2a1a0e" flood-opacity="0.35"/>
+    </filter>
+    <filter id="bot-glow" x="-15%" y="-15%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="1" stdDeviation="0.5" flood-color="#1a1008" flood-opacity="0.85"/>
+      <feDropShadow dx="0" dy="0" stdDeviation="2" flood-color="#ffcc66" flood-opacity="0.35"/>
     </filter>
   </defs>
 
-  <path d="M0 108 Q280 92 560 108" fill="none" stroke="url(#logo-accent)" stroke-width="1.5" opacity="0.18"/>
-  <path d="M40 18 Q280 4 520 18" fill="none" stroke="url(#logo-accent)" stroke-width="1" opacity="0.12"/>
-
   <g filter="url(#logo-shadow)" transform="translate(20 20) scale(0.6875)">
-    <rect x="4" y="4" width="120" height="120" rx="28" fill="url(#mark-bg)"/>
-    <rect x="4.5" y="4.5" width="119" height="119" rx="27.5" fill="none" stroke="url(#mark-ring)" stroke-width="2.5" opacity="0.85"/>
-    <path d="M18 34 Q64 22 110 34" fill="none" stroke="url(#mark-ring)" stroke-width="2" stroke-linecap="round" opacity="0.55"/>
+    <rect x="4" y="4" width="120" height="120" rx="22" fill="url(#mark-bg)"/>
+    <rect x="10" y="10" width="108" height="108" rx="18" fill="url(#mark-inner)"/>
+    <rect x="4.5" y="4.5" width="119" height="119" rx="21.5" fill="none" stroke="url(#mark-ring)" stroke-width="2.5"/>
+    <rect x="8" y="8" width="112" height="112" rx="20" fill="none" stroke="#c9a66b" stroke-width="1" opacity="0.35"/>
+    <path d="M18 34 Q64 22 110 34" fill="none" stroke="url(#mark-ring)" stroke-width="2" stroke-linecap="round" opacity="0.5"/>
     <g filter="url(#mark-glow)">
-      <text x="64" y="78" text-anchor="middle" font-family="Segoe UI, system-ui, Arial, sans-serif" font-size="52" font-weight="800" letter-spacing="-2" fill="url(#mark-letters)">GB</text>
+      <text x="64" y="78" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="52" font-weight="700" letter-spacing="-2" fill="url(#mark-letters)">GB</text>
     </g>
-    <circle cx="98" cy="30" r="5" fill="#34d399" opacity="0.95"/>
-    <circle cx="98" cy="30" r="2.2" fill="#ecfdf5"/>
+    <circle cx="98" cy="30" r="5" fill="#ffcc66" opacity="0.95"/>
+    <circle cx="98" cy="30" r="2.2" fill="#fff8cf"/>
   </g>
 
-  <text x="124" y="62" font-family="Segoe UI, system-ui, sans-serif" font-size="40" font-weight="700" fill="url(#logo-name)">Gladius</text>
-  <text x="318" y="62" font-family="Segoe UI, system-ui, sans-serif" font-size="40" font-weight="800" letter-spacing="0.12em" fill="url(#logo-accent)">BOT</text>
-  <rect x="124" y="74" width="268" height="2.5" rx="1.25" fill="url(#logo-accent)" opacity="0.55"/>
-  <text x="124" y="96" font-family="Segoe UI, system-ui, sans-serif" font-size="11" font-weight="600" letter-spacing="0.24em" fill="#64748b">GLADIATUS AUTOMATION</text>
+  <text x="124" y="62" font-family="Georgia, 'Times New Roman', serif" font-size="40" font-weight="700" fill="url(#logo-name)">Gladius</text>
+  <g filter="url(#bot-glow)">
+    <text x="318" y="62" font-family="Georgia, 'Times New Roman', serif" font-size="40" font-weight="700" letter-spacing="0.12em" fill="url(#logo-accent)">BOT</text>
+  </g>
+  <rect x="124" y="74" width="268" height="2.5" rx="1.25" fill="url(#logo-accent)" opacity="0.9"/>
+  <text x="124" y="96" font-family="Tahoma, 'Segoe UI', Arial, sans-serif" font-size="11" font-weight="600" letter-spacing="0.24em" fill="#c9a66b">GLADIATUS AUTOMATION</text>
 </svg>

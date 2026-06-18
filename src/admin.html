@@ -69,6 +69,10 @@
       50% { opacity: 0.5; transform: scale(0.9); }
     }
     #bot-monitor-events tr:hover { background: #f8fafc; }
+    .bot-monitor-online-scroll {
+      max-height: 320px;
+      overflow-y: auto;
+    }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen font-sans">
@@ -206,7 +210,7 @@
       <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
         <div>
           <h2 class="text-2xl font-semibold text-gray-800">Monitoramento do Bot</h2>
-          <p class="text-sm text-gray-500 mt-1">Dados em tempo real com base nos heartbeats <code class="bg-gray-100 px-1 rounded">/v-s</code> e validações de licença. Sem impacto na performance da extensão.</p>
+          <p class="text-sm text-gray-500 mt-1">Dados em tempo real com base nos heartbeats <code class="bg-gray-100 px-1 rounded">/v-s</code> (~3 min com bot ativo) e validações de licença. Sem impacto na performance da extensão.</p>
         </div>
         <div class="flex items-center gap-3">
           <span class="text-xs text-gray-500 flex items-center gap-2"><span class="monitor-pulse"></span> Auto-refresh 30s</span>
@@ -214,7 +218,7 @@
         </div>
       </div>
 
-      <div id="bot-monitor-stats" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div id="bot-monitor-stats" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 mb-6">
         <p class="text-gray-500 col-span-full">Carregando monitoramento...</p>
       </div>
 
@@ -224,17 +228,19 @@
             <h3 class="font-semibold text-gray-800">Players online (estimado)</h3>
             <span id="bot-monitor-online-meta" class="text-xs text-gray-500"></span>
           </div>
-          <div class="admin-card-body overflow-x-auto">
+          <div class="admin-card-body overflow-x-auto bot-monitor-online-scroll">
             <table class="min-w-full text-sm">
-              <thead class="bg-gray-50 text-gray-500 uppercase text-xs">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs sticky top-0">
                 <tr>
                   <th class="px-3 py-2 text-left">Player ID</th>
+                  <th class="px-3 py-2 text-left">Versão</th>
                   <th class="px-3 py-2 text-left">Último sinal</th>
+                  <th class="px-3 py-2 text-left">Servidor</th>
                   <th class="px-3 py-2 text-left">Origem</th>
                 </tr>
               </thead>
               <tbody id="bot-monitor-online-table" class="divide-y divide-gray-100">
-                <tr><td colspan="3" class="px-3 py-4 text-gray-500">—</td></tr>
+                <tr><td colspan="5" class="px-3 py-4 text-gray-500">—</td></tr>
               </tbody>
             </table>
           </div>
@@ -613,6 +619,11 @@
           <p class="text-3xl font-bold text-slate-700">${data.stats24h?.['v-s:ok'] || 0}</p>
           <p class="text-xs text-slate-600 mt-1">Sessões renovadas via /v-s</p>
         </div>
+        <div class="bg-violet-50 border border-violet-100 p-4 rounded-xl">
+          <p class="text-sm font-medium text-violet-800">Versões online</p>
+          <p class="text-3xl font-bold text-violet-600">${data.distinctVersionCount || 0}</p>
+          <p class="text-xs text-violet-700 mt-1">${data.heartbeatsLastHour || 0} heartbeats na última hora</p>
+        </div>
       `;
     }
 
@@ -623,27 +634,46 @@
     if (onlineTable) {
       const players = data.onlinePlayers || [];
       if (players.length === 0) {
-        onlineTable.innerHTML = '<tr><td colspan="3" class="px-3 py-4 text-gray-500 text-center">Nenhum player com sinal recente.</td></tr>';
+        onlineTable.innerHTML = '<tr><td colspan="5" class="px-3 py-4 text-gray-500 text-center">Nenhum player com sinal recente.</td></tr>';
       } else {
-        onlineTable.innerHTML = players.map(p => `
+        onlineTable.innerHTML = players.map(p => {
+          const serverLabel = p.serverId
+            ? `s${escapeHtml(p.serverId)}${p.country ? '-' + escapeHtml(p.country) : ''}`
+            : '—';
+          return `
           <tr>
             <td class="px-3 py-2 font-mono text-xs">${escapeHtml(p.playerId)}</td>
+            <td class="px-3 py-2"><code class="text-xs bg-gray-100 px-1 rounded">${escapeHtml(p.botVersion || '—')}</code></td>
             <td class="px-3 py-2">há ${p.agoSec}s <span class="text-gray-400">(${formatBRT(p.lastSeen)})</span></td>
+            <td class="px-3 py-2 font-mono text-xs">${serverLabel}</td>
             <td class="px-3 py-2"><code class="text-xs bg-gray-100 px-1 rounded">${escapeHtml(p.source)}</code></td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
       }
     }
 
     if (statsList) {
-      const entries = Object.entries(data.stats24h || {});
-      if (entries.length === 0) {
+      const versionEntries = Object.entries(data.versionCounts || {});
+      const statEntries = Object.entries(data.stats24h || {});
+      if (versionEntries.length === 0 && statEntries.length === 0) {
         statsList.innerHTML = '<li class="text-gray-500">Sem dados nas últimas 24h.</li>';
       } else {
-        statsList.innerHTML = entries
-          .sort((a, b) => b[1] - a[1])
-          .map(([key, val]) => `<li class="flex justify-between bg-gray-50 px-3 py-2 rounded-md"><span>${escapeHtml(key)}</span><strong>${val}</strong></li>`)
-          .join('');
+        const versionHtml = versionEntries.length
+          ? `<li class="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-1">Versões online agora</li>` +
+            versionEntries
+              .sort((a, b) => b[1] - a[1])
+              .map(([ver, count]) => `<li class="flex justify-between bg-violet-50 px-3 py-2 rounded-md"><span>${escapeHtml(ver)}</span><strong>${count}</strong></li>`)
+              .join('')
+          : '';
+        const statsHtml = statEntries.length
+          ? `<li class="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-2">Validações 24h</li>` +
+            statEntries
+              .sort((a, b) => b[1] - a[1])
+              .map(([key, val]) => `<li class="flex justify-between bg-gray-50 px-3 py-2 rounded-md"><span>${escapeHtml(key)}</span><strong>${val}</strong></li>`)
+              .join('')
+          : '';
+        statsList.innerHTML = versionHtml + statsHtml;
       }
     }
 

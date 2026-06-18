@@ -9,6 +9,7 @@ const STATS_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const onlinePlayers = new Map();
 const events = [];
+const heartbeatTimestamps = [];
 const stats = {
     windowStart: Date.now(),
     counts: {},
@@ -20,6 +21,13 @@ function pruneOnline() {
         if (now - data.lastSeen > ONLINE_TTL_MS) {
             onlinePlayers.delete(pid);
         }
+    }
+}
+
+function pruneHeartbeats() {
+    const cutoff = Date.now() - STATS_WINDOW_MS;
+    while (heartbeatTimestamps.length && heartbeatTimestamps[0] < cutoff) {
+        heartbeatTimestamps.shift();
     }
 }
 
@@ -48,14 +56,49 @@ function pushEvent(type, playerId, reason, source) {
     }
 }
 
-function recordSessionOk(source, playerId) {
+function sanitizeMeta(meta = {}) {
+    const out = {};
+    if (meta.botVersion != null) {
+        out.botVersion = String(meta.botVersion).slice(0, 32);
+    }
+    if (meta.serverId != null) {
+        out.serverId = String(meta.serverId).slice(0, 16);
+    }
+    if (meta.country != null) {
+        out.country = String(meta.country).slice(0, 8);
+    }
+    if (meta.botActive != null) {
+        out.botActive = !!meta.botActive;
+    }
+    if (meta.trial != null) {
+        out.trial = !!meta.trial;
+    }
+    return out;
+}
+
+function recordSessionOk(source, playerId, meta = {}) {
     if (!playerId) return;
     pruneOnline();
-    onlinePlayers.set(String(playerId), {
+    const pid = String(playerId);
+    const prev = onlinePlayers.get(pid) || {};
+    const clean = sanitizeMeta(meta);
+    onlinePlayers.set(pid, {
         lastSeen: Date.now(),
-        source: source || 'unknown',
+        source: source || prev.source || 'unknown',
+        botVersion: clean.botVersion ?? prev.botVersion ?? null,
+        serverId: clean.serverId ?? prev.serverId ?? null,
+        country: clean.country ?? prev.country ?? null,
+        botActive: clean.botActive ?? prev.botActive ?? null,
+        trial: clean.trial ?? prev.trial ?? null,
     });
     bumpStat(`${source}:ok`);
+    if (source === 'v-s') {
+        heartbeatTimestamps.push(Date.now());
+        pruneHeartbeats();
+        while (heartbeatTimestamps.length > 10000) {
+            heartbeatTimestamps.shift();
+        }
+    }
     if (source !== 'v-s') {
         pushEvent('success', playerId, 'ok', source);
     }
@@ -69,6 +112,7 @@ function recordSessionFail(source, playerId, reason) {
 
 function getDashboard() {
     pruneOnline();
+    pruneHeartbeats();
     rollStatsWindow();
 
     const now = Date.now();
@@ -77,9 +121,20 @@ function getDashboard() {
             playerId,
             lastSeen: new Date(data.lastSeen).toISOString(),
             source: data.source,
+            botVersion: data.botVersion || null,
+            serverId: data.serverId || null,
+            country: data.country || null,
+            botActive: data.botActive,
+            trial: data.trial,
             agoSec: Math.round((now - data.lastSeen) / 1000),
         }))
         .sort((a, b) => a.agoSec - b.agoSec);
+
+    const versionCounts = {};
+    for (const [, data] of onlinePlayers) {
+        const version = data.botVersion || 'desconhecida';
+        versionCounts[version] = (versionCounts[version] || 0) + 1;
+    }
 
     const failuresLastHour = events.filter((e) => {
         if (e.type !== 'failure') return false;
@@ -91,6 +146,10 @@ function getDashboard() {
         return now - new Date(e.ts).getTime() < 60 * 60 * 1000;
     }).length;
 
+    const heartbeatsLastHour = heartbeatTimestamps.filter(
+        (ts) => now - ts < 60 * 60 * 1000
+    ).length;
+
     return {
         onlineCount: online.length,
         onlinePlayers: online,
@@ -98,6 +157,9 @@ function getDashboard() {
         stats24h: { ...stats.counts },
         failuresLastHour,
         successesLastHour,
+        heartbeatsLastHour,
+        versionCounts,
+        distinctVersionCount: Object.keys(versionCounts).length,
         heartbeatTtlMinutes: Math.round(ONLINE_TTL_MS / 60000),
         serverTime: new Date().toISOString(),
     };

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
+    <link rel="apple-touch-icon" href="./images/gladiusbot-icon-128.png">
     <title>GladiusBot — Gladiatus Automation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
@@ -14,7 +15,7 @@
 <aside class="sidebar">
     <div class="sidebar-brand">
         <img class="sidebar-logo-full" src="./images/gladiusbot-logo.svg" alt="GladiusBot">
-        <span class="sidebar-version">v3.0.1</span>
+        <span class="sidebar-version">v3.0.2</span>
     </div>
     <nav class="sidebar-nav">
         <button type="button" id="back" style="display: none;"><i class="fas fa-arrow-left"></i> Back</button>
@@ -33,17 +34,37 @@
     <section id="hero-view" class="site-view is-active">
         <div class="hero-panel">
             <div class="hero-copy">
-                <h1>Automation for <span>Gladiatus</span></h1>
-                <p>GladiusBot runs expeditions, arena, circus, smeltery and daily routines while you focus on strategy. Licensed, secure and built for serious players.</p>
+                <div class="hero-eyebrow">
+                    <img src="./images/gladiusbot-mark.svg" alt="" width="22" height="22" aria-hidden="true">
+                    Gladiatus automation
+                </div>
+                <h1>Your legion never <span>rests</span></h1>
+                <p>GladiusBot automates expeditions, arena, circus, smeltery and daily routines with a rustic interface integrated into the game — licensed, secure and built for serious players.</p>
                 <ul class="hero-features">
-                    <li>Expedition, dungeon, arena & circus automation</li>
-                    <li>Smeltery, market, heal & underworld tools</li>
-                    <li>1-day free trial · License saved in Extras tab</li>
+                    <li>Expedition, dungeon, arena & circus on autopilot</li>
+                    <li>Smeltery, market, heal & underworld modules</li>
+                    <li>1-day free trial · License in the Extras tab</li>
                 </ul>
+                <div class="hero-actions">
+                    <button type="button" class="hero-btn hero-btn-primary" id="hero-download">
+                        <i class="fas fa-download"></i> Download
+                    </button>
+                    <button type="button" class="hero-btn hero-btn-secondary" id="hero-buy">
+                        <i class="fas fa-shopping-cart"></i> Get license
+                    </button>
+                </div>
             </div>
-            <div class="hero-visual hero-showcase" id="hero-showcase">
-                <img class="hero-showcase-img is-primary is-active" src="./images/gladius_bot_1.png" alt="GladiusBot interface preview">
-                <img class="hero-showcase-img is-secondary" src="./images/gladius_bot_2.png" alt="GladiusBot interface preview">
+            <div class="hero-visual hero-showcase" id="hero-showcase" title="Click to see next screenshot">
+                <img class="hero-showcase-img is-active" src="./images/bot_2.png" alt="GladiusBot interface preview">
+                <img class="hero-showcase-img" src="./images/bot_3.png" alt="GladiusBot interface preview">
+                <img class="hero-showcase-img" src="./images/bot_4.png" alt="GladiusBot interface preview">
+                <img class="hero-showcase-img" src="./images/bot_1.png" alt="GladiusBot interface preview">
+                <div class="hero-showcase-dots" role="tablist" aria-label="Screenshots">
+                    <button type="button" class="is-active" aria-label="Screenshot 1" aria-selected="true"></button>
+                    <button type="button" aria-label="Screenshot 2" aria-selected="false"></button>
+                    <button type="button" aria-label="Screenshot 3" aria-selected="false"></button>
+                    <button type="button" aria-label="Screenshot 4" aria-selected="false"></button>
+                </div>
             </div>
         </div>
     </section>
@@ -191,15 +212,61 @@
     };
 
     (function initHeroShowcase() {
+        const showcase = document.getElementById('hero-showcase');
         const imgs = document.querySelectorAll('.hero-showcase-img');
-        if (imgs.length < 2) return;
+        const dots = document.querySelectorAll('.hero-showcase-dots button');
+        if (!showcase || imgs.length < 2) return;
+
         let idx = 0;
-        setInterval(function () {
+        let timer = null;
+
+        function goTo(nextIdx) {
             imgs[idx].classList.remove('is-active');
-            idx = (idx + 1) % imgs.length;
+            if (dots[idx]) {
+                dots[idx].classList.remove('is-active');
+                dots[idx].setAttribute('aria-selected', 'false');
+            }
+            idx = (nextIdx + imgs.length) % imgs.length;
             imgs[idx].classList.add('is-active');
-        }, 5000);
+            if (dots[idx]) {
+                dots[idx].classList.add('is-active');
+                dots[idx].setAttribute('aria-selected', 'true');
+            }
+        }
+
+        function next() {
+            goTo(idx + 1);
+        }
+
+        function startAuto() {
+            clearInterval(timer);
+            timer = setInterval(next, 5000);
+        }
+
+        showcase.addEventListener('click', function (e) {
+            if (e.target.closest('.hero-showcase-dots')) return;
+            next();
+            startAuto();
+        });
+
+        dots.forEach(function (dot, i) {
+            dot.addEventListener('click', function (e) {
+                e.stopPropagation();
+                goTo(i);
+                startAuto();
+            });
+        });
+
+        startAuto();
     })();
+
+    document.getElementById('hero-download').addEventListener('click', function () {
+        document.getElementById('download').click();
+    });
+
+    document.getElementById('hero-buy').addEventListener('click', function () {
+        document.getElementById('buyButton').click();
+    });
 
     const btnBack = document.getElementById('back');
     const btnContact = document.getElementById('contactus');
@@ -214,10 +281,10 @@
 
     function setSidebarHome() {
         btnBack.style.display = 'none';
-        btnContact.style.display = 'block';
-        btnTutorial.style.display = 'block';
-        btnDownload.style.display = 'block';
-        btnBuy.style.display = 'block';
+        btnContact.style.display = 'flex';
+        btnTutorial.style.display = 'flex';
+        btnDownload.style.display = 'flex';
+        btnBuy.style.display = 'flex';
     }
 
     function setSidebarSub() {

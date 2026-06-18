@@ -1,6 +1,6 @@
 # Política de Privacidade — GladiusBot
 
-**Última atualização:** 16 de junho de 2026  
+**Última atualização:** 17 de junho de 2026  
 **Produto:** GladiusBot (extensão para navegador Chrome / Chromium)  
 **Site oficial:** https://gldbotserver.com  
 **Contato:** gldbotsuport@gmail.com
@@ -37,6 +37,9 @@ O **GladiusBot** é um assistente de automação para o jogo **Gladiatus** (Game
 | **Token de sessão (JWT)** | Servidor após validação de licença | Manter sessão segura e impedir uso não autorizado |
 | **Data de expiração da licença** | Servidor | Controlar validade do acesso |
 | **Registros de validação** (sucesso/falha, horário, motivo genérico) | Servidor (`/validate-key`, `/validate-license`, `/v-s`) | Segurança, anti-fraude e monitoramento operacional |
+| **Versão da extensão** | Enviada no heartbeat `/v-s` enquanto o bot está ativo | Suporte, compatibilidade e estatísticas agregadas de uso |
+| **Servidor do jogo** (número do servidor e região, ex.: `s12-br`) | Extraído da URL do Gladiatus durante o heartbeat | Monitoramento operacional agregado (sem identificar além do Player ID já vinculado) |
+| **Estado “bot ativo”** (sim/não) | Sessão da extensão durante o heartbeat | Saber se a automação está em execução no momento do sinal |
 | **Preferências do bot** | Armazenamento local do navegador (`localStorage` / `sessionStorage`) | Salvar configurações da extensão (ações, listas, estado do bot) |
 | **Dados de pagamento** | Stripe / Mercado Pago | Processamento de compras (tratados pelos gateways; não armazenamos cartão completo) |
 
@@ -53,7 +56,7 @@ O **GladiusBot** é um assistente de automação para o jogo **Gladiatus** (Game
 Utilizamos as informações exclusivamente para:
 
 1. **Autenticar e gerenciar licenças** (ativação, trial, renovação, expiração).  
-2. **Operar a extensão** (validação periódica de sessão enquanto o bot está em uso).  
+2. **Operar a extensão** (validação periódica de sessão e heartbeat operacional enquanto o bot está em uso).  
 3. **Exibir anúncios globais** configurados pelo administrador (texto informativo na extensão).  
 4. **Processar pagamentos** e emitir licenças.  
 5. **Prestar suporte** e responder contatos.  
@@ -68,7 +71,7 @@ Utilizamos as informações exclusivamente para:
 | Local | O que fica lá |
 |-------|----------------|
 | **Seu navegador** (extensão) | Configurações, token de sessão, data de licença, preferências do bot |
-| **Servidor GladiusBot** (`gldbotserver.com`) | Licenças, player ID vinculado, e-mail de compra, logs de validação, anúncios globais |
+| **Servidor GladiusBot** (`gldbotserver.com`) | Licenças, player ID vinculado, e-mail de compra, logs de validação, metadados operacionais de heartbeat (versão, servidor do jogo), anúncios globais |
 | **MongoDB** (infraestrutura do servidor) | Registros de licenças e auditoria de vendas |
 | **Stripe / Mercado Pago** | Dados de transação financeira |
 
@@ -98,14 +101,16 @@ A extensão comunica-se com:
 - `https://*.gladiatus.gameforge.com` — páginas do jogo  
 - `https://gldbotserver.com` — validação de licença, sessão, anúncios e recursos do bot  
 
-Heartbeats de sessão (`/v-s`) ocorrem aproximadamente a cada **5 minutos** enquanto o bot está ativo, apenas para validar a licença. Não há rastreamento contínuo fora desse contexto.
+Heartbeats de sessão (`/v-s`) ocorrem aproximadamente a cada **3 minutos** enquanto o bot está ativo (automação ligada ou aba do bot aberta), apenas para validar a licença e registrar sinal operacional. Cada heartbeat pode incluir a **versão da extensão**, o **servidor do jogo** em que você está jogando (derivado da URL do Gladiatus) e se o bot está **ativo** no momento. Esses dados não incluem senha, mensagens privadas nem conteúdo do jogo além do necessário para o funcionamento do serviço.
+
+Não há rastreamento contínuo fora desse contexto: quando o bot está desligado e a aba não está em uso, a extensão não envia heartbeats.
 
 ---
 
 ## 7. Retenção
 
 - **Licenças ativas:** mantidas enquanto a licença existir ou for necessário para suporte e obrigações legais.  
-- **Logs de validação (monitoramento):** em memória no servidor, rotacionados automaticamente (não persistem após reinício do servidor).  
+- **Logs de validação (monitoramento):** em memória no servidor, rotacionados automaticamente (não persistem após reinício do servidor). Incluem contagem de heartbeats e metadados operacionais agregados (versão, servidor).  
 - **Dados de auditoria de vendas:** mantidos para fins contábeis e de suporte.  
 - **Dados locais na extensão:** permanecem até você removê-los ou desinstalar a extensão.  
 
