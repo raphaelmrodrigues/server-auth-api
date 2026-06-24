@@ -2,7 +2,7 @@ const jwt = require('jsonwebtoken');
 const crypto = require('crypto');
 
 const SESSION_VERSION = 2;
-const SESSION_TTL = process.env.LICENSE_SESSION_TTL || '6h';
+const SESSION_TTL = process.env.LICENSE_SESSION_TTL || '2d';
 
 function issueLicenseSession(jwtSecret, playerId, expireDate) {
     const lexp = new Date(expireDate).getTime();

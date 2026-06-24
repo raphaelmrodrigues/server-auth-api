@@ -270,8 +270,12 @@ app.post('/admin/login', async (req, res) => {
     }
 });
 
-app.get('/home-gld', async (req, res) => {
+app.get('/', async (req, res) => {
     return res.sendFile(path.join(__dirname, 'welcome.html'));
+});
+
+app.get('/home-gld', (req, res) => {
+    res.redirect(301, '/');
 });
 
 app.get('/gld-admin-login', async (req, res) => {
