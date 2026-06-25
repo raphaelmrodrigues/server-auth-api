@@ -32,6 +32,18 @@ const {
     normalizeEmail,
     getCustomerEmailStats,
 } = require('./email-broadcast');
+const {
+    ITCH_PLANS,
+    isItchLicenseKey,
+    isItchLicenseRecord,
+    applyItchActivationDates,
+    buildItchLicenseDocument,
+    licensesToItchCsv,
+} = require('./itch-licenses');
+const {
+    enrichLicenseFromDownloadKey,
+    fetchProfileGames,
+} = require('./itch-api');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const app = express();
@@ -55,6 +67,28 @@ const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
 const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
 const endpointSecret = process.env.ENDPOINT_SECRET;
 var globalAnnouncement = '';
+
+async function linkLicenseToPlayer(LicenseModel, licenseData, idkps) {
+    const existingLicense = await LicenseModel.findOne({ playerid: idkps });
+
+    if (isItchLicenseRecord(licenseData)) {
+        applyItchActivationDates(licenseData);
+        if (!licenseData.payment_method) {
+            licenseData.payment_method = 'itch';
+        }
+    }
+
+    if (existingLicense) {
+        const trialStatus = existingLicense.trial;
+        await LicenseModel.deleteOne({ _id: existingLicense._id });
+        licenseData.playerid = idkps;
+        licenseData.trial = trialStatus;
+    } else {
+        licenseData.playerid = idkps;
+    }
+
+    await licenseData.save();
+}
 
 function formatLicenseStillValidMessage(licenseKey, expireDate) {
     const expiry = new Date(expireDate);
@@ -912,11 +946,35 @@ app.post('/admin/licenses/search', authenticateAdminToken, async (req, res) => {
                 break;
             case 'unlinked_active':
                 query.playerid = "";
-                query.expireDate = { $gt: currentDate };
+                query.$or = [
+                    { expireDate: { $gt: currentDate } },
+                    {
+                        payment_method: 'itch',
+                        $or: [
+                            { expireDate: null },
+                            { expireDate: { $exists: false } },
+                        ],
+                    },
+                    {
+                        licenseKey: { $regex: /^ITCH-/i },
+                        $or: [
+                            { expireDate: null },
+                            { expireDate: { $exists: false } },
+                        ],
+                    },
+                ];
                 break;
             case 'unlinked_inactive':
                 query.playerid = "";
-                query.expireDate = { $lte: currentDate };
+                query.expireDate = { $lte: currentDate, $ne: null, $exists: true };
+                break;
+            case 'itch_unused':
+                query.payment_method = 'itch';
+                query.playerid = '';
+                query.$or = [
+                    { expireDate: null },
+                    { expireDate: { $exists: false } },
+                ];
                 break;
             case 'all':
             default:
@@ -934,9 +992,9 @@ app.post('/admin/licenses/search', authenticateAdminToken, async (req, res) => {
 
         // 3. Executar a busca
         const licenses = await License.find(query)
-            .select('licenseKey playerid expireDate email trial') // Seleciona apenas os campos necessários
+            .select('licenseKey playerid expireDate email trial plan payment_method')
             .sort({ expireDate: -1 })
-            .limit(500); // Limita a 500 resultados para performance
+            .limit(500);
 
         res.json({ success: true, licenses });
 
@@ -950,6 +1008,177 @@ app.post('/admin/licenses/search', authenticateAdminToken, async (req, res) => {
  * Rota para desvincular um playerid de uma licença.
  * Recebe um corpo { licenseKey }
  */
+app.get('/admin/itch/licenses/stats', authenticateAdminToken, async (req, res) => {
+    try {
+        const itchBase = { payment_method: 'itch', trial: false };
+        const unusedQuery = {
+            ...itchBase,
+            playerid: '',
+            $or: [
+                { expireDate: null },
+                { expireDate: { $exists: false } },
+            ],
+        };
+
+        const unusedTotal = await License.countDocuments(unusedQuery);
+        const byPlan = {};
+        for (const [code, plan] of Object.entries(ITCH_PLANS)) {
+            byPlan[code] = await License.countDocuments({
+                ...unusedQuery,
+                plan: plan.title,
+            });
+        }
+
+        const activated = await License.countDocuments({
+            ...itchBase,
+            playerid: { $ne: '' },
+        });
+
+        return res.json({
+            success: true,
+            unusedTotal,
+            activated,
+            byPlan,
+            plans: ITCH_PLANS,
+            itchApiConfigured: Boolean(process.env.ITCH_API_KEY),
+        });
+    } catch (error) {
+        console.error('Erro ao buscar stats itch:', error);
+        return res.status(500).json({ success: false, message: 'Erro interno ao buscar estatísticas itch.' });
+    }
+});
+
+app.post('/admin/itch/licenses/generate', authenticateAdminToken, async (req, res) => {
+    try {
+        const { planCode, quantity } = req.body;
+        const qty = Math.min(Math.max(parseInt(quantity, 10) || 0, 1), 500);
+
+        if (!ITCH_PLANS[planCode]) {
+            return res.status(400).json({
+                success: false,
+                message: 'Plano inválido. Use 15DAYS, 30DAYS ou 60DAYS.',
+            });
+        }
+
+        const docs = [];
+        const keys = new Set();
+        let attempts = 0;
+
+        while (docs.length < qty && attempts < qty * 8) {
+            attempts += 1;
+            const doc = buildItchLicenseDocument(planCode);
+            if (keys.has(doc.licenseKey)) continue;
+
+            const exists = await License.findOne({ licenseKey: doc.licenseKey }).select('_id');
+            if (exists) continue;
+
+            keys.add(doc.licenseKey);
+            docs.push(doc);
+        }
+
+        if (docs.length < qty) {
+            return res.status(500).json({
+                success: false,
+                message: 'Não foi possível gerar chaves únicas. Tente novamente.',
+            });
+        }
+
+        await License.insertMany(docs);
+
+        return res.json({
+            success: true,
+            message: `${docs.length} licença(s) itch gerada(s). Faça upload do CSV no itch.io → Distribute → External keys.`,
+            count: docs.length,
+            planCode,
+            plan: ITCH_PLANS[planCode].title,
+            licenses: docs.map((doc) => ({
+                licenseKey: doc.licenseKey,
+                plan: doc.plan,
+            })),
+            csv: licensesToItchCsv(docs),
+        });
+    } catch (error) {
+        console.error('Erro ao gerar licenças itch:', error);
+        return res.status(500).json({ success: false, message: 'Erro interno ao gerar licenças itch.' });
+    }
+});
+
+app.get('/admin/itch/games', authenticateAdminToken, async (req, res) => {
+    try {
+        const games = await fetchProfileGames();
+        return res.json({
+            success: true,
+            games: games.map((game) => ({
+                id: game.id,
+                title: game.title,
+                url: game.url,
+                purchases_count: game.purchases_count,
+            })),
+            configuredGameIds: {
+                '15DAYS': process.env.ITCH_GAME_ID_15D || null,
+                '30DAYS': process.env.ITCH_GAME_ID_30D || null,
+                '60DAYS': process.env.ITCH_GAME_ID_60D || null,
+            },
+        });
+    } catch (error) {
+        console.error('Erro ao listar jogos itch:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Erro ao consultar API do itch.io.',
+        });
+    }
+});
+
+app.post('/admin/itch/enrich', authenticateAdminToken, async (req, res) => {
+    try {
+        const { licenseKey, downloadKey, planCode } = req.body;
+
+        if (!licenseKey || !downloadKey) {
+            return res.status(400).json({
+                success: false,
+                message: 'licenseKey e downloadKey são obrigatórios.',
+            });
+        }
+
+        const license = await License.findOne({ licenseKey });
+        if (!license || !isItchLicenseRecord(license)) {
+            return res.status(404).json({
+                success: false,
+                message: 'Licença itch não encontrada.',
+            });
+        }
+
+        const enrichment = await enrichLicenseFromDownloadKey({
+            planCode,
+            planTitle: license.plan,
+            downloadKey,
+        });
+
+        if (enrichment.email) {
+            license.email = enrichment.email;
+        }
+        license.country = license.country || 'itch.io';
+        await license.save();
+
+        return res.json({
+            success: true,
+            message: enrichment.email
+                ? 'E-mail do comprador vinculado via itch.io.'
+                : 'Download key válida, mas nenhum e-mail de compra foi encontrado.',
+            licenseKey: license.licenseKey,
+            email: license.email || null,
+            itchUsername: enrichment.itchUsername,
+            itchUserId: enrichment.itchUserId,
+        });
+    } catch (error) {
+        console.error('Erro ao enriquecer licença itch:', error);
+        return res.status(500).json({
+            success: false,
+            message: error.message || 'Erro ao consultar itch.io.',
+        });
+    }
+});
+
 app.post('/admin/licenses/unlink', authenticateAdminToken, async (req, res) => {
     try {
         const { licenseKey } = req.body;
@@ -1575,41 +1804,7 @@ app.post('/validate-license', async (req, res) => {
         let licenseData = await License.findOne({ licenseKey: license });
 
         if (licenseData && !licenseData.playerid) {
-            // Verificar se o playerid já existe no banco de dados
-            const existingLicense = await License.findOne({ playerid: idkps });
-
-            if (existingLicense) {
-                const currentDate = new Date();
-                if (currentDate > new Date(existingLicense.expireDate)) {
-                    // Salvar a informação de trial
-                    const trialStatus = existingLicense.trial;
-
-                    // Deletar o registro atual
-                    await License.deleteOne({ _id: existingLicense._id });
-
-                    // Atualizar a licença para vincular ao playerid recebido
-                    licenseData.playerid = idkps;
-                    licenseData.trial = trialStatus;
-                    await licenseData.save();
-                } else {
-                    // Salvar a informação de trial
-                    const trialStatus = existingLicense.trial;
-
-                    // Deletar o registro atual
-                    await License.deleteOne({ _id: existingLicense._id });
-
-                    // Atualizar a licença para vincular ao playerid recebido
-                    licenseData.playerid = idkps;
-                    licenseData.trial = trialStatus;
-                    await licenseData.save();
-                    // Retornar que a licença vinculada ainda está ativa
-                    // return res.json({ valid: false, message: `The account still has an active license to use: ${existingLicense.licenseKey}` });
-                }
-            } else {
-                // Atualiza a licença para vincular ao playerid recebido
-                licenseData.playerid = idkps;
-                await licenseData.save();
-            }
+            await linkLicenseToPlayer(License, licenseData, idkps);
         }
 
         // Revalida a licença agora com o playerid

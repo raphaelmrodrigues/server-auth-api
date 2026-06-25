@@ -117,6 +117,9 @@
         <a href="#" onclick="showPanel('license-control-section')" id="nav-license-control" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Controle de Licenças</a>
       </li>
       <li class="mr-2">
+        <a href="#" onclick="showPanel('itch-licenses-section')" id="nav-itch-licenses" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Licenças itch.io</a>
+      </li>
+      <li class="mr-2">
         <a href="#" onclick="showPanel('bot-monitor-section')" id="nav-bot-monitor" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Monitoramento do Bot</a>
       </li>
     </ul>
@@ -240,6 +243,7 @@
       <div>
         <label for="license-filter" class="block text-sm font-medium text-gray-700">Filtrar por Status</label>
         <select id="license-filter" class="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+          <option value="itch_unused">itch — sem uso (estoque)</option>
           <option value="unlinked_active">Ativas (Sem Vínculo)</option>
           <option value="active">Ativas (Vinculadas)</option>
           <option value="inactive">Inativas (Vinculadas)</option>
@@ -278,6 +282,78 @@
         <tbody id="license-results-table" class="bg-white divide-y divide-gray-200">
         </tbody>
       </table>
+    </div>
+  </section>
+
+  <section id="itch-licenses-section" class="hidden space-y-6">
+    <div class="p-4 md:p-6 bg-white rounded-lg shadow-xl">
+      <h2 class="text-2xl font-semibold mb-2 text-gray-800">Licenças itch.io (External keys)</h2>
+      <p class="text-sm text-gray-500 mb-6">
+        Gere chaves com prefixo <code class="bg-gray-100 px-1 rounded">ITCH-</code>, faça upload no itch.io (Distribute → External keys) e o comprador ativa no bot.
+        A data de expiração só começa na primeira validação — igual ao fluxo de venda externa.
+      </p>
+
+      <div id="itch-stats-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+        <p class="text-gray-500 col-span-full">Carregando estoque itch...</p>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="font-semibold text-gray-800">Gerar lote para upload no itch</h3>
+        </div>
+        <div class="admin-card-body space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label for="itch-plan-code" class="block text-sm font-medium text-gray-700 mb-1">Plano</label>
+              <select id="itch-plan-code" class="w-full p-2 border border-gray-300 rounded-md">
+                <option value="15DAYS">15 dias — GLDbot - 15 dias</option>
+                <option value="30DAYS">30 dias — GLDbot - 30 dias</option>
+                <option value="60DAYS">60 dias — GLDbot - 60 dias</option>
+              </select>
+            </div>
+            <div>
+              <label for="itch-quantity" class="block text-sm font-medium text-gray-700 mb-1">Quantidade (máx. 500)</label>
+              <input type="number" id="itch-quantity" min="1" max="500" value="10" class="w-full p-2 border border-gray-300 rounded-md">
+            </div>
+            <div class="self-end">
+              <button onclick="generateItchLicenses()" class="w-full bg-violet-600 hover:bg-violet-700 text-white font-bold py-2 px-4 rounded transition">Gerar licenças</button>
+            </div>
+          </div>
+          <div id="itch-generate-notification" class="hidden text-sm rounded-lg px-4 py-3"></div>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="copyItchCsv()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg text-sm">Copiar CSV</button>
+            <button onclick="downloadItchCsv()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg text-sm">Baixar .txt para itch</button>
+            <button onclick="loadItchStats()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-4 rounded-lg text-sm">Atualizar estoque</button>
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700 mb-2">Chaves geradas (último lote)</label>
+            <textarea id="itch-generated-csv" rows="8" readonly placeholder="Gere um lote para ver as chaves aqui (uma por linha, pronto para colar no itch.io)." class="w-full p-3 border border-gray-300 rounded-lg font-mono text-xs bg-gray-50"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-card">
+        <div class="admin-card-header">
+          <h3 class="font-semibold text-gray-800">Vincular e-mail do comprador (opcional)</h3>
+        </div>
+        <div class="admin-card-body space-y-4">
+          <p class="text-sm text-gray-500">
+            Cole a <strong>download key</strong> da URL de compra itch e a <strong>license key ITCH-</strong> para buscar o e-mail via API (requer <code class="bg-gray-100 px-1 rounded">ITCH_API_KEY</code> e IDs dos jogos no servidor).
+          </p>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label for="itch-enrich-license" class="block text-sm font-medium text-gray-700 mb-1">License key (ITCH-...)</label>
+              <input type="text" id="itch-enrich-license" class="w-full p-2 border border-gray-300 rounded-md font-mono text-sm">
+            </div>
+            <div>
+              <label for="itch-enrich-download" class="block text-sm font-medium text-gray-700 mb-1">Download key (da URL itch)</label>
+              <input type="text" id="itch-enrich-download" class="w-full p-2 border border-gray-300 rounded-md font-mono text-sm">
+            </div>
+          </div>
+          <button onclick="enrichItchLicense()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg">Buscar e-mail no itch</button>
+          <div id="itch-enrich-notification" class="hidden text-sm rounded-lg px-4 py-3"></div>
+        </div>
+      </div>
     </div>
   </section>
 
@@ -376,6 +452,7 @@
     'sales-overview-section': 'nav-overview',
     'sales-audit-section': 'nav-audit',
     'license-control-section': 'nav-license-control',
+    'itch-licenses-section': 'nav-itch-licenses',
     'bot-monitor-section': 'nav-bot-monitor',
   };
 
@@ -438,6 +515,10 @@
       const defaultFilter = document.querySelector('#license-control-section option[value="unlinked_active"]');
       if (defaultFilter) defaultFilter.selected = true;
       searchLicenses();
+    }
+
+    if (panelId === 'itch-licenses-section') {
+      loadItchStats();
     }
 
     if (panelId === 'sales-overview-section') {
@@ -986,6 +1067,14 @@
     }
   }
 
+  function formatExpireCell(lic) {
+    const isItch = lic.payment_method === 'itch' || (lic.licenseKey || '').toUpperCase().startsWith('ITCH-');
+    if (isItch && !lic.expireDate) {
+      return '<span class="text-violet-600 text-xs font-medium">Inicia na ativação</span>';
+    }
+    return formatBRT(lic.expireDate);
+  }
+
   function renderLicenses(licenses) {
     const tableBody = document.getElementById('license-results-table');
     if (licenses.length === 0) {
@@ -996,15 +1085,17 @@
     tableBody.innerHTML = licenses.map(lic => {
       const isLinked = lic.playerid && lic.playerid !== "";
       const isTrial = lic.trial;
-      const isExpired = new Date(lic.expireDate) < new Date();
+      const isItch = lic.payment_method === 'itch' || (lic.licenseKey || '').toUpperCase().startsWith('ITCH-');
+      const isExpired = lic.expireDate ? new Date(lic.expireDate) < new Date() : false;
+      const itchBadge = isItch ? '<span class="ml-1 px-1.5 py-0.5 bg-violet-100 text-violet-800 rounded text-xs">itch</span>' : '';
 
       return `
-              <tr class="${isExpired ? 'bg-gray-100 text-gray-400' : 'bg-white'}">
-                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${lic.licenseKey}</td>
+              <tr class="${isExpired && !isItch ? 'bg-gray-100 text-gray-400' : 'bg-white'}">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${lic.licenseKey}${itchBadge}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm ${isLinked ? 'text-gray-700' : 'text-gray-400 italic'}">
                       ${isLinked ? lic.playerid : '(sem vínculo)'}
                   </td>
-                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatBRT(lic.expireDate)}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${formatExpireCell(lic)}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${lic.email || 'N/A'}</td>
                   <td class="px-6 py-4 whitespace-nowrap text-sm">
                       ${isTrial ? '<span class="px-2 py-1 bg-yellow-200 text-yellow-800 rounded-full text-xs">Sim</span>' : '<span class="px-2 py-1 bg-green-200 text-green-800 rounded-full text-xs">Não</span>'}
@@ -1053,6 +1144,165 @@
       notification.textContent = 'Erro de conexão ao tentar desvincular.';
       notification.className = 'mt-4 text-center p-3 rounded-md bg-red-100 text-red-800';
       notification.classList.remove('hidden');
+    }
+  }
+
+  // --- Licenças itch.io ---
+
+  let lastItchCsv = '';
+
+  function showItchNotification(elId, message, isError) {
+    const el = document.getElementById(elId);
+    if (!el) return;
+    el.textContent = message;
+    el.className = isError
+      ? 'text-sm rounded-lg px-4 py-3 bg-red-50 text-red-700 border border-red-100'
+      : 'text-sm rounded-lg px-4 py-3 bg-green-50 text-green-700 border border-green-100';
+    el.classList.remove('hidden');
+  }
+
+  async function loadItchStats() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const grid = document.getElementById('itch-stats-grid');
+    if (!grid) return;
+
+    grid.innerHTML = '<p class="text-gray-500 col-span-full">Carregando...</p>';
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/itch/licenses/stats`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (response.status === 401 || response.status === 403) return logout();
+
+      const data = await response.json();
+      if (!data.success) {
+        grid.innerHTML = `<p class="text-red-500 col-span-full">${escapeHtml(data.message || 'Erro ao carregar.')}</p>`;
+        return;
+      }
+
+      const apiStatus = data.itchApiConfigured
+        ? '<span class="text-emerald-600 text-xs">API configurada</span>'
+        : '<span class="text-amber-600 text-xs">ITCH_API_KEY não configurada</span>';
+
+      grid.innerHTML = `
+        <div class="bg-violet-50 border border-violet-100 p-4 rounded-xl">
+          <p class="text-sm font-medium text-violet-800">Estoque (sem player)</p>
+          <p class="text-3xl font-bold text-violet-600">${data.unusedTotal}</p>
+          ${apiStatus}
+        </div>
+        <div class="bg-blue-50 border border-blue-100 p-4 rounded-xl">
+          <p class="text-sm font-medium text-blue-800">15 dias — estoque</p>
+          <p class="text-2xl font-bold text-blue-600">${data.byPlan?.['15DAYS'] ?? 0}</p>
+        </div>
+        <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl">
+          <p class="text-sm font-medium text-indigo-800">30 dias — estoque</p>
+          <p class="text-2xl font-bold text-indigo-600">${data.byPlan?.['30DAYS'] ?? 0}</p>
+        </div>
+        <div class="bg-purple-50 border border-purple-100 p-4 rounded-xl">
+          <p class="text-sm font-medium text-purple-800">60 dias — estoque</p>
+          <p class="text-2xl font-bold text-purple-600">${data.byPlan?.['60DAYS'] ?? 0}</p>
+          <p class="text-xs text-purple-700 mt-1">${data.activated} já ativadas</p>
+        </div>
+      `;
+    } catch (error) {
+      console.error('Erro itch stats:', error);
+      grid.innerHTML = '<p class="text-red-500 col-span-full">Erro de conexão.</p>';
+    }
+  }
+
+  async function generateItchLicenses() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const planCode = document.getElementById('itch-plan-code')?.value;
+    const quantity = document.getElementById('itch-quantity')?.value;
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/itch/licenses/generate`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ planCode, quantity })
+      });
+
+      if (response.status === 401 || response.status === 403) return logout();
+
+      const data = await response.json();
+      if (data.success) {
+        lastItchCsv = data.csv || '';
+        const textarea = document.getElementById('itch-generated-csv');
+        if (textarea) textarea.value = lastItchCsv;
+        showItchNotification('itch-generate-notification', data.message, false);
+        loadItchStats();
+      } else {
+        showItchNotification('itch-generate-notification', data.message || 'Falha ao gerar.', true);
+      }
+    } catch (error) {
+      console.error('Erro ao gerar itch:', error);
+      showItchNotification('itch-generate-notification', 'Erro de conexão.', true);
+    }
+  }
+
+  async function copyItchCsv() {
+    const text = document.getElementById('itch-generated-csv')?.value || lastItchCsv;
+    if (!text) {
+      showItchNotification('itch-generate-notification', 'Gere um lote antes de copiar.', true);
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      showItchNotification('itch-generate-notification', 'CSV copiado para a área de transferência.', false);
+    } catch (error) {
+      showItchNotification('itch-generate-notification', 'Não foi possível copiar automaticamente.', true);
+    }
+  }
+
+  function downloadItchCsv() {
+    const text = document.getElementById('itch-generated-csv')?.value || lastItchCsv;
+    if (!text) {
+      showItchNotification('itch-generate-notification', 'Gere um lote antes de baixar.', true);
+      return;
+    }
+    const planCode = document.getElementById('itch-plan-code')?.value || 'itch';
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `gladiusbot-external-keys-${planCode.toLowerCase()}.txt`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showItchNotification('itch-generate-notification', 'Arquivo baixado. Cole no itch.io → External keys.', false);
+  }
+
+  async function enrichItchLicense() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const licenseKey = document.getElementById('itch-enrich-license')?.value?.trim();
+    const downloadKey = document.getElementById('itch-enrich-download')?.value?.trim();
+    const planCode = document.getElementById('itch-plan-code')?.value;
+
+    if (!licenseKey || !downloadKey) {
+      showItchNotification('itch-enrich-notification', 'Preencha license key e download key.', true);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/itch/enrich`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ licenseKey, downloadKey, planCode })
+      });
+
+      if (response.status === 401 || response.status === 403) return logout();
+
+      const data = await response.json();
+      showItchNotification('itch-enrich-notification', data.message || (data.success ? 'OK' : 'Falha'), !data.success);
+    } catch (error) {
+      console.error('Erro enrich itch:', error);
+      showItchNotification('itch-enrich-notification', 'Erro de conexão.', true);
     }
   }
 
