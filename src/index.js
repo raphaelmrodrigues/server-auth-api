@@ -67,6 +67,8 @@ const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
 const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
 const endpointSecret = process.env.ENDPOINT_SECRET;
 var globalAnnouncement = '';
+const ITCH_HUB_URL = process.env.ITCH_HUB_URL || 'https://gladiusbot.itch.io/gladiusbot';
+const CHROME_WEB_STORE_URL = process.env.CHROME_WEB_STORE_URL || 'https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa';
 
 async function linkLicenseToPlayer(LicenseModel, licenseData, idkps) {
     const existingLicense = await LicenseModel.findOne({ playerid: idkps });
@@ -1219,7 +1221,7 @@ app.post('/country', (req, res) => {
     if (country === 'br') {
         res.json({ redirectTo: 'checkout' });
     } else {
-        res.json({ redirectTo: 'gumroad' });
+        res.json({ redirectTo: 'itch', url: ITCH_HUB_URL });
     }
 });
 

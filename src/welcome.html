@@ -15,12 +15,13 @@
 <aside class="sidebar">
     <div class="sidebar-brand">
         <img class="sidebar-logo-full" src="./images/gladiusbot-logo.svg" alt="GladiusBot">
-        <span class="sidebar-version">v3.0.3</span>
+        <span class="sidebar-version">v3.0.4</span>
     </div>
     <nav class="sidebar-nav">
         <button type="button" id="back" style="display: none;"><i class="fas fa-arrow-left"></i> Back</button>
         <button type="button" id="contactus"><i class="fas fa-envelope"></i> Contact us</button>
         <button type="button" id="tutorial"><i class="fas fa-play-circle"></i> Tutorial</button>
+        <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener" id="chrome-extension" class="sidebar-link sidebar-link-chrome"><i class="fab fa-chrome"></i> Install Extension</a>
         <button type="button" id="download"><i class="fas fa-download"></i> Download Bot</button>
         <button type="button" id="buyButton" class="is-accent"><i class="fas fa-shopping-cart"></i> Buy</button>
     </nav>
@@ -44,6 +45,7 @@
                     <li>Expedition, dungeon, arena & circus on autopilot</li>
                     <li>Smeltery, market, heal & underworld modules</li>
                     <li>1-day free trial · License in the Extras tab</li>
+                    <li>Install from the <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">Chrome Web Store</a> — or download the ZIP</li>
                 </ul>
                 <div class="hero-actions">
                     <button type="button" class="hero-btn hero-btn-primary" id="hero-download">
@@ -70,11 +72,41 @@
     </section>
 
     <section id="video" class="site-view video-panel">
-        <h2><i class="fas fa-play-circle"></i> Tutorial</h2>
-        <iframe class="frame" src="https://www.youtube.com/embed/vsWShm2GRo4"
-                title="GladiusBot tutorial"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen></iframe>
+        <header class="tutorial-header">
+            <h2><i class="fas fa-play-circle"></i> Tutorials</h2>
+            <p class="tutorial-lead">Step-by-step guides for installing GladiusBot and activating your license. More videos will be added over time.</p>
+        </header>
+
+        <div class="tutorial-layout">
+            <nav class="tutorial-nav" id="tutorial-nav" aria-label="Tutorial list"></nav>
+
+            <div class="tutorial-player-wrap">
+                <div class="tutorial-player" id="tutorial-player">
+                    <iframe id="tutorial-iframe" class="tutorial-frame"
+                            src="https://www.youtube.com/embed/70akJqYWT0s"
+                            title="Manual install on desktop browser"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen></iframe>
+                    <div id="tutorial-placeholder" class="tutorial-placeholder hidden" hidden>
+                        <i class="fas fa-hourglass-half" aria-hidden="true"></i>
+                        <p><strong>Coming soon</strong></p>
+                        <p class="tutorial-placeholder-note">This guide is being recorded and will be published here.</p>
+                    </div>
+                    <div id="tutorial-link-card" class="tutorial-link-card hidden" hidden>
+                        <i class="fab fa-chrome" aria-hidden="true"></i>
+                        <p><strong id="tutorial-link-title">Install from Chrome Web Store</strong></p>
+                        <p id="tutorial-link-desc" class="tutorial-link-desc"></p>
+                        <a id="tutorial-external-link" class="tutorial-external-btn" href="#" target="_blank" rel="noopener">Open in Chrome Web Store</a>
+                    </div>
+                </div>
+
+                <article class="tutorial-detail">
+                    <span class="tutorial-category" id="tutorial-category">Installation</span>
+                    <h3 class="tutorial-title" id="tutorial-title">Manual install on desktop browser</h3>
+                    <p class="tutorial-desc" id="tutorial-desc">Download the ZIP, extract the folder, open <code>chrome://extensions</code>, enable Developer mode, and load the unpacked extension.</p>
+                </article>
+            </div>
+        </div>
     </section>
 
     <section id="contact-section" class="site-view contact-panel">
@@ -306,7 +338,157 @@
         showView('video');
         setSidebarSub();
         btnTutorial.style.display = 'none';
+        initTutorialHub();
     });
+
+    const TUTORIAL_ITEMS = [
+        {
+            id: 'manual-desktop',
+            category: 'Installation',
+            title: 'Manual install on desktop browser',
+            description: 'Download the ZIP from this site or itch.io, extract the folder, open chrome://extensions, turn on Developer mode, and click Load unpacked.',
+            youtubeId: '70akJqYWT0s',
+            type: 'video',
+            available: true
+        },
+        {
+            id: 'chrome-store',
+            category: 'Installation',
+            title: 'Install from Chrome Web Store',
+            description: 'The fastest way on desktop: open the store page, click Add to Chrome, and confirm. No ZIP or Developer mode required.',
+            externalUrl: 'https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa',
+            linkLabel: 'Open in Chrome Web Store',
+            type: 'link',
+            available: true
+        },
+        {
+            id: 'manual-mobile',
+            category: 'Installation',
+            title: 'Manual install on mobile',
+            description: 'How to sideload the extension on Android browsers that support unpacked extensions (Kiwi, Lemur, etc.).',
+            type: 'video',
+            available: false
+        },
+        {
+            id: 'trial-license',
+            category: 'License',
+            title: 'Activate your 1-day free trial',
+            description: 'Open Gladiatus, go to the GladiusBot panel → Extras tab, request a trial key, and validate your license on the server.',
+            type: 'video',
+            available: false
+        },
+        {
+            id: 'paid-license',
+            category: 'License',
+            title: 'Activate a paid license (itch.io)',
+            description: 'After purchase on itch.io, copy your License Key from External keys on the download page and paste it in the Extras tab inside Gladiatus.',
+            type: 'video',
+            available: false
+        },
+        {
+            id: 'paid-license-br',
+            category: 'License',
+            title: 'Activate a paid license (Brazil / Mercado Pago)',
+            description: 'Complete checkout on gldbotserver.com, receive your license key by email, then paste it in the Extras tab in Gladiatus.',
+            type: 'video',
+            available: false
+        }
+    ];
+
+    let tutorialHubReady = false;
+    let activeTutorialId = 'manual-desktop';
+
+    function initTutorialHub() {
+        if (tutorialHubReady) {
+            selectTutorial(activeTutorialId);
+            return;
+        }
+        tutorialHubReady = true;
+        renderTutorialNav();
+        selectTutorial(activeTutorialId);
+    }
+
+    function renderTutorialNav() {
+        const nav = document.getElementById('tutorial-nav');
+        if (!nav) return;
+
+        const groups = {};
+        TUTORIAL_ITEMS.forEach(function (item) {
+            if (!groups[item.category]) groups[item.category] = [];
+            groups[item.category].push(item);
+        });
+
+        nav.innerHTML = Object.keys(groups).map(function (category) {
+            const items = groups[category].map(function (item) {
+                const badge = item.available
+                    ? '<span class="tutorial-nav-badge is-live">Available</span>'
+                    : '<span class="tutorial-nav-badge">Soon</span>';
+                return '<button type="button" class="tutorial-nav-item" data-tutorial-id="' + item.id + '">' +
+                    '<span class="tutorial-nav-item-title">' + item.title + '</span>' +
+                    badge +
+                    '</button>';
+            }).join('');
+
+            return '<div class="tutorial-nav-group">' +
+                '<p class="tutorial-nav-label">' + category + '</p>' +
+                items +
+                '</div>';
+        }).join('');
+
+        nav.querySelectorAll('.tutorial-nav-item').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                selectTutorial(btn.getAttribute('data-tutorial-id'));
+            });
+        });
+    }
+
+    function selectTutorial(id) {
+        const item = TUTORIAL_ITEMS.find(function (t) { return t.id === id; });
+        if (!item) return;
+
+        activeTutorialId = id;
+
+        document.querySelectorAll('.tutorial-nav-item').forEach(function (btn) {
+            btn.classList.toggle('is-active', btn.getAttribute('data-tutorial-id') === id);
+        });
+
+        document.getElementById('tutorial-category').textContent = item.category;
+        document.getElementById('tutorial-title').textContent = item.title;
+        document.getElementById('tutorial-desc').textContent = item.description;
+
+        const iframe = document.getElementById('tutorial-iframe');
+        const placeholder = document.getElementById('tutorial-placeholder');
+        const linkCard = document.getElementById('tutorial-link-card');
+
+        iframe.classList.add('hidden');
+        iframe.hidden = true;
+        placeholder.classList.add('hidden');
+        placeholder.hidden = true;
+        linkCard.classList.add('hidden');
+        linkCard.hidden = true;
+
+        if (item.type === 'link' && item.available) {
+            linkCard.classList.remove('hidden');
+            linkCard.hidden = false;
+            document.getElementById('tutorial-link-title').textContent = item.title;
+            document.getElementById('tutorial-link-desc').textContent = item.description;
+            const link = document.getElementById('tutorial-external-link');
+            link.href = item.externalUrl;
+            link.textContent = item.linkLabel || 'Open link';
+            return;
+        }
+
+        if (item.type === 'video' && item.available && item.youtubeId) {
+            iframe.classList.remove('hidden');
+            iframe.hidden = false;
+            iframe.title = item.title;
+            iframe.src = 'https://www.youtube.com/embed/' + item.youtubeId + '?rel=0';
+            return;
+        }
+
+        placeholder.classList.remove('hidden');
+        placeholder.hidden = false;
+    }
 
     document.getElementById('back').addEventListener('click', function () {
         showView('hero');
@@ -337,26 +519,41 @@
         flagIcon.className = 'fi fi-' + opt.getAttribute('data-flag') + ' flag-icon';
     });
 
+    const ITCH_HUB_URL = 'https://gladiusbot.itch.io/gladiusbot';
+
     submitButton.addEventListener('click', async function () {
+        const country = select.value;
+
+        if (country === 'br') {
+            window.location.href = 'checkout.html';
+            return;
+        }
+
+        submitButton.disabled = true;
+        submitButton.textContent = 'Redirecting…';
+
         try {
-            const response = await fetch('https://gldbotserver.com/country', {
+            const response = await fetch('/country', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ country: select.value })
+                body: JSON.stringify({ country })
             });
             if (response.ok) {
                 const data = await response.json();
                 if (data.redirectTo === 'checkout') {
                     window.location.href = 'checkout.html';
-                } else if (data.redirectTo === 'gumroad') {
-                    window.location.href = 'https://sgldbot.gumroad.com/l/gladiatusbot';
+                    return;
                 }
-            } else {
-                console.error('Request error:', response.statusText);
+                if (data.redirectTo === 'itch' || data.redirectTo === 'gumroad') {
+                    window.location.href = data.url || ITCH_HUB_URL;
+                    return;
+                }
             }
         } catch (error) {
-            console.error('Request error:', error);
+            console.error('Country redirect error:', error);
         }
+
+        window.location.href = ITCH_HUB_URL;
     });
 
     function showSiteAlert(message, type) {
