@@ -33,6 +33,20 @@ const {
     getCustomerEmailStats,
 } = require('./email-broadcast');
 const {
+    MP_PLANS,
+    getMercadoPagoPlan,
+    buildMercadoPagoExternalReference,
+    parsePlanCodeFromExternalReference,
+    resolvePlanLabel,
+    resolvePlanTitleForDb,
+} = require('./mercadopago-plans');
+const {
+    PURCHASE_FROM,
+    PURCHASE_REPLY_TO,
+    buildPurchaseEmailHtml,
+    getPurchaseEmailAttachments,
+} = require('./purchase-email');
+const {
     ITCH_PLANS,
     isItchLicenseKey,
     isItchLicenseRecord,
@@ -562,24 +576,24 @@ app.get('/admin/broadcast-email/preview', authenticateAdminToken, (req, res) => 
 app.post('/mercadopago/checkout', async (req, res) => {
     const { plan_code, email } = req.body;
 
-    const plans = {
-        '15DAYS': { price: 5.78, title: 'GLDbot - 15 dias', duration: 15 },
-        '30DAYS': { price: 9.89, title: 'GLDbot - 30 dias', duration: 30 },
-        '60DAYS': { price: 18.98, title: 'GLDbot - 60 dias', duration: 60 },
-    };
-
-    const selectedPlan = plans[plan_code];
+    const selectedPlan = getMercadoPagoPlan(plan_code);
 
     if (!selectedPlan) {
         return res.status(400).send({ error: 'Plano inválido.' });
     }
 
     try {
+        const checkoutId = uuidv4();
+        const externalReference = buildMercadoPagoExternalReference(plan_code, checkoutId);
+
         // Cria a preferência de pagamento
         const preference = {
+            external_reference: externalReference,
             items: [
                 {
+                    id: plan_code,
                     title: selectedPlan.title,
+                    description: selectedPlan.description,
                     quantity: 1,
                     currency_id: 'BRL',
                     unit_price: selectedPlan.price,
@@ -596,7 +610,12 @@ app.post('/mercadopago/checkout', async (req, res) => {
                 pending: `https://gldbotserver.com/checkout.html`,
             },
             auto_return: 'approved',
-            metadata: { plan_code, email },
+            metadata: {
+                plan_code,
+                email,
+                checkout_id: checkoutId,
+                external_reference: externalReference,
+            },
         };
         console.log('preference: ', preference)
 
@@ -656,16 +675,28 @@ app.post('/mercadopago/webhook', async (req, res) => {
                     }
                 }
 
-                const email = payment.metadata.email;
-                const planCode = payment.metadata.plan_code;
+                const email = payment.metadata?.email || payment.payer?.email;
+                let planCode = payment.metadata?.plan_code
+                    || parsePlanCodeFromExternalReference(payment.external_reference);
+                const externalReference = payment.external_reference
+                    || payment.metadata?.external_reference
+                    || null;
+
                 auditLogData.email = email;
                 auditLogData.planCode = planCode;
+                if (externalReference) {
+                    auditLogData.auditNotes = `external_reference: ${externalReference}`;
+                }
 
-                const plans = {
-                    '15DAYS': { duration: 15 },
-                    '30DAYS': { duration: 30 },
-                    '60DAYS': { duration: 60 },
-                };
+                if (!email || !planCode) {
+                    auditLogData.status = 'error';
+                    auditLogData.auditNotes = `Dados insuficientes no pagamento (email ou plano). external_reference=${externalReference || 'N/A'}`;
+                    await new SaleAudit(auditLogData).save();
+                    console.error('Webhook MP sem email ou planCode:', { email, planCode, externalReference });
+                    return res.status(200).send();
+                }
+
+                const plans = MP_PLANS;
 
                 const selectedPlan = plans[planCode];
 
@@ -691,7 +722,10 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
                 // Gera a licença
                 const licenseKey = uuidv4();
-                const description = payment.description;
+                const planTitle = resolvePlanTitleForDb({
+                    planCode,
+                    paymentDescription: payment.description,
+                });
                 const expireDate = new Date();
                 const transactionAmount = payment.transaction_amount; // Captura o valor da transação
                 expireDate.setDate(expireDate.getDate() + selectedPlan.duration);
@@ -707,7 +741,7 @@ app.post('/mercadopago/webhook', async (req, res) => {
                 const newLicense = new License({
                     playerid: "",
                     licenseKey: licenseKey,
-                    plan: description,
+                    plan: planTitle,
                     expireDate: expireDate,
                     trial: false,
                     email: email,
@@ -721,7 +755,9 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
                 console.log('Pagamento aprovado, licença gerada:', licenseKey);
                 auditLogData.licenseLink = newLicense._id;
-                auditLogData.auditNotes = 'Pagamento aprovado e nova licença gerada com sucesso.';
+                auditLogData.auditNotes = externalReference
+                    ? `Pagamento aprovado e nova licença gerada. external_reference=${externalReference}`
+                    : 'Pagamento aprovado e nova licença gerada com sucesso.';
 
 
                 // ---- CHAMAR A ROTA /sendMail PARA ENVIAR O E-MAIL ----
@@ -738,7 +774,8 @@ app.post('/mercadopago/webhook', async (req, res) => {
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             customerName: customerName,
-                            itemDescription: description,
+                            planCode: planCode,
+                            itemDescription: planTitle,
                             licenseKey: licenseKey,
                             expirationDate: expireDate,
                             email: email
@@ -771,84 +808,40 @@ app.post('/mercadopago/webhook', async (req, res) => {
 
 
 app.post('/sendMail', async (req, res) => {
-    const { customerName, itemDescription, licenseKey, expirationDate, email } = req.body;
-    console.log('Received Parameters:', { customerName, itemDescription, licenseKey, expirationDate, email });
+    const { customerName, itemDescription, licenseKey, expirationDate, email, planCode } = req.body;
+    console.log('Received Parameters:', { customerName, itemDescription, licenseKey, expirationDate, email, planCode });
 
-    const enviarEmail = async (name, description, license, dateExpire, recipientEmail) => {
-        const imagePath = path.join(__dirname, 'images/gladiusbot-icon-128.png');
-        const imageData = fs.readFileSync(imagePath).toString('base64');
-        const planLabel = String(description || '').replace(/GLDbot/gi, 'GladiusBot');
+    if (!email || !licenseKey) {
+        return res.status(400).json({ message: 'E-mail e licenseKey são obrigatórios.' });
+    }
 
-        function formatDate(date) {
-            const options = {
-                day: '2-digit',
-                month: 'long',
-                year: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: false
-            };
-            return new Intl.DateTimeFormat('pt-BR', options).format(date);
-        }
+    const planLabel = resolvePlanLabel({ planCode, itemDescription });
 
-        const Data = new Date(dateExpire);
-        Data.setHours(Data.getHours() - 3); // Ajusta para GMT-3
-        const formattedDate = formatDate(Data);
-
-        const msg = {
-            to: [recipientEmail, 'gldbotsuport@gmail.com'],
-            from: 'support@gldbotserver.com',
-            replyTo: 'gldbotsuport@gmail.com',
-            subject: 'Detalhes da sua compra - GladiusBot',
-            text: 'GladiusBot',
-            html: `
-                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; color: #333;">
-                    <div style="text-align: center;">
-                        <img src="cid:gladiusboticon" alt="GladiusBot" style="width: 120px; margin-bottom: 20px;">
-                        <h2 style="color: #4CAF50;">Compra Realizada com Sucesso!</h2>
-                    </div>
-                    <p>Olá <strong style="font-size: 14px;">${name}</strong>,</p>
-                    <p>Agradecemos por sua compra! Abaixo estão os detalhes da sua licença:</p>
-                    <div style="background-color: #ffffff; padding: 15px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1); margin-bottom: 20px;">
-                        <ul style="list-style-type: none; padding: 0;">
-                            <li><strong>📝 Plano:</strong> ${planLabel}</li>
-                            <li><strong>📆 Data de Expiração:</strong> ${formattedDate}</li>
-                            <li><strong>⚠️ Observação:</strong> Chave válida para uma única conta!</li>
-                            <li><strong>🔑 Chave da Licença:</strong> ${license}</li>
-                        </ul>
-                    </div>
-                    <p style="font-size: 0.9em; color: #555;">Por favor, guarde esta chave em segurança.</p>
-                    <p>Atenciosamente,<br>Equipe GladiusBot</p>
-                    <footer style="text-align: center; margin-top: 20px; font-size: 0.8em; color: #999;">
-                        <p>&copy; ${new Date().getFullYear()} GladiusBot. Todos os direitos reservados.</p>
-                    </footer>
-                </div>
-            `,
-            attachments: [
-                {
-                    filename: 'gladiusbot-icon-128.png',
-                    content: imageData,
-                    type: 'image/png',
-                    disposition: 'inline',
-                    content_id: 'gladiusboticon'
-                }
-            ]
-        };
-
-        try {
-            await sgMail.send(msg);
-            console.log('E-mail enviado com sucesso');
-        } catch (error) {
-            console.error('Erro ao enviar e-mail:', error);
-            if (error.response) {
-                console.error(error.response.body);
-            }
-        }
+    const msg = {
+        to: [email, 'gldbotsuport@gmail.com'],
+        from: PURCHASE_FROM,
+        replyTo: PURCHASE_REPLY_TO,
+        subject: 'Sua licença GladiusBot — compra confirmada',
+        html: buildPurchaseEmailHtml({
+            customerName,
+            planLabel,
+            licenseKey,
+            expirationDate,
+        }),
+        attachments: getPurchaseEmailAttachments(),
     };
 
-    // Chama a função de envio de e-mail
-    await enviarEmail(customerName, itemDescription, licenseKey, expirationDate, email);
-    res.send({ message: 'E-mail enviado com sucesso!' });
+    try {
+        await sgMail.send(msg);
+        console.log('E-mail de compra enviado com sucesso');
+        res.send({ message: 'E-mail enviado com sucesso!', planLabel });
+    } catch (error) {
+        console.error('Erro ao enviar e-mail:', error);
+        if (error.response) {
+            console.error(error.response.body);
+        }
+        res.status(500).json({ message: 'Erro ao enviar e-mail.' });
+    }
 });
 
 app.post('/admin/sales-overview', authenticateAdminToken, async (req, res) => {
