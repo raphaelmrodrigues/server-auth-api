@@ -34,6 +34,7 @@ const {
 } = require('./email-broadcast');
 const {
     MP_PLANS,
+    MP_STATEMENT_DESCRIPTOR,
     getMercadoPagoPlan,
     buildMercadoPagoExternalReference,
     parsePlanCodeFromExternalReference,
@@ -589,6 +590,7 @@ app.post('/mercadopago/checkout', async (req, res) => {
         // Cria a preferência de pagamento
         const preference = {
             external_reference: externalReference,
+            statement_descriptor: MP_STATEMENT_DESCRIPTOR,
             items: [
                 {
                     id: plan_code,

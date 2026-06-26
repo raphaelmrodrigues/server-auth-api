@@ -1,313 +1,548 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="icon" type="image/png" href="./images/gldicon.png">
-    <title>Compra Realizada com Sucesso</title>
-    <link rel="stylesheet" href="styles.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f5f7fa;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 2rem;
-        }
-
-        header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
-
-        header h1 {
-            font-size: 2.5rem;
-            color: #2d3748;
-            margin-bottom: 0.5rem;
-        }
-
-        header p {
-            color: #4a5568;
-            font-size: 1.1rem;
-        }
-
-        .success-message {
-            background-color: #38a169;
-            color: #fff;
-            padding: 1rem 2rem;
-            border-radius: 8px;
-            margin-bottom: 2rem;
-            text-align: center;
-            width: 100%;
-            max-width: 500px;
-            font-size: 1.2rem;
-        }
-
-        .purchase-details {
-            background-color: #ffffff;
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 600px;
-            margin-bottom: 3rem;
-        }
-
-        .purchase-details h2 {
-            font-size: 1.8rem;
-            color: #2d3748;
-            margin-bottom: 1.5rem;
-            margin-top: 1.5rem;
-            text-align: center;
-        }
-
-        .purchase-details .price {
-            font-size: 2rem;
-            color: #2d3748;
-            margin-bottom: 1.5rem;
-        }
-
-        .purchase-details ul {
-            list-style-type: none;
-            margin-bottom: 1.5rem;
-        }
-
-        .purchase-details li {
-            font-size: 1rem;
-            color: #718096;
-            margin: 0.5rem 0;
-        }
-
-        .key-container {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.5rem;
-        }
-
-        .key-container input {
-            padding: 0.5rem;
-            font-size: 1rem;
-            width: 70%;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-right: 5px;
-        }
-
-        .key-container button {
-            background-color: #6d2a2a;
-            color: #fff;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .key-container button:hover {
-            background-color: #432a2a;
-        }
-
-        button {
-            padding: 0.5rem 1.6rem;
-            border: none;
-            background-color: #6d2a2a;
-            color: #ffffff;
-            font-size: 1rem;
-            font-weight: bold;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-
-        button:hover {
-            background-color: #432a2a;
-        }
-
-        .product-image {
-            width: 170px;
-        }
-
-        .image {
-            text-align: center;
-        }
-
-        .gobackpage {
-            text-align: center;
-            margin-top: 30px;
-        }
-
-        .notification {
-            visibility: hidden;
-            opacity: 0;
-            margin-top: 1rem;
-            background-color: #38a169;
-            color: #fff;
-            padding: 10px 20px;
-            border-radius: 5px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            font-size: 1rem;
-            text-align: center;
-            transition: visibility 0s, opacity 0.5s ease;
-            max-width: 600px;
-        }
-        .notification.show {
-            visibility: visible;
-            opacity: 1;
-        }
-
-    </style>
+    <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
+    <link rel="apple-touch-icon" href="./images/gladiusbot-icon-128.png">
+    <title>GladiusBot — Compra confirmada</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
 </head>
 <body>
+<style>
+    :root {
+        --gld-bg: #14100a;
+        --gld-panel: #f4e4c1;
+        --gld-wood: #5c3a1c;
+        --gld-wood-dark: #2a1a0e;
+        --gld-gold: #ffcc66;
+        --gld-accent: #ba9700;
+        --gld-border: #876e3e;
+        --gld-text: #3d2a1a;
+        --gld-text-muted: #6b4f32;
+        --gld-success: #3d6b28;
+        --gld-font: Tahoma, "Segoe UI", Arial, sans-serif;
+        --gld-font-display: Georgia, "Times New Roman", serif;
+    }
 
-<header>
-    <h1>Compra Realizada com Sucesso! 🛒</h1>
-    <p>Agradecemos por sua compra. Seu pedido foi processado. ✅</p>
-</header>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-<div class="success-message">
-    <p><strong>Parabéns!</strong> Sua compra foi realizada com sucesso. O pagamento foi confirmado.</p>
-</div>
+    body {
+        font-family: var(--gld-font);
+        background:
+            radial-gradient(ellipse 70% 40% at 50% 0%, rgb(186 151 0 / 0.1), transparent 55%),
+            linear-gradient(180deg, #1a120a 0%, #0e0a06 100%);
+        min-height: 100vh;
+        color: var(--gld-text);
+        padding: 1.25rem 1rem 2.5rem;
+    }
 
-<div class="purchase-details">
+    .success-shell {
+        width: 100%;
+        max-width: 640px;
+        margin: 0 auto;
+    }
 
-    <div class="image">
-        <img src="images/gldicon.png" alt="Produto" class="product-image">
+    .success-top {
+        margin-bottom: 1rem;
+    }
+
+    .success-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1.05rem;
+        font-size: 0.84rem;
+        font-weight: 600;
+        font-family: var(--gld-font-display);
+        color: #fff8cf;
+        text-decoration: none;
+        background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 100%);
+        border: 1px solid rgb(255 204 102 / 0.4);
+        border-radius: 4px;
+        box-shadow: 0 4px 14px rgb(0 0 0 / 0.3);
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+
+    .success-back:hover {
+        border-color: var(--gld-gold);
+        box-shadow: 0 0 14px rgb(255 204 102 / 0.18);
+    }
+
+    .success-back i { color: var(--gld-gold); font-size: 0.78rem; }
+
+    .success-card {
+        background: linear-gradient(180deg, #f4e4bc 0%, #e8d4a8 100%);
+        border: 3px solid var(--gld-border);
+        border-radius: 8px;
+        box-shadow: 0 12px 32px rgb(0 0 0 / 0.45);
+        overflow: hidden;
+    }
+
+    .success-header {
+        background: linear-gradient(180deg, #5c3d1e 0%, #3d2814 100%);
+        padding: 1.75rem 1.5rem;
+        text-align: center;
+        border-bottom: 3px solid #c9a227;
+    }
+
+    .success-header img {
+        width: 72px;
+        height: 72px;
+        margin-bottom: 0.75rem;
+        border-radius: 10px;
+        border: 2px solid #c9a227;
+    }
+
+    .success-header h1 {
+        font-family: var(--gld-font-display);
+        font-size: 1.45rem;
+        font-weight: normal;
+        color: #f4e4bc;
+        margin-bottom: 0.35rem;
+    }
+
+    .success-header p {
+        font-size: 0.92rem;
+        color: rgb(244 228 193 / 0.85);
+        line-height: 1.5;
+    }
+
+    .success-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        margin-top: 0.85rem;
+        padding: 0.35rem 0.85rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #d4f5c4;
+        background: rgb(61 107 40 / 0.45);
+        border: 1px solid rgb(134 197 94 / 0.5);
+        border-radius: 999px;
+    }
+
+    .success-body {
+        padding: 1.5rem 1.35rem 1.75rem;
+    }
+
+    .success-section-title {
+        font-family: var(--gld-font-display);
+        font-size: 1.1rem;
+        color: var(--gld-wood);
+        margin-bottom: 0.85rem;
+        padding-bottom: 0.35rem;
+        border-bottom: 1px solid rgb(135 110 62 / 0.35);
+    }
+
+    .success-details {
+        list-style: none;
+        margin-bottom: 1.25rem;
+    }
+
+    .success-details li {
+        display: flex;
+        justify-content: space-between;
+        gap: 1rem;
+        padding: 0.55rem 0;
+        border-bottom: 1px solid rgb(135 110 62 / 0.2);
+        font-size: 0.92rem;
+    }
+
+    .success-details li:last-child { border-bottom: none; }
+
+    .success-details strong {
+        color: var(--gld-wood);
+        flex-shrink: 0;
+    }
+
+    .success-details span {
+        text-align: right;
+        color: var(--gld-text-muted);
+        word-break: break-word;
+    }
+
+    .license-block {
+        background: #fff9ed;
+        border: 2px solid #c9a227;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1.25rem;
+    }
+
+    .license-block label {
+        display: block;
+        font-size: 0.68rem;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #8b6914;
+        margin-bottom: 0.5rem;
+    }
+
+    .license-row {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .license-row input {
+        flex: 1 1 200px;
+        min-width: 0;
+        padding: 0.65rem 0.75rem;
+        font-family: "Courier New", Courier, monospace;
+        font-size: 0.88rem;
+        color: #f4e4bc;
+        background: #3d2814;
+        border: 1px solid #8b6914;
+        border-radius: 4px;
+    }
+
+    .btn-copy {
+        padding: 0.65rem 1rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        font-family: inherit;
+        color: #fff8cf;
+        background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 100%);
+        border: 1px solid rgb(255 204 102 / 0.45);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: box-shadow 0.15s, border-color 0.15s;
+    }
+
+    .btn-copy:hover {
+        border-color: var(--gld-gold);
+        box-shadow: 0 0 12px rgb(255 204 102 / 0.2);
+    }
+
+    .success-steps {
+        margin: 0 0 1.25rem;
+        padding-left: 1.2rem;
+        font-size: 0.9rem;
+        line-height: 1.55;
+        color: var(--gld-text);
+    }
+
+    .success-steps li { margin-bottom: 0.45rem; }
+
+    .success-steps a {
+        color: var(--gld-wood);
+        font-weight: 600;
+    }
+
+    .success-note {
+        font-size: 0.84rem;
+        color: var(--gld-text-muted);
+        line-height: 1.5;
+        margin-bottom: 1.25rem;
+    }
+
+    .success-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.65rem;
+    }
+
+    .btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.75rem 1rem;
+        font-size: 0.95rem;
+        font-weight: 600;
+        font-family: var(--gld-font-display);
+        color: #fff8cf;
+        text-decoration: none;
+        background: linear-gradient(180deg, rgb(186 151 0 / 0.45), rgb(92 58 28 / 0.55));
+        border: 1px solid var(--gld-gold);
+        border-radius: 4px;
+        cursor: pointer;
+        transition: box-shadow 0.15s;
+    }
+
+    .btn-primary:hover {
+        box-shadow: 0 0 16px rgb(255 204 102 / 0.22);
+    }
+
+    .btn-secondary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        width: 100%;
+        padding: 0.7rem 1rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--gld-wood);
+        text-decoration: none;
+        background: rgb(255 255 255 / 0.35);
+        border: 1px solid rgb(135 110 62 / 0.45);
+        border-radius: 4px;
+    }
+
+    .btn-secondary:hover {
+        border-color: var(--gld-border);
+        background: rgb(255 255 255 / 0.55);
+    }
+
+    .toast {
+        position: fixed;
+        bottom: 1.5rem;
+        left: 50%;
+        transform: translateX(-50%) translateY(120%);
+        padding: 0.75rem 1.25rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #fff;
+        background: var(--gld-success);
+        border: 1px solid rgb(134 197 94 / 0.6);
+        border-radius: 6px;
+        box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
+        opacity: 0;
+        transition: transform 0.3s ease, opacity 0.3s ease;
+        z-index: 100;
+    }
+
+    .toast.show {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+
+    .loading-state {
+        text-align: center;
+        padding: 2rem 1rem;
+        color: var(--gld-text-muted);
+        font-size: 0.95rem;
+    }
+
+    .error-state {
+        text-align: center;
+        padding: 1.5rem 1rem;
+        color: #8b2222;
+        font-size: 0.92rem;
+        line-height: 1.5;
+    }
+
+    @media (max-width: 480px) {
+        .success-details li {
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+        .success-details span { text-align: left; }
+    }
+</style>
+
+<div class="success-shell">
+    <div class="success-top">
+        <a class="success-back" href="/"><i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao início</a>
     </div>
 
-    <h2>Detalhes da Compra</h2>
-    <ul>
-        <li><strong>Plano:</strong> <span id="plan">Carregando...</span></li>
-        <li><strong>Data da Compra:</strong> <span id="purchaseDate">Carregando...</span></li>
-        <li><strong>Validade da Licença:</strong> <span id="expirationDate">Carregando...</span></li>
-        <li><strong>Observação:</strong> <span id="customerName">Carregando...</span></li>
-        <li><strong>Email do cliente:</strong> <span id="customerEmail">Carregando...</span></li>
-    </ul>
+    <div class="success-card">
+        <header class="success-header">
+            <img src="./images/gladiusbot-mark.svg" alt="GladiusBot">
+            <h1>Compra realizada com sucesso</h1>
+            <p>O pagamento foi confirmado. Sua licença está pronta para ativação.</p>
+            <span class="success-badge"><i class="fas fa-check-circle"></i> Pagamento aprovado</span>
+        </header>
 
-    <div class="key-container">
-        <input type="text" id="licenseKey" readonly>
-        <button onclick="copyKey()">Copiar</button>
+        <div class="success-body" id="success-content">
+            <div class="loading-state" id="loading-state">
+                <i class="fas fa-spinner fa-spin"></i> Carregando detalhes da licença…
+            </div>
+
+            <div id="license-panel" class="hidden" hidden>
+                <h2 class="success-section-title">Detalhes da compra</h2>
+                <ul class="success-details">
+                    <li><strong>Plano</strong> <span id="plan">—</span></li>
+                    <li><strong>Data da compra</strong> <span id="purchaseDate">—</span></li>
+                    <li><strong>Validade da licença</strong> <span id="expirationDate">—</span></li>
+                    <li><strong>Observação</strong> <span id="customerNote">Chave válida para uma única conta.</span></li>
+                    <li><strong>E-mail</strong> <span id="customerEmail">—</span></li>
+                </ul>
+
+                <div class="license-block">
+                    <label for="licenseKey">Chave da licença</label>
+                    <div class="license-row">
+                        <input type="text" id="licenseKey" readonly aria-label="Chave da licença">
+                        <button type="button" class="btn-copy" onclick="copyKey()"><i class="fas fa-copy"></i> Copiar</button>
+                    </div>
+                </div>
+
+                <h2 class="success-section-title">Próximos passos</h2>
+                <ol class="success-steps">
+                    <li>Instale a extensão pela <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">Chrome Web Store</a>.</li>
+                    <li>Abra o Gladiatus no mesmo perfil do Chrome.</li>
+                    <li>No painel GladiusBot, vá em <strong>GladiusBot</strong> → <strong>GladiusBot License</strong> e cole a chave.</li>
+                </ol>
+
+                <p class="success-note">Enviamos os mesmos dados para o seu e-mail. Guarde a chave em local seguro.</p>
+
+                <div class="success-actions">
+                    <a class="btn-primary" href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">
+                        <i class="fab fa-chrome"></i> Instalar extensão
+                    </a>
+                    <a class="btn-secondary" href="/">
+                        <i class="fas fa-home"></i> Voltar à página principal
+                    </a>
+                </div>
+            </div>
+
+            <div id="error-panel" class="error-state hidden" hidden>
+                <p><strong>Não foi possível carregar a licença ainda.</strong></p>
+                <p style="margin-top:0.5rem;">O pagamento pode estar em processamento. Verifique seu e-mail em alguns minutos ou acesse o suporte em <a href="https://gldbotserver.com/">gldbotserver.com</a>.</p>
+                <a class="btn-secondary" href="/" style="margin-top:1rem;">Voltar ao início</a>
+            </div>
+        </div>
     </div>
-    <div class="gobackpage">
-        <button onclick="window.location.href='https://gldbotserver.com';">Voltar à Página Principal</button>
-    </div>
-
-</div>
-<div class="notification" id="copyNotification">
-    Chave copiada para a área de transferência!
 </div>
 
+<div class="toast" id="copyNotification" role="status">Chave copiada!</div>
 
 <script>
-    function copyKey() {
-        const keyInput = document.getElementById('licenseKey');
-        keyInput.select();
-        document.execCommand('copy');
+    const API_BASE = window.location.origin;
+    const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa';
 
-        // Exibe a notificação
-        const notification = document.getElementById('copyNotification');
-        notification.classList.add('show');
-
-        // Remove a notificação após 3 segundos
-        setTimeout(() => {
-            notification.classList.remove('show');
-        }, 3000);
+    function formatPlanLabel(plan) {
+        if (!plan || !String(plan).trim()) return 'GladiusBot';
+        return String(plan).replace(/GLDbot/gi, 'GladiusBot');
     }
 
     function formatDate(date) {
-        const options = {
+        return new Intl.DateTimeFormat('pt-BR', {
+            timeZone: 'America/Sao_Paulo',
             day: '2-digit',
             month: 'long',
             year: 'numeric',
             hour: '2-digit',
             minute: '2-digit',
-            hour12: false
-        };
-        return new Intl.DateTimeFormat('pt-BR', options).format(date);
+            hour12: false,
+        }).format(date);
     }
 
-    // Função para buscar e exibir as informações de licença
+    function showLicensePanel() {
+        document.getElementById('loading-state').hidden = true;
+        document.getElementById('loading-state').classList.add('hidden');
+        const panel = document.getElementById('license-panel');
+        panel.hidden = false;
+        panel.classList.remove('hidden');
+    }
+
+    function showErrorPanel() {
+        document.getElementById('loading-state').hidden = true;
+        document.getElementById('loading-state').classList.add('hidden');
+        const panel = document.getElementById('error-panel');
+        panel.hidden = false;
+        panel.classList.remove('hidden');
+    }
+
+    function fillLicenseData(data) {
+        document.getElementById('licenseKey').value = data.licenseKey || '';
+        document.getElementById('purchaseDate').innerText = formatDate(new Date());
+        document.getElementById('expirationDate').innerText = formatDate(new Date(data.expirationDate));
+        document.getElementById('plan').innerText = formatPlanLabel(data.plan);
+        document.getElementById('customerEmail').innerText = data.email || '—';
+        showLicensePanel();
+    }
+
+    async function copyKey() {
+        const key = document.getElementById('licenseKey').value;
+        if (!key) return;
+        try {
+            await navigator.clipboard.writeText(key);
+        } catch (e) {
+            const input = document.getElementById('licenseKey');
+            input.select();
+            document.execCommand('copy');
+        }
+        const toast = document.getElementById('copyNotification');
+        toast.classList.add('show');
+        setTimeout(() => toast.classList.remove('show'), 2800);
+    }
+
+    async function maybeSendEmail(data, idempotencyKey) {
+        if (!data.email || !data.licenseKey) return;
+        const storageKey = `gld_email_sent_${idempotencyKey}`;
+        if (localStorage.getItem(storageKey)) return;
+
+        try {
+            await fetch(`${API_BASE}/sendMail`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    customerName: data.email.split('@')[0],
+                    itemDescription: data.plan,
+                    licenseKey: data.licenseKey,
+                    expirationDate: data.expirationDate,
+                    email: data.email,
+                    planCode: data.planCode || undefined,
+                }),
+            });
+            localStorage.setItem(storageKey, 'true');
+        } catch (error) {
+            console.error('Erro ao enviar e-mail de confirmação:', error);
+        }
+    }
+
     async function fetchLicenseInfo() {
         const urlParams = new URLSearchParams(window.location.search);
         const sessionId = urlParams.get('session_id');
-        if (!sessionId) {
-            const urlParams = new URLSearchParams(window.location.search);
-            const payment_id = urlParams.get('payment_id');
-            if (payment_id) {
-                try {
-                    const response = await fetch(`https://gldbotserver.com/license-info-mp?payment_id=${payment_id}`);
-                    const data = await response.json();
-                    if (response.ok) {
-                        document.getElementById('licenseKey').value = data.licenseKey;
-                        const purchaseDate = new Date();
-                        document.getElementById('purchaseDate').innerText = formatDate(purchaseDate);
-                        const expirationDate = new Date(data.expirationDate);
-                        document.getElementById('expirationDate').innerText = formatDate(expirationDate);
-                        document.getElementById('plan').innerText = data.plan;
-                        document.getElementById('customerName').innerText = "Chave válida para uma unica conta!";
-                        document.getElementById('customerEmail').innerText = data.email;
+        const paymentId = urlParams.get('payment_id') || urlParams.get('collection_id');
 
-                    } else {
-                        console.error(data.error || 'Erro ao buscar informações da licença');
-                    }
-                } catch (error) {
-                    console.error('Erro ao buscar informações da licença:', error);
+        if (paymentId) {
+            try {
+                const response = await fetch(`${API_BASE}/license-info-mp?payment_id=${encodeURIComponent(paymentId)}`);
+                const data = await response.json();
+                if (response.ok && data.licenseKey) {
+                    fillLicenseData(data);
+                    await maybeSendEmail(data, `mp_${paymentId}`);
+                    return;
                 }
-            } else {
-                return;
+            } catch (error) {
+                console.error('Erro ao buscar licença MP:', error);
             }
         }
-        try {
-            const response = await fetch(`https://gldbotserver.com/license-info?session_id=${sessionId}`);
-            const data = await response.json();
-            if (response.ok) {
-                document.getElementById('licenseKey').value = data.licenseKey;
-                const purchaseDate = new Date();
-                document.getElementById('purchaseDate').innerText = formatDate(purchaseDate);
-                const expirationDate = new Date(data.expirationDate);
-                document.getElementById('expirationDate').innerText = formatDate(expirationDate);
-                document.getElementById('plan').innerText = data.plan;
-                document.getElementById('customerName').innerText = "Chave válida para uma unica conta!";
-                document.getElementById('customerEmail').innerText = data.email;
-                const customerName = data.email.split('@')[0];
 
-                // Envia os dados para o /sendMail
-                try {
-                    const sendMailResponse = await fetch('https://gldbotserver.com/sendMail', {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({
-                            customerName: customerName,
-                            itemDescription: data.plan,
-                            licenseKey: data.licenseKey,
-                            expirationDate: data.expirationDate,
-                            email: data.email
-                        })
-                    });
-
-                    // Marca como enviado no localStorage para não enviar novamente
-                    localStorage.setItem('emailSent', 'true');
-
-                } catch (error) {
-                    console.error('Erro ao enviar os dados:', error);
+        if (sessionId) {
+            try {
+                const response = await fetch(`${API_BASE}/license-info?session_id=${encodeURIComponent(sessionId)}`);
+                const data = await response.json();
+                if (response.ok && data.licenseKey) {
+                    fillLicenseData(data);
+                    await maybeSendEmail(data, `stripe_${sessionId}`);
+                    return;
                 }
-
-            } else {
-                console.error(data.error || 'Erro ao buscar informações da licença');
+            } catch (error) {
+                console.error('Erro ao buscar licença:', error);
             }
-        } catch (error) {
-            console.error('Erro ao buscar informações da licença:', error);
         }
+
+        if (paymentId || sessionId) {
+            setTimeout(async () => {
+                if (paymentId) {
+                    try {
+                        const response = await fetch(`${API_BASE}/license-info-mp?payment_id=${encodeURIComponent(paymentId)}`);
+                        const data = await response.json();
+                        if (response.ok && data.licenseKey) {
+                            fillLicenseData(data);
+                            await maybeSendEmail(data, `mp_${paymentId}`);
+                            return;
+                        }
+                    } catch (e) { /* retry once */ }
+                }
+                showErrorPanel();
+            }, 8000);
+            return;
+        }
+
+        showErrorPanel();
     }
 
-    // Chama a função ao carregar a página
-    window.onload = fetchLicenseInfo;
+    window.addEventListener('DOMContentLoaded', fetchLicenseInfo);
 </script>
-
 </body>
 </html>

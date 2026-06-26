@@ -24,6 +24,9 @@ const MP_PLANS = {
 
 const EXTERNAL_REF_PREFIX = 'GLDBOT';
 
+/** Até 13 caracteres — texto na fatura do cartão do comprador (Mercado Pago). */
+const MP_STATEMENT_DESCRIPTOR = 'GLADIUSBOT';
+
 function getMercadoPagoPlan(planCode) {
     return MP_PLANS[planCode] || null;
 }
@@ -60,6 +63,7 @@ function resolvePlanTitleForDb({ planCode, paymentDescription }) {
 module.exports = {
     MP_PLANS,
     EXTERNAL_REF_PREFIX,
+    MP_STATEMENT_DESCRIPTOR,
     getMercadoPagoPlan,
     buildMercadoPagoExternalReference,
     parsePlanCodeFromExternalReference,
