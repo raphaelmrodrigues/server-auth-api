@@ -17,12 +17,38 @@ const {
     issueLicenseSession,
     verifyLicenseSession,
     assertLicenseActive,
+    verifySessionSignature,
+    verifySessionMark,
+    buildSessionIssueOptions,
 } = require('./license-session');
+
+function sessionJsonPayload(session, extra = {}) {
+    const payload = {
+        p: session.p,
+        token: session.token,
+        qs: session.qs,
+        ...extra,
+    };
+    if (session.k) {
+        payload.k = session.k;
+    }
+    return payload;
+}
 const {
     recordSessionOk,
     recordSessionFail,
     getDashboard,
 } = require('./bot-monitor');
+const {
+    guardPrecheck,
+    configurePlayerGuard,
+    logSuspiciousNoLicense,
+    listBlockedPlayers,
+    blockPlayer,
+    unblockPlayer,
+    getAbuseSummary,
+    buildClientContext,
+} = require('./player-guard');
 const {
     DEFAULT_SUBJECT,
     buildBroadcastEmailHtml,
@@ -60,6 +86,7 @@ const {
     fetchProfileGames,
 } = require('./itch-api');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+configurePlayerGuard({ sgMail });
 
 const app = express();
 app.use(cors());
@@ -490,6 +517,54 @@ app.post('/admin/announcement', authenticateAdminToken, async (req, res) => {
 
 app.get('/admin/bot-monitor', authenticateAdminToken, (req, res) => {
     return res.json({ success: true, ...getDashboard() });
+});
+
+app.get('/admin/blocked-players', authenticateAdminToken, async (req, res) => {
+    try {
+        const players = await listBlockedPlayers();
+        return res.json({ success: true, players });
+    } catch (error) {
+        console.error('Erro ao listar bloqueados:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao listar bloqueados.' });
+    }
+});
+
+app.post('/admin/blocked-players', authenticateAdminToken, async (req, res) => {
+    try {
+        const { playerId, reason } = req.body || {};
+        if (!playerId) {
+            return res.status(400).json({ success: false, message: 'playerId é obrigatório.' });
+        }
+        const doc = await blockPlayer(playerId, reason, req.user?.user || 'admin');
+        return res.json({ success: true, player: doc });
+    } catch (error) {
+        console.error('Erro ao bloquear player:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao bloquear player.' });
+    }
+});
+
+app.delete('/admin/blocked-players/:playerId', authenticateAdminToken, async (req, res) => {
+    try {
+        const removed = await unblockPlayer(req.params.playerId);
+        if (!removed) {
+            return res.status(404).json({ success: false, message: 'Player não estava bloqueado.' });
+        }
+        return res.json({ success: true });
+    } catch (error) {
+        console.error('Erro ao desbloquear player:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao desbloquear player.' });
+    }
+});
+
+app.get('/admin/abuse-summary', authenticateAdminToken, async (req, res) => {
+    try {
+        const hours = Math.min(168, Math.max(1, parseInt(req.query.hours, 10) || 24));
+        const data = await getAbuseSummary(hours);
+        return res.json({ success: true, ...data });
+    } catch (error) {
+        console.error('Erro no abuse-summary:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao carregar resumo de abuso.' });
+    }
 });
 
 app.get('/admin/customer-emails', authenticateAdminToken, async (req, res) => {
@@ -1767,34 +1842,49 @@ app.post('/ls', async (req, res) => {
 
 app.post('/validate-key', async (req, res) => {
     const { idkps } = req.body;
+    const ctx = buildClientContext(req);
+
+    if (await guardPrecheck(req, res, idkps, 'validate-key', recordSessionFail, License)) {
+        return;
+    }
 
     try {
         const licenseData = await assertLicenseActive(License, idkps);
 
         if (licenseData) {
-            const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
-            recordSessionOk('validate-key', idkps, { trial: !!licenseData.trial });
+            const session = issueLicenseSession(
+                JWT_SECRET,
+                idkps,
+                licenseData.expireDate,
+                buildSessionIssueOptions(req.body)
+            );
+            recordSessionOk('validate-key', idkps, { trial: !!licenseData.trial, ...ctx });
             return res.json({
                 valid: true,
-                p: session.p,
-                token: session.token,
-                qs: session.qs,
-                globalAnnouncement: String(globalAnnouncement),
-                expirationDate: GLOBAL_EXPIRATION_DATE,
-                refreshToken: GLOBAL_REFRESH_TOKEN,
+                ...sessionJsonPayload(session, {
+                    globalAnnouncement: String(globalAnnouncement),
+                    expirationDate: GLOBAL_EXPIRATION_DATE,
+                    refreshToken: GLOBAL_REFRESH_TOKEN,
+                }),
             });
         }
-        recordSessionFail('validate-key', idkps, 'invalid_or_expired');
+        recordSessionFail('validate-key', idkps, 'invalid_or_expired', ctx);
+        await logSuspiciousNoLicense(License, idkps, 'validate-key', ctx);
         return res.json({ valid: false, message: 'Invalid license Key or player without access' });
     } catch (error) {
         console.error("Erro ao buscar licença:", error);
-        recordSessionFail('validate-key', req.body?.idkps, 'server_error');
+        recordSessionFail('validate-key', req.body?.idkps, 'server_error', ctx);
         res.status(500).json({ valid: false, message: 'Server error' });
     }
 });
 
 app.post('/validate-license', async (req, res) => {
     const { idkps, license } = req.body;
+    const ctx = buildClientContext(req);
+
+    if (await guardPrecheck(req, res, idkps, 'validate-license', recordSessionFail, License)) {
+        return;
+    }
 
     try {
         // Verificar se a licença existe com um playerid vazio
@@ -1810,64 +1900,122 @@ app.post('/validate-license', async (req, res) => {
         if (licenseData) {
             const currentDate = new Date();
             if (currentDate <= new Date(licenseData.expireDate)) {
-                const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
-                recordSessionOk('validate-license', idkps, { trial: !!licenseData.trial });
+                const session = issueLicenseSession(
+                    JWT_SECRET,
+                    idkps,
+                    licenseData.expireDate,
+                    buildSessionIssueOptions(req.body)
+                );
+                recordSessionOk('validate-license', idkps, { trial: !!licenseData.trial, ...ctx });
                 return res.json({
                     valid: true,
-                    token: session.token,
-                    qs: session.qs,
-                    expirationDate: GLOBAL_EXPIRATION_DATE,
-                    refreshToken: GLOBAL_REFRESH_TOKEN,
-                    p: session.p,
-                    globalAnnouncement: String(globalAnnouncement)
+                    ...sessionJsonPayload(session, {
+                        expirationDate: GLOBAL_EXPIRATION_DATE,
+                        refreshToken: GLOBAL_REFRESH_TOKEN,
+                        globalAnnouncement: String(globalAnnouncement),
+                    }),
                 });
             } else {
-                recordSessionFail('validate-license', idkps, 'expired');
+                recordSessionFail('validate-license', idkps, 'expired', ctx);
                 return res.json({ valid: false, message: 'Expired license Key' });
             }
         } else {
-            recordSessionFail('validate-license', idkps, 'invalid');
+            recordSessionFail('validate-license', idkps, 'invalid', ctx);
+            await logSuspiciousNoLicense(License, idkps, 'validate-license', ctx);
             return res.json({ valid: false, message: 'Invalid license Key or player without access' });
         }
     } catch (error) {
         console.error('Erro na validação da licença:', error);
-        recordSessionFail('validate-license', req.body?.idkps, 'server_error');
+        recordSessionFail('validate-license', req.body?.idkps, 'server_error', ctx);
         return res.status(500).json({ valid: false, message: 'Server error' });
     }
 });
 
 app.post('/v-s', async (req, res) => {
     const { idkps, tk, botVersion, serverId, country, botActive } = req.body;
+    const qs = req.body.q || req.body.qs;
+    const mark = req.body.k || req.body.mark;
+    const ctx = buildClientContext(req);
+
     if (!idkps || !tk) {
-        recordSessionFail('v-s', idkps, 'missing_params');
+        recordSessionFail('v-s', idkps, 'missing_params', ctx);
         return res.json({ ok: false });
     }
+
+    if (await guardPrecheck(req, res, idkps, 'v-s', recordSessionFail, License)) {
+        return;
+    }
+
     try {
         verifyLicenseSession(JWT_SECRET, tk, idkps);
-        const licenseData = await assertLicenseActive(License, idkps);
-        if (!licenseData) {
-            recordSessionFail('v-s', idkps, 'license_expired');
+        if (qs && !verifySessionSignature(JWT_SECRET, tk, qs)) {
+            recordSessionFail('v-s', idkps, 'jwt_sig_mismatch', ctx);
+            await logSuspiciousNoLicense(License, idkps, 'v-s', ctx);
             return res.json({ ok: false });
         }
-        const session = issueLicenseSession(JWT_SECRET, idkps, licenseData.expireDate);
+        if (mark && !verifySessionMark(JWT_SECRET, tk, mark)) {
+            recordSessionFail('v-s', idkps, 'jwt_mark_mismatch', ctx);
+            await logSuspiciousNoLicense(License, idkps, 'v-s', ctx);
+            return res.json({ ok: false });
+        }
+        const licenseData = await assertLicenseActive(License, idkps);
+        if (!licenseData) {
+            recordSessionFail('v-s', idkps, 'license_expired', ctx);
+            await logSuspiciousNoLicense(License, idkps, 'v-s', ctx);
+            return res.json({ ok: false });
+        }
+        const session = issueLicenseSession(
+            JWT_SECRET,
+            idkps,
+            licenseData.expireDate,
+            buildSessionIssueOptions(req.body)
+        );
         recordSessionOk('v-s', idkps, {
             botVersion,
             serverId,
             country,
             botActive,
             trial: !!licenseData.trial,
+            ...ctx,
         });
         return res.json({
             ok: true,
-            p: session.p,
-            token: session.token,
-            qs: session.qs,
-            globalAnnouncement: String(globalAnnouncement),
+            ...sessionJsonPayload(session, {
+                globalAnnouncement: String(globalAnnouncement),
+            }),
         });
     } catch (error) {
         const reason = error.name === 'TokenExpiredError' ? 'jwt_expired' : 'jwt_invalid';
-        recordSessionFail('v-s', idkps, reason);
+        recordSessionFail('v-s', idkps, reason, ctx);
+        await logSuspiciousNoLicense(License, idkps, 'v-s', ctx);
         return res.json({ ok: false });
+    }
+});
+
+/** Sync leve — trava silenciosa (extensão consulta periodicamente). */
+app.post('/gld/rs', async (req, res) => {
+    const { idkps, tk } = req.body || {};
+    if (await guardPrecheck(req, res, idkps, 'rs', recordSessionFail, License)) {
+        return;
+    }
+    try {
+        if (tk && idkps && String(tk).includes('.')) {
+            verifyLicenseSession(JWT_SECRET, tk, idkps);
+            const licenseData = await assertLicenseActive(License, idkps);
+            if (!licenseData) {
+                const ctx = buildClientContext(req);
+                recordSessionFail('rs', idkps, 'license_expired', ctx);
+                await logSuspiciousNoLicense(License, idkps, 'rs', ctx);
+                return res.json({ ok: false, s: 0, t: Date.now() });
+            }
+        }
+        return res.json({ ok: true, s: 1, t: Date.now() });
+    } catch (error) {
+        const ctx = buildClientContext(req);
+        const reason = error.name === 'TokenExpiredError' ? 'jwt_expired' : 'jwt_invalid';
+        recordSessionFail('rs', idkps, reason, ctx);
+        await logSuspiciousNoLicense(License, idkps, 'rs', ctx);
+        return res.json({ ok: false, s: 0, t: Date.now() });
     }
 });
 
@@ -1877,6 +2025,11 @@ app.post('/get-trial', async (req, res) => {
     if (!playerId) {
         return res.status(400).json({ success: false, message: 'Player ID is required' });
     }
+
+    if (await guardPrecheck(req, res, playerId, 'get-trial', recordSessionFail, License)) {
+        return;
+    }
+
     try {
         // Procura o playerid no banco de dados
         let licenseData = await License.findOne({ playerid: playerId });
@@ -1960,6 +2113,8 @@ registerBotProxyRoutes(app, {
     License,
     verifyLicenseSession,
     assertLicenseActive,
+    verifySessionSignature,
+    verifySessionMark,
 });
 
 app.listen(port, () => {

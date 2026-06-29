@@ -4,7 +4,7 @@
  */
 
 const ONLINE_TTL_MS = Number(process.env.BOT_ONLINE_TTL_MS) || 10 * 60 * 1000;
-const MAX_EVENTS = 300;
+const MAX_EVENTS = 400;
 const STATS_WINDOW_MS = 24 * 60 * 60 * 1000;
 
 const onlinePlayers = new Map();
@@ -43,19 +43,6 @@ function bumpStat(key) {
     stats.counts[key] = (stats.counts[key] || 0) + 1;
 }
 
-function pushEvent(type, playerId, reason, source) {
-    events.unshift({
-        ts: new Date().toISOString(),
-        type,
-        playerId: playerId ? String(playerId) : null,
-        reason: reason || 'unknown',
-        source: source || 'unknown',
-    });
-    if (events.length > MAX_EVENTS) {
-        events.length = MAX_EVENTS;
-    }
-}
-
 function sanitizeMeta(meta = {}) {
     const out = {};
     if (meta.botVersion != null) {
@@ -67,6 +54,12 @@ function sanitizeMeta(meta = {}) {
     if (meta.country != null) {
         out.country = String(meta.country).slice(0, 8);
     }
+    if (meta.charName != null) {
+        out.charName = String(meta.charName).slice(0, 64);
+    }
+    if (meta.ip != null) {
+        out.ip = String(meta.ip).slice(0, 64);
+    }
     if (meta.botActive != null) {
         out.botActive = !!meta.botActive;
     }
@@ -74,6 +67,21 @@ function sanitizeMeta(meta = {}) {
         out.trial = !!meta.trial;
     }
     return out;
+}
+
+function pushEvent(type, playerId, reason, source, meta = {}) {
+    const clean = sanitizeMeta(meta);
+    events.unshift({
+        ts: new Date().toISOString(),
+        type,
+        playerId: playerId ? String(playerId) : null,
+        reason: reason || 'unknown',
+        source: source || 'unknown',
+        ...clean,
+    });
+    if (events.length > MAX_EVENTS) {
+        events.length = MAX_EVENTS;
+    }
 }
 
 function recordSessionOk(source, playerId, meta = {}) {
@@ -88,6 +96,8 @@ function recordSessionOk(source, playerId, meta = {}) {
         botVersion: clean.botVersion ?? prev.botVersion ?? null,
         serverId: clean.serverId ?? prev.serverId ?? null,
         country: clean.country ?? prev.country ?? null,
+        charName: clean.charName ?? prev.charName ?? null,
+        ip: clean.ip ?? prev.ip ?? null,
         botActive: clean.botActive ?? prev.botActive ?? null,
         trial: clean.trial ?? prev.trial ?? null,
     });
@@ -99,15 +109,15 @@ function recordSessionOk(source, playerId, meta = {}) {
             heartbeatTimestamps.shift();
         }
     }
-    if (source !== 'v-s') {
-        pushEvent('success', playerId, 'ok', source);
+    if (source !== 'v-s' && source !== 'rs') {
+        pushEvent('success', playerId, 'ok', source, clean);
     }
 }
 
-function recordSessionFail(source, playerId, reason) {
+function recordSessionFail(source, playerId, reason, meta = {}) {
     bumpStat(`${source}:fail`);
     bumpStat(`fail:${reason}`);
-    pushEvent('failure', playerId, reason, source);
+    pushEvent('failure', playerId, reason, source, meta);
 }
 
 function getDashboard() {
@@ -124,6 +134,8 @@ function getDashboard() {
             botVersion: data.botVersion || null,
             serverId: data.serverId || null,
             country: data.country || null,
+            charName: data.charName || null,
+            ip: data.ip || null,
             botActive: data.botActive,
             trial: data.trial,
             agoSec: Math.round((now - data.lastSeen) / 1000),
@@ -153,7 +165,7 @@ function getDashboard() {
     return {
         onlineCount: online.length,
         onlinePlayers: online,
-        recentEvents: events.slice(0, 100),
+        recentEvents: events.slice(0, 120),
         stats24h: { ...stats.counts },
         failuresLastHour,
         successesLastHour,

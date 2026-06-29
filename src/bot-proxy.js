@@ -21,6 +21,8 @@ const ASSET_MIME = {
     'char-item-bg.jpg': 'image/jpeg',
 };
 
+const { isPlayerBlocked } = require('./player-guard');
+
 function registerBotProxyRoutes(app, deps = {}) {
     const {
         jwtSecret,
@@ -28,13 +30,19 @@ function registerBotProxyRoutes(app, deps = {}) {
         License,
         verifyLicenseSession,
         assertLicenseActive,
+        verifySessionSignature,
+        verifySessionMark,
     } = deps;
 
-    async function ensureLicensedSimulate(playerId, tkz_lcr, res) {
+    async function ensureLicensedSimulate(playerId, tkz_lcr, res, extras = {}) {
         if (!jwtSecret || !License || !verifyLicenseSession || !assertLicenseActive) {
             return true;
         }
         if (!playerId || !tkz_lcr) {
+            res.status(403).json({ error: 'Unauthorized' });
+            return false;
+        }
+        if (await isPlayerBlocked(playerId)) {
             res.status(403).json({ error: 'Unauthorized' });
             return false;
         }
@@ -46,6 +54,16 @@ function registerBotProxyRoutes(app, deps = {}) {
                 }
             } else {
                 verifyLicenseSession(jwtSecret, tkz_lcr, playerId);
+                const qs = extras.q || extras.qs;
+                const mark = extras.k || extras.mark;
+                if (qs && verifySessionSignature && !verifySessionSignature(jwtSecret, tkz_lcr, qs)) {
+                    res.status(403).json({ error: 'Unauthorized' });
+                    return false;
+                }
+                if (mark && verifySessionMark && !verifySessionMark(jwtSecret, tkz_lcr, mark)) {
+                    res.status(403).json({ error: 'Unauthorized' });
+                    return false;
+                }
             }
             const licenseData = await assertLicenseActive(License, playerId);
             if (!licenseData) {
@@ -61,8 +79,8 @@ function registerBotProxyRoutes(app, deps = {}) {
 
     app.post('/bot/simulate', async (req, res) => {
         try {
-            const { playerId, tkz_lcr } = req.body || {};
-            if (!await ensureLicensedSimulate(playerId, tkz_lcr, res)) {
+            const { playerId, tkz_lcr, q, qs, k, mark } = req.body || {};
+            if (!await ensureLicensedSimulate(playerId, tkz_lcr, res, { q, qs, k, mark })) {
                 return;
             }
             const upstream = await fetch(FOCII_SIMU_URL, {
