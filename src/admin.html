@@ -170,7 +170,7 @@
           <h2 class="text-xl font-semibold text-gray-800">Campanha de E-mail</h2>
           <p class="text-sm text-gray-500 mt-1">Envio individual via SendGrid — cada cliente recebe só de <strong>support@gldbotserver.com</strong> (resposta: gldbotsuport@gmail.com), sem ver outros destinatários.</p>
         </div>
-        <span id="email-campaign-count-badge" class="monitor-pill ok">0 selecionados</span>
+        <span id="email-campaign-count-badge" class="monitor-pill ok">0 lista · 0 digitado(s) · 0 total</span>
       </div>
       <div class="admin-card-body space-y-5">
         <div class="flex flex-wrap gap-2">
@@ -190,6 +190,15 @@
           Carregando destinatários...
         </div>
 
+        <div>
+          <label for="email-campaign-manual" class="block text-sm font-medium text-gray-700 mb-2">E-mails manuais</label>
+          <textarea id="email-campaign-manual" rows="3" maxlength="8000" placeholder="Digite um ou mais e-mails separados por vírgula, ponto e vírgula ou quebra de linha&#10;Ex.: cliente@gmail.com, outro@email.com" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800 font-mono text-sm"></textarea>
+          <div class="flex flex-wrap justify-between gap-2 mt-2 text-xs text-gray-500">
+            <span>Usa o mesmo assunto, mensagem e layout da campanha. Pode combinar com a seleção da lista acima.</span>
+            <span id="email-campaign-manual-meta">0 e-mail(s) válido(s)</span>
+          </div>
+        </div>
+
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
           <div class="space-y-4">
             <div>
@@ -206,7 +215,8 @@
             </div>
             <div class="flex flex-wrap gap-3">
               <button type="button" onclick="previewBroadcastEmail()" class="bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 font-semibold py-2 px-5 rounded-lg">Atualizar preview</button>
-              <button type="button" onclick="sendBroadcastToSelected()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-5 rounded-lg">Enviar para selecionados</button>
+              <button type="button" onclick="sendBroadcastToSelected()" class="bg-amber-600 hover:bg-amber-700 text-white font-semibold py-2 px-5 rounded-lg">Enviar selecionados + digitados</button>
+              <button type="button" onclick="sendBroadcastToManualOnly()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-5 rounded-lg">Enviar só digitados</button>
               <button type="button" onclick="sendBroadcastToFiltered()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg">Enviar para todos do filtro</button>
             </div>
             <div id="email-campaign-notification" class="hidden text-sm rounded-lg px-4 py-3"></div>
@@ -1518,7 +1528,48 @@
 
   function updateEmailSelectionBadge() {
     const badge = document.getElementById('email-campaign-count-badge');
-    if (badge) badge.textContent = `${selectedEmailSet.size} selecionado(s)`;
+    const manual = getManualEmails();
+    const combined = getCombinedRecipients();
+    if (badge) {
+      badge.textContent = `${selectedEmailSet.size} lista · ${manual.length} digitado(s) · ${combined.length} total`;
+    }
+    const manualMeta = document.getElementById('email-campaign-manual-meta');
+    if (manualMeta) {
+      const invalidCount = getManualEmailInvalidCount();
+      manualMeta.textContent = invalidCount > 0
+        ? `${manual.length} válido(s) · ${invalidCount} inválido(s) ignorado(s)`
+        : `${manual.length} e-mail(s) válido(s)`;
+    }
+  }
+
+  function parseManualEmailInput(raw) {
+    if (!raw || !String(raw).trim()) return [];
+    const parts = String(raw)
+      .split(/[\s,;]+/)
+      .map((part) => part.trim().toLowerCase())
+      .filter(Boolean);
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return [...new Set(parts.filter((email) => emailRe.test(email)))];
+  }
+
+  function getManualEmailInvalidCount() {
+    const raw = document.getElementById('email-campaign-manual')?.value || '';
+    if (!raw.trim()) return 0;
+    const parts = String(raw)
+      .split(/[\s,;]+/)
+      .map((part) => part.trim().toLowerCase())
+      .filter(Boolean);
+    const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return parts.filter((email) => !emailRe.test(email)).length;
+  }
+
+  function getManualEmails() {
+    const input = document.getElementById('email-campaign-manual');
+    return parseManualEmailInput(input?.value || '');
+  }
+
+  function getCombinedRecipients() {
+    return [...new Set([...selectedEmailSet, ...getManualEmails()])];
   }
 
   function setEmailCampaignFilter(filter) {
@@ -1659,8 +1710,10 @@
     }
 
     const countLabel = payload.mode === 'selected'
-      ? `${payload.recipients.length} selecionado(s)`
-      : `todos do filtro "${emailCampaignFilter}"`;
+      ? `${payload.recipients.length} destinatário(s)`
+      : payload.mode === 'manual'
+        ? `${payload.recipients.length} e-mail(s) digitado(s)`
+        : `todos do filtro "${emailCampaignFilter}"`;
 
     if (!confirm(`Enviar campanha para ${countLabel}?\n\nCada pessoa receberá um e-mail individual (sem ver outros destinatários).`)) {
       return;
@@ -1693,12 +1746,21 @@
   }
 
   function sendBroadcastToSelected() {
-    const recipients = [...selectedEmailSet];
+    const recipients = getCombinedRecipients();
     if (!recipients.length) {
-      showEmailCampaignNotification('Selecione ao menos um e-mail na lista.', true);
+      showEmailCampaignNotification('Selecione e-mails na lista ou digite ao menos um e-mail válido no campo manual.', true);
       return;
     }
     sendBroadcastEmailRequest({ mode: 'selected', recipients });
+  }
+
+  function sendBroadcastToManualOnly() {
+    const recipients = getManualEmails();
+    if (!recipients.length) {
+      showEmailCampaignNotification('Digite ao menos um e-mail válido no campo manual.', true);
+      return;
+    }
+    sendBroadcastEmailRequest({ mode: 'manual', recipients });
   }
 
   function sendBroadcastToFiltered() {
@@ -1716,6 +1778,7 @@
     clearTimeout(window.__emailPreviewTimer);
     window.__emailPreviewTimer = setTimeout(previewBroadcastEmail, 500);
   });
+  document.getElementById('email-campaign-manual')?.addEventListener('input', updateEmailSelectionBadge);
 
   window.onload = function() {
     checkAuth();

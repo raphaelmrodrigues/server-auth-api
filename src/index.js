@@ -595,11 +595,17 @@ app.post('/admin/broadcast-email', authenticateAdminToken, async (req, res) => {
 
         let targetEmails = [];
 
-        if (mode === 'selected') {
+        if (mode === 'selected' || mode === 'manual') {
             if (!Array.isArray(recipients) || recipients.length === 0) {
-                return res.status(400).json({ success: false, message: 'Selecione ao menos um destinatário.' });
+                const emptyMsg = mode === 'manual'
+                    ? 'Informe ao menos um e-mail válido no campo manual.'
+                    : 'Selecione ao menos um destinatário.';
+                return res.status(400).json({ success: false, message: emptyMsg });
             }
             targetEmails = recipients.map(normalizeEmail).filter(isValidEmail);
+            if (targetEmails.length === 0) {
+                return res.status(400).json({ success: false, message: 'Nenhum e-mail válido encontrado na lista informada.' });
+            }
         } else {
             const listFilter = ['all', 'active', 'inactive'].includes(filter) ? filter : 'all';
             const customers = await aggregateCustomerEmails(License, listFilter);

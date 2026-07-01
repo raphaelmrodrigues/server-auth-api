@@ -39,9 +39,9 @@ function decodeSessionVersion(token) {
 }
 
 /**
- * Decide qual versão de sessão emitir durante o rollout da extensão 3.0.5.
+ * Decide qual versão de sessão emitir durante o rollout do token v3.
  * - Clientes antigos (sem botVersion ou < 3.0.5): v2
- * - Clientes 3.0.5+ ou que já usam token v3: v3
+ * - Clientes 3.0.5+ (incl. quem subiu manualmente) ou que já usam token v3: v3
  */
 function resolveIssueSessionVersion(options = {}) {
     const { botVersion, existingToken, hasMark } = options;
