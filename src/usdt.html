@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
+    <title>GladiusBot — Confirm USDT Transfer</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="site.css">
+    <style>
+        .gc-wrap { max-width: 640px; margin: 0 auto; padding: 2rem 1.25rem 3.5rem; }
+        .gc-back {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            margin-bottom: 1.25rem; color: #dacfa2; text-decoration: none; font-size: 0.85rem;
+        }
+        .gc-back:hover { color: var(--gld-gold); }
+        .gc-card {
+            background: linear-gradient(165deg, #2a1a0e 0%, #1f160e 100%);
+            border: 2px solid var(--gld-border); border-radius: var(--gld-radius);
+            box-shadow: var(--gld-shadow); overflow: hidden;
+        }
+        .gc-header {
+            background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 55%, #2a1a0e 100%);
+            border-bottom: 2px solid var(--gld-border); padding: 1.5rem; text-align: center;
+        }
+        .gc-header img { width: 64px; height: 64px; margin-bottom: 0.6rem; }
+        .gc-header h1 { font-family: var(--gld-font-display); font-size: 1.35rem; color: var(--gld-parchment-light); }
+        .gc-header .gc-sub { margin-top: 0.35rem; font-size: 0.72rem; letter-spacing: 0.16em; text-transform: uppercase; color: var(--gld-gold); }
+        .gc-body { padding: 1.5rem; }
+
+        .gc-inst-title {
+            font-size: 0.74rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+            color: rgb(255 204 102 / 0.8); margin-bottom: 0.6rem;
+        }
+        .gc-warning {
+            display: flex; align-items: flex-start; gap: 0.55rem;
+            padding: 0.7rem 0.85rem; margin-bottom: 1.25rem;
+            background: rgb(139 34 34 / 0.18); border: 1px solid rgb(220 80 80 / 0.4);
+            border-radius: var(--gld-radius-sm); font-size: 0.82rem; line-height: 1.5; color: #f3c9b0;
+        }
+        .gc-warning i { color: #ff9a6b; margin-top: 0.1rem; flex-shrink: 0; }
+
+        .gc-plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.6rem; margin-bottom: 1.35rem; }
+        .gc-plan-opt {
+            display: flex; flex-direction: column; align-items: center; gap: 0.25rem;
+            padding: 0.85rem 0.5rem; text-align: center; cursor: pointer;
+            background: rgb(0 0 0 / 0.25); border: 1px solid rgb(255 204 102 / 0.25);
+            border-radius: var(--gld-radius-sm); transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+        }
+        .gc-plan-opt:hover { border-color: rgb(240 185 11 / 0.6); }
+        .gc-plan-opt.is-selected {
+            border-color: #f0b90b; background: linear-gradient(180deg, rgb(240 185 11 / 0.15), rgb(0 0 0 / 0.28));
+            box-shadow: 0 0 12px rgb(240 185 11 / 0.22);
+        }
+        .gc-plan-opt-name { font-size: 0.78rem; color: var(--gld-text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .gc-plan-opt-price { font-family: var(--gld-font-display); font-size: 1.1rem; font-weight: 700; color: #f0b90b; }
+        .gc-plan-opt-unit { font-size: 0.66rem; color: rgb(244 228 193 / 0.6); }
+
+        .gc-field { margin-bottom: 1.1rem; }
+        .gc-field label {
+            display: block; font-size: 0.78rem; font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.05em; color: var(--gld-text-muted); margin-bottom: 0.4rem;
+        }
+        .gc-field input[type="text"], .gc-field input[type="email"] {
+            width: 100%; padding: 0.72rem 0.85rem; font-family: inherit; font-size: 0.94rem;
+            color: var(--gld-parchment); background: var(--gld-bg-input);
+            border: 1px solid var(--gld-border); border-radius: var(--gld-radius-sm);
+        }
+        .gc-field input:focus { outline: none; border-color: var(--gld-gold); }
+        .gc-field input#gc-tx { font-family: "Courier New", monospace; font-size: 0.85rem; }
+        .gc-file-label {
+            display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.6rem 0.9rem;
+            font-size: 0.84rem; color: var(--gld-gold); background: rgb(0 0 0 / 0.22);
+            border: 1px dashed rgb(255 204 102 / 0.4); border-radius: var(--gld-radius-sm); cursor: pointer;
+        }
+        .gc-file-name { font-size: 0.8rem; color: #a7d98a; margin-left: 0.5rem; }
+        .gc-hint { font-size: 0.78rem; color: rgb(244 228 193 / 0.6); margin-top: 0.35rem; }
+        .gc-submit {
+            width: 100%; padding: 0.85rem 1.25rem; margin-top: 0.5rem;
+            font-family: var(--gld-font-display); font-size: 1rem; font-weight: 700; color: #1a1008;
+            background: linear-gradient(180deg, #ffcc66, #ba9700); border: 1px solid #d4a742;
+            border-radius: var(--gld-radius-sm); cursor: pointer; transition: background 0.15s, transform 0.1s;
+        }
+        .gc-submit:hover { background: linear-gradient(180deg, #ffe08a, #d4a742); }
+        .gc-submit:active { transform: scale(0.99); }
+        .gc-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .gc-msg { margin-top: 1rem; padding: 0.8rem 1rem; border-radius: var(--gld-radius-sm); font-size: 0.88rem; line-height: 1.5; }
+        .gc-msg.is-error { background: #2a1414; border: 1px solid rgb(139 34 34 / 0.55); color: #f0b0b0; }
+        .gc-msg.is-info { background: var(--gld-bg-panel); border: 1px solid var(--gld-border); color: var(--gld-text-muted); }
+
+        .gc-status-badge { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border-radius: 999px; font-size: 0.85rem; font-weight: 700; margin-bottom: 1.25rem; }
+        .gc-status-badge.is-pending { background: rgb(240 185 11 / 0.16); color: #f0b90b; border: 1px solid rgb(240 185 11 / 0.5); }
+        .gc-status-badge.is-generated { background: rgb(74 124 42 / 0.2); color: #a7d98a; border: 1px solid rgb(74 124 42 / 0.55); }
+        .gc-status-badge.is-rejected { background: rgb(139 34 34 / 0.2); color: #f0b0b0; border: 1px solid rgb(139 34 34 / 0.55); }
+        .gc-order-id {
+            font-family: "Courier New", monospace; font-size: 0.9rem; color: var(--gld-parchment);
+            background: rgb(0 0 0 / 0.25); border: 1px solid var(--gld-border); border-radius: var(--gld-radius-sm);
+            padding: 0.5rem 0.75rem; display: inline-block; margin-bottom: 1rem;
+        }
+        .gc-license-box { background: #3d2814; border: 1px solid #8b6914; border-radius: var(--gld-radius-sm); padding: 1rem 1.15rem; text-align: center; margin: 1rem 0; }
+        .gc-license-box .gc-license-label { font-size: 0.7rem; letter-spacing: 0.12em; text-transform: uppercase; color: #c9a227; margin-bottom: 0.5rem; }
+        .gc-license-key { font-family: "Courier New", monospace; font-size: 1rem; color: #f4e4bc; word-break: break-all; }
+        .gc-copy-btn {
+            margin-top: 0.75rem; padding: 0.5rem 1rem; font-family: inherit; font-size: 0.82rem; font-weight: 700;
+            color: #1a1008; background: linear-gradient(180deg, #ffcc66, #ba9700); border: 1px solid #d4a742;
+            border-radius: var(--gld-radius-sm); cursor: pointer;
+        }
+        .gc-note {
+            font-size: 0.85rem; line-height: 1.55; color: rgb(244 228 193 / 0.78);
+            margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgb(135 110 62 / 0.4);
+        }
+        .gc-note strong { color: var(--gld-gold); }
+        .gc-refresh {
+            margin-top: 1rem; padding: 0.6rem 1.1rem; font-family: inherit; font-size: 0.84rem; font-weight: 600;
+            color: var(--gld-parchment); background: rgb(0 0 0 / 0.25); border: 1px solid var(--gld-border);
+            border-radius: var(--gld-radius-sm); cursor: pointer;
+        }
+        .gc-refresh:hover { border-color: var(--gld-gold); color: #fff8cf; }
+        .gc-steps { margin: 0.5rem 0 0 1.1rem; padding: 0; display: flex; flex-direction: column; gap: 0.4rem; }
+        .gc-steps li { font-size: 0.85rem; line-height: 1.5; color: rgb(244 228 193 / 0.82); }
+        .gc-hidden { display: none !important; }
+    </style>
+</head>
+<body class="legal-page">
+    <div class="gc-wrap">
+        <a class="gc-back" href="/"><i class="fas fa-arrow-left"></i> Back to gldbotserver.com</a>
+
+        <div class="gc-card">
+            <div class="gc-header">
+                <img src="./images/gladiusbot-icon-128.png" alt="GladiusBot">
+                <h1>Confirm your USDT transfer</h1>
+                <p class="gc-sub">GladiusBot · USDT (Tether) · Solana</p>
+            </div>
+
+            <div class="gc-body">
+                <div id="gc-loading" class="gc-msg is-info">Loading…</div>
+
+                <!-- NEW ORDER FORM -->
+                <div id="gc-form-view" class="gc-hidden">
+                    <div class="gc-warning">
+                        <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                        <span>Only transfers sent as <strong>USDT on the Solana network</strong> can be confirmed. Already sent it? Pick your plan and paste the transaction hash below.</span>
+                    </div>
+
+                    <p class="gc-inst-title"><i class="fas fa-coins" aria-hidden="true"></i> USDT · Solana — direct transfer price</p>
+                    <div class="gc-plans" id="gc-plans"></div>
+
+                    <form id="gc-form">
+                        <div class="gc-field">
+                            <label for="gc-email">Your email</label>
+                            <input type="email" id="gc-email" placeholder="you@email.com" required>
+                            <p class="gc-hint">We send the license and confirmation to this email.</p>
+                        </div>
+                        <div class="gc-field">
+                            <label for="gc-tx">Transaction hash (TXID)</label>
+                            <input type="text" id="gc-tx" placeholder="Paste the Solana transaction hash" required>
+                            <p class="gc-hint">Find it in your wallet/exchange transaction details after sending.</p>
+                        </div>
+                        <div class="gc-field">
+                            <label>Payment proof (optional)</label>
+                            <label class="gc-file-label" for="gc-proof"><i class="fas fa-paperclip" aria-hidden="true"></i> Attach screenshot</label>
+                            <span class="gc-file-name" id="gc-file-name"></span>
+                            <input type="file" id="gc-proof" accept="image/*" style="display:none;">
+                            <p class="gc-hint">Optional — a screenshot of the transfer helps us verify faster.</p>
+                        </div>
+                        <button type="submit" class="gc-submit" id="gc-submit">Submit confirmation</button>
+                        <div id="gc-form-msg" class="gc-msg gc-hidden"></div>
+                    </form>
+                </div>
+
+                <!-- STATUS VIEW -->
+                <div id="gc-status-view" class="gc-hidden">
+                    <div id="gc-status-badge" class="gc-status-badge is-pending"><i class="fas fa-hourglass-half"></i> <span>Pending verification</span></div>
+                    <div><span class="gc-order-id" id="gc-order-id">—</span></div>
+                    <p id="gc-status-plan" class="gc-note" style="border-top:none;padding-top:0;margin-top:0;"></p>
+
+                    <div id="gc-license-wrap" class="gc-hidden">
+                        <div class="gc-license-box">
+                            <p class="gc-license-label">Your license key</p>
+                            <p class="gc-license-key" id="gc-license-key">—</p>
+                            <button type="button" class="gc-copy-btn" id="gc-copy-btn"><i class="fas fa-copy"></i> Copy</button>
+                        </div>
+                        <p class="gc-note"><strong>Important:</strong> the days start counting only when you activate the license inside the Bot — not from the transfer date.</p>
+                        <ol class="gc-steps">
+                            <li>Install the extension from the Chrome Web Store.</li>
+                            <li>Open Gladiatus in the same Chrome profile.</li>
+                            <li>In the GladiusBot panel, go to <strong>GladiusBot → GladiusBot License</strong>.</li>
+                            <li>Paste the key above and confirm.</li>
+                        </ol>
+                    </div>
+
+                    <p id="gc-pending-note" class="gc-note">Your order is <strong>pending verification</strong>. We are checking your transaction on the Solana network. Once it's confirmed, you'll also receive an <strong>email with your license</strong>. Keep this link — refresh this page anytime to see your license here as soon as it's ready.</p>
+                    <p id="gc-rejected-note" class="gc-note gc-hidden">We could not verify this transfer. Please <a href="/" style="color:var(--gld-gold);">contact support</a> for help.</p>
+
+                    <button type="button" class="gc-refresh" id="gc-refresh"><i class="fas fa-rotate-right"></i> Refresh status</button>
+                </div>
+
+                <div id="gc-error-view" class="gc-hidden">
+                    <div class="gc-msg is-error" id="gc-error-msg">Something went wrong.</div>
+                    <a class="gc-back" href="/" style="margin-top:1rem;"><i class="fas fa-arrow-left"></i> Back to site</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const USDT_PLANS = {
+            '15DAYS': { label: '15 days', usdt: '1.92' },
+            '30DAYS': { label: '30 days', usdt: '3.38' },
+            '60DAYS': { label: '60 days', usdt: '6.62' }
+        };
+
+        const params = new URLSearchParams(window.location.search);
+        const orderParam = (params.get('order') || '').trim();
+        const planParam = (params.get('plan') || '').trim().toUpperCase();
+
+        let selectedPlan = USDT_PLANS[planParam] ? planParam : '30DAYS';
+
+        const el = (id) => document.getElementById(id);
+        function show(id) { el(id).classList.remove('gc-hidden'); }
+        function hide(id) { el(id).classList.add('gc-hidden'); }
+        function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        function showError(message) {
+            hide('gc-loading'); hide('gc-form-view'); hide('gc-status-view');
+            el('gc-error-msg').textContent = message || 'Something went wrong.';
+            show('gc-error-view');
+        }
+
+        function renderPlans() {
+            const wrap = el('gc-plans');
+            wrap.innerHTML = Object.keys(USDT_PLANS).map(function (code) {
+                const p = USDT_PLANS[code];
+                const active = code === selectedPlan ? ' is-selected' : '';
+                return '<div class="gc-plan-opt' + active + '" data-plan="' + code + '">' +
+                    '<span class="gc-plan-opt-name">' + p.label + '</span>' +
+                    '<span class="gc-plan-opt-price">' + p.usdt + '</span>' +
+                    '<span class="gc-plan-opt-unit">USDT</span>' +
+                    '</div>';
+            }).join('');
+            wrap.querySelectorAll('.gc-plan-opt').forEach(function (opt) {
+                opt.addEventListener('click', function () {
+                    selectedPlan = opt.getAttribute('data-plan');
+                    wrap.querySelectorAll('.gc-plan-opt').forEach(function (o) { o.classList.remove('is-selected'); });
+                    opt.classList.add('is-selected');
+                });
+            });
+        }
+
+        function renderStatus(order) {
+            hide('gc-loading'); hide('gc-form-view'); hide('gc-error-view');
+            show('gc-status-view');
+
+            el('gc-order-id').textContent = 'Order: ' + order.orderId;
+            const planLabel = (USDT_PLANS[order.plan] && USDT_PLANS[order.plan].label) || (order.planDays + ' days');
+            const amount = order.amount ? (' · ' + order.amount + ' USDT') : '';
+            el('gc-status-plan').textContent = 'Plan: ' + planLabel + amount + ' · ' + order.email;
+
+            const badge = el('gc-status-badge');
+            badge.classList.remove('is-pending', 'is-generated', 'is-rejected');
+            hide('gc-license-wrap'); hide('gc-pending-note'); hide('gc-rejected-note');
+
+            if (order.status === 'generated' && order.licenseKey) {
+                badge.classList.add('is-generated');
+                badge.innerHTML = '<i class="fas fa-circle-check"></i> <span>License generated</span>';
+                el('gc-license-key').textContent = order.licenseKey;
+                show('gc-license-wrap');
+            } else if (order.status === 'rejected') {
+                badge.classList.add('is-rejected');
+                badge.innerHTML = '<i class="fas fa-circle-xmark"></i> <span>Rejected</span>';
+                if (order.rejectionReason) {
+                    el('gc-rejected-note').innerHTML = 'This transfer was <strong>rejected</strong>. Reason: ' + escapeHtml(order.rejectionReason) + ' — if you think this is a mistake, please <a href="/" style="color:var(--gld-gold);">contact support</a>.';
+                }
+                show('gc-rejected-note');
+            } else {
+                badge.classList.add('is-pending');
+                badge.innerHTML = '<i class="fas fa-hourglass-half"></i> <span>Pending verification</span>';
+                show('gc-pending-note');
+            }
+        }
+
+        async function fetchOrder(orderId) {
+            const res = await fetch('/crypto/order/' + encodeURIComponent(orderId));
+            if (res.status === 404) throw new Error('Order not found. Please check your link.');
+            if (!res.ok) throw new Error('Could not load your order. Please try again later.');
+            const data = await res.json();
+            return data.order;
+        }
+
+        function initForm() {
+            hide('gc-loading'); show('gc-form-view');
+            renderPlans();
+
+            el('gc-proof').addEventListener('change', function () {
+                el('gc-file-name').textContent = this.files && this.files[0] ? this.files[0].name : '';
+            });
+
+            el('gc-form').addEventListener('submit', async function (e) {
+                e.preventDefault();
+                const email = el('gc-email').value.trim();
+                const txHash = el('gc-tx').value.trim();
+                const proof = el('gc-proof').files[0];
+                const msg = el('gc-form-msg');
+                msg.classList.add('gc-hidden');
+
+                if (!email || !txHash) {
+                    msg.textContent = 'Please fill in your email and the transaction hash.';
+                    msg.className = 'gc-msg is-error';
+                    return;
+                }
+
+                const btn = el('gc-submit');
+                btn.disabled = true;
+                btn.textContent = 'Submitting…';
+
+                try {
+                    const fd = new FormData();
+                    fd.append('plan', selectedPlan);
+                    fd.append('email', email);
+                    fd.append('txHash', txHash);
+                    if (proof) fd.append('proof', proof);
+
+                    const res = await fetch('/crypto/usdt/order', { method: 'POST', body: fd });
+                    const data = await res.json();
+                    if (!res.ok || !data.success) throw new Error(data.message || 'Could not submit your confirmation.');
+
+                    const newUrl = window.location.pathname + '?order=' + encodeURIComponent(data.orderId);
+                    window.history.replaceState({}, '', newUrl);
+
+                    renderStatus({
+                        orderId: data.orderId,
+                        plan: selectedPlan,
+                        planDays: USDT_PLANS[selectedPlan].label,
+                        amount: USDT_PLANS[selectedPlan].usdt,
+                        email: email,
+                        status: 'pending',
+                        licenseKey: null
+                    });
+                } catch (err) {
+                    btn.disabled = false;
+                    btn.textContent = 'Submit confirmation';
+                    msg.textContent = err.message;
+                    msg.className = 'gc-msg is-error';
+                }
+            });
+        }
+
+        async function initStatus(orderId) {
+            try {
+                const order = await fetchOrder(orderId);
+                renderStatus(order);
+            } catch (err) {
+                showError(err.message);
+            }
+        }
+
+        el('gc-refresh').addEventListener('click', function () {
+            const oid = (new URLSearchParams(window.location.search).get('order') || '').trim();
+            if (oid) initStatus(oid);
+        });
+
+        el('gc-copy-btn').addEventListener('click', function () {
+            const key = el('gc-license-key').textContent;
+            const done = () => { this.innerHTML = '<i class="fas fa-check"></i> Copied!'; setTimeout(() => { this.innerHTML = '<i class="fas fa-copy"></i> Copy'; }, 1600); };
+            if (navigator.clipboard) { navigator.clipboard.writeText(key).then(done).catch(done); } else { done(); }
+        });
+
+        (function init() {
+            if (orderParam) {
+                initStatus(orderParam);
+            } else {
+                initForm();
+            }
+        })();
+    </script>
+</body>
+</html>

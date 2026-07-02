@@ -24,6 +24,7 @@
         <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener" id="chrome-extension" class="sidebar-link sidebar-link-chrome"><i class="fab fa-chrome"></i> Install Extension</a>
         <button type="button" id="download"><i class="fas fa-download"></i> Download Bot</button>
         <button type="button" id="buyButton" class="is-accent"><i class="fas fa-shopping-cart"></i> Buy</button>
+        <button type="button" id="cryptoButton" class="is-crypto"><i class="fab fa-bitcoin"></i> Buy with crypto</button>
     </nav>
     <div class="sidebar-footer-links">
         <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>
@@ -233,6 +234,88 @@
         </div>
     </section>
 
+    <section id="crypto-section" class="site-view crypto-panel">
+        <div class="crypto-head">
+            <h2><i class="fab fa-bitcoin"></i> Pay with crypto</h2>
+            <p class="crypto-lead">Buy your GladiusBot license with <strong>USDT (Tether)</strong> or a <strong>Binance Gift Card</strong>. Fast, global, no bank card required.</p>
+        </div>
+
+        <div class="crypto-prices">
+            <p class="crypto-prices-label">USDT · Solana — direct transfer price</p>
+            <div class="crypto-prices-grid" id="crypto-prices-grid"></div>
+            <p class="crypto-prices-note">USDT is a stablecoin pegged to the US dollar, so the price stays fixed. Prefer the Binance Gift Card? See the plans on the right — no network fee, no risk of choosing the wrong network.</p>
+        </div>
+
+        <div class="crypto-grid">
+            <article class="crypto-card">
+                <div class="crypto-card-head">
+                    <span class="crypto-badge is-recommended">Recommended</span>
+                    <h3><i class="fas fa-coins"></i> USDT (Tether)</h3>
+                    <p class="crypto-network">Network: <strong>Solana (SOL)</strong></p>
+                </div>
+
+                <div class="crypto-warning">
+                    <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+                    <span>Send <strong>only via the Solana network</strong>. USDT sent on any other network may be lost forever.</span>
+                </div>
+
+                <div class="crypto-qr-wrap">
+                    <img id="crypto-qr" class="crypto-qr" alt="USDT Solana wallet QR code" width="180" height="180">
+                </div>
+
+                <label class="crypto-addr-label" for="crypto-address">My wallet address · USDT (Solana)</label>
+                <div class="crypto-addr-row">
+                    <input type="text" id="crypto-address" readonly aria-label="USDT Solana wallet address">
+                    <button type="button" id="crypto-copy"><i class="fas fa-copy" aria-hidden="true"></i> <span id="crypto-copy-label">Copy</span></button>
+                </div>
+
+                <ol class="crypto-steps">
+                    <li>In your wallet or exchange, choose <strong>Send / Withdraw USDT</strong>.</li>
+                    <li>Select the <strong>Solana</strong> network.</li>
+                    <li>Paste the address above (or scan the QR) and send the exact amount for your plan.</li>
+                    <li>Confirm your transfer here — paste the <strong>transaction hash (TXID)</strong> and your email so we can send your license:</li>
+                </ol>
+                <a class="crypto-confirm-link" href="usdt.html" target="_blank" rel="noopener">
+                    <i class="fas fa-paper-plane" aria-hidden="true"></i> Confirm USDT transfer
+                </a>
+            </article>
+
+            <article class="crypto-card">
+                <div class="crypto-card-head">
+                    <span class="crypto-badge">No network risk</span>
+                    <h3><i class="fas fa-gift"></i> Binance Gift Card</h3>
+                    <p class="crypto-network">Pay with a <strong>USDT</strong> gift card code</p>
+                </div>
+
+                <ol class="crypto-steps">
+                    <li>Buy a <strong>USDT Binance Gift Card</strong> for your plan amount from a trusted Binance merchant.</li>
+                    <li>Copy the gift card <strong>redemption code</strong>.</li>
+                    <li>Pick your plan below and open its page.</li>
+                    <li>Paste the code and your email — we verify it and send your license to the same page.</li>
+                </ol>
+
+                <div class="crypto-merchants">
+                    <p class="crypto-p2p-title"><i class="fas fa-user-shield" aria-hidden="true"></i> Buy from Binance's trusted merchants</p>
+                    <a class="crypto-merchant-link" id="crypto-merchants-link" href="#" target="_blank" rel="noopener">
+                        <i class="fas fa-store" aria-hidden="true"></i> Open Binance trusted merchants
+                    </a>
+                    <p class="crypto-p2p-note">Prefer merchants with the <strong>verified</strong> badge and a high completion rate.</p>
+                </div>
+
+                <div class="crypto-giftcards">
+                    <p class="crypto-giftcards-title">Choose your plan</p>
+                    <div class="crypto-giftcards-row" id="crypto-giftcards-row"></div>
+                </div>
+            </article>
+        </div>
+
+        <div class="crypto-after">
+            <i class="fas fa-circle-info" aria-hidden="true"></i>
+            <span>After paying, you'll be redirected to send us your <strong>proof of payment</strong> and the <strong>email</strong> where you want to receive your license key. Delivery is manual and usually quick. Questions? Contact us.</span>
+            <button type="button" id="crypto-contact-btn">Contact us</button>
+        </div>
+    </section>
+
 </main>
 
 <script>
@@ -240,7 +323,30 @@
         hero: document.getElementById('hero-view'),
         video: document.getElementById('video'),
         contact: document.getElementById('contact-section'),
-        country: document.getElementById('container')
+        country: document.getElementById('container'),
+        crypto: document.getElementById('crypto-section')
+    };
+
+    // Pagamento em cripto — edite estes valores conforme sua carteira/preços.
+    const CRYPTO_CONFIG = {
+        // Endereço USDT na rede SOLANA (copie da Binance → Receber → via endereço).
+        usdtSolanaAddress: '3xfroudB2dUrPjtVVjgn2hd22DGpJeukKitpFSKBc8H7',
+        // QR code da carteira (imagem estática). Deixe vazio para gerar automaticamente.
+        usdtSolanaQr: './images/qrcode_theter_solana.png',
+        // Preço de cada plano em USDT (≈ dólar) para pagamento direto na rede Solana.
+        plans: [
+            { name: '15 days', usdt: '1.92' },
+            { name: '30 days', usdt: '3.38' },
+            { name: '60 days', usdt: '6.62' }
+        ],
+        // Parceiros/merchants confiáveis da Binance para comprar o gift card.
+        binanceMerchantsUrl: 'https://www.binance.com/pt-BR/gift-card/merchant',
+        // Gift cards Binance — cada card leva à página de resgate do plano.
+        giftCards: [
+            { plan: '15DAYS', label: '15 days', usd: '2', img: './images/gift_card_2.png' },
+            { plan: '30DAYS', label: '30 days', usd: '4', img: './images/gift_card_4.png' },
+            { plan: '60DAYS', label: '60 days', usd: '6', img: './images/gift_card_6.png' }
+        ]
     };
 
     (function initHeroShowcase() {
@@ -305,6 +411,7 @@
     const btnTutorial = document.getElementById('tutorial');
     const btnDownload = document.getElementById('download');
     const btnBuy = document.getElementById('buyButton');
+    const btnCrypto = document.getElementById('cryptoButton');
 
     function showView(name) {
         Object.values(views).forEach(v => v.classList.remove('is-active'));
@@ -317,6 +424,7 @@
         btnTutorial.style.display = 'flex';
         btnDownload.style.display = 'flex';
         btnBuy.style.display = 'flex';
+        btnCrypto.style.display = 'flex';
     }
 
     function setSidebarSub() {
@@ -508,6 +616,81 @@
         btnTutorial.style.display = 'none';
         btnBuy.style.display = 'none';
         btnContact.style.display = 'none';
+        btnCrypto.style.display = 'none';
+    });
+
+    btnCrypto.addEventListener('click', function () {
+        initCryptoView();
+        showView('crypto');
+        setSidebarSub();
+        btnDownload.style.display = 'none';
+        btnTutorial.style.display = 'none';
+        btnBuy.style.display = 'none';
+        btnContact.style.display = 'none';
+        btnCrypto.style.display = 'none';
+    });
+
+    function openContactFromCrypto() {
+        document.getElementById('contactus').click();
+    }
+    document.getElementById('crypto-contact-btn').addEventListener('click', openContactFromCrypto);
+
+    let cryptoViewReady = false;
+    function initCryptoView() {
+        if (cryptoViewReady) return;
+        cryptoViewReady = true;
+
+        const pricesGrid = document.getElementById('crypto-prices-grid');
+        if (pricesGrid) {
+            pricesGrid.innerHTML = CRYPTO_CONFIG.plans.map(function (plan) {
+                return '<div class="crypto-price-item">' +
+                    '<span class="crypto-price-plan">' + plan.name + '</span>' +
+                    '<span class="crypto-price-value">' + plan.usdt + ' USDT</span>' +
+                    '</div>';
+            }).join('');
+        }
+
+        const addrInput = document.getElementById('crypto-address');
+        const qrImg = document.getElementById('crypto-qr');
+        const addr = CRYPTO_CONFIG.usdtSolanaAddress || '';
+        if (addrInput) addrInput.value = addr;
+        if (qrImg) {
+            qrImg.src = CRYPTO_CONFIG.usdtSolanaQr
+                ? CRYPTO_CONFIG.usdtSolanaQr
+                : 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=' + encodeURIComponent(addr);
+        }
+
+        const merchantsLink = document.getElementById('crypto-merchants-link');
+        if (merchantsLink) merchantsLink.href = CRYPTO_CONFIG.binanceMerchantsUrl;
+
+        const giftRow = document.getElementById('crypto-giftcards-row');
+        if (giftRow) {
+            giftRow.innerHTML = CRYPTO_CONFIG.giftCards.map(function (card) {
+                return '<a class="crypto-giftcard" href="giftcard.html?plan=' + encodeURIComponent(card.plan) + '" target="_blank" rel="noopener" title="' + card.label + ' — $' + card.usd + ' gift card">' +
+                    '<img src="' + card.img + '" alt="' + card.label + ' gift card ($' + card.usd + ')">' +
+                    '<span class="crypto-giftcard-label">' + card.label + ' · $' + card.usd + '</span>' +
+                    '</a>';
+            }).join('');
+        }
+    }
+
+    document.getElementById('crypto-copy').addEventListener('click', function () {
+        const addr = CRYPTO_CONFIG.usdtSolanaAddress || '';
+        const label = document.getElementById('crypto-copy-label');
+        function done() {
+            if (!label) return;
+            const prev = label.textContent;
+            label.textContent = 'Copied!';
+            setTimeout(function () { label.textContent = prev; }, 1600);
+        }
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(addr).then(done).catch(done);
+        } else {
+            const input = document.getElementById('crypto-address');
+            input.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            done();
+        }
     });
 
     const select = document.getElementById('country-select');

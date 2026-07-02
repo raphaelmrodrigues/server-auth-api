@@ -119,10 +119,148 @@ function buildPurchaseEmailHtml({ customerName, planLabel, licenseKey, expiratio
 </html>`;
 }
 
+function buildCryptoConfirmationEmailHtml({ customerName, planLabel, planDays, licenseKey, methodLabel }) {
+    const year = new Date().getFullYear();
+    const safeName = escapeHtml(customerName || 'player');
+    const safePlan = escapeHtml(planLabel || 'GladiusBot');
+    const safeDays = escapeHtml(String(planDays || ''));
+    const safeKey = escapeHtml(licenseKey || '');
+    const safeMethod = escapeHtml(methodLabel || 'Binance Gift Card');
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GladiusBot — License</title>
+</head>
+<body style="margin:0;padding:0;background-color:#1a1208;font-family:Georgia,'Times New Roman',serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#1a1208;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:linear-gradient(180deg,#f4e4bc 0%,#e8d4a8 100%);border:3px solid #8b6914;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="background:linear-gradient(180deg,#5c3d1e 0%,#3d2814 100%);padding:28px 24px;text-align:center;border-bottom:3px solid #c9a227;">
+              <img src="cid:gladiusboticon" alt="GladiusBot" width="96" height="96" style="display:block;margin:0 auto 12px;border-radius:12px;border:2px solid #c9a227;">
+              <h1 style="margin:0;color:#f4e4bc;font-size:22px;letter-spacing:1px;font-weight:normal;">Crypto purchase confirmed</h1>
+              <p style="margin:8px 0 0;color:#c9a227;font-size:12px;letter-spacing:2px;text-transform:uppercase;">GladiusBot · Paid with ${safeMethod}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 26px;color:#3d2814;font-size:16px;line-height:1.65;">
+              <p style="margin:0 0 16px;">Hi, <strong>${safeName}</strong>!</p>
+              <p style="margin:0 0 20px;">Thank you for your purchase. Your payment was verified and your license is ready. Keep the details below in a safe place.</p>
+
+              <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fff9ed;border:2px solid #c9a227;border-radius:10px;margin:0 0 22px;">
+                <tr>
+                  <td style="padding:18px 20px;">
+                    <p style="margin:0 0 12px;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:#8b6914;font-weight:bold;">License details</p>
+                    <p style="margin:0 0 10px;"><strong style="color:#5c3d1e;">Plan:</strong> ${safePlan}</p>
+                    <p style="margin:0 0 10px;"><strong style="color:#5c3d1e;">Duration:</strong> ${safeDays} days</p>
+                    <p style="margin:0 0 14px;font-size:14px;color:#6b5344;"><em>The ${safeDays} days start counting from the moment you activate the license inside the Bot — not from today.</em></p>
+                    <div style="background:#3d2814;border:1px solid #8b6914;border-radius:8px;padding:14px 16px;text-align:center;">
+                      <p style="margin:0 0 6px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#c9a227;">License key</p>
+                      <p style="margin:0;font-family:'Courier New',Courier,monospace;font-size:15px;color:#f4e4bc;word-break:break-all;">${safeKey}</p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:0 0 10px;font-size:14px;letter-spacing:1px;text-transform:uppercase;color:#8b6914;font-weight:bold;">How to activate</p>
+              <ol style="margin:0 0 22px;padding-left:22px;color:#3d2814;">
+                <li style="margin-bottom:8px;">Install the extension from the <a href="${CHROME_STORE_URL}" style="color:#5c3d1e;font-weight:bold;">Chrome Web Store</a>.</li>
+                <li style="margin-bottom:8px;">Open Gladiatus in the same Chrome profile.</li>
+                <li style="margin-bottom:8px;">In the GladiusBot panel, go to <strong>GladiusBot</strong> → <strong>GladiusBot License</strong>.</li>
+                <li>Paste the key above and confirm. Your ${safeDays} days start now.</li>
+              </ol>
+
+              <p style="margin:0;font-size:14px;color:#6b5344;">Questions or activation issues? Reply to this email or visit <a href="https://gldbotserver.com" style="color:#5c3d1e;">gldbotserver.com</a>.</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#3d2814;padding:20px 24px;text-align:center;border-top:2px solid #8b6914;">
+              <p style="margin:0 0 8px;color:#c9a227;font-size:13px;">
+                <a href="https://gldbotserver.com" style="color:#f4e4bc;text-decoration:none;">gldbotserver.com</a>
+                &nbsp;·&nbsp;
+                <a href="https://gldbotserver.com/privacy" style="color:#f4e4bc;text-decoration:none;">Privacy</a>
+              </p>
+              <p style="margin:0;color:#8b7355;font-size:11px;">&copy; ${year} GladiusBot. Independent product for Gladiatus.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildCryptoRejectionEmailHtml({ customerName, planLabel, reason, methodLabel, statusUrl }) {
+    const year = new Date().getFullYear();
+    const safeName = escapeHtml(customerName || 'player');
+    const safePlan = escapeHtml(planLabel || 'GladiusBot');
+    const safeMethod = escapeHtml(methodLabel || 'crypto');
+    const safeReason = escapeHtml(reason || '');
+    const safeUrl = escapeHtml(statusUrl || 'https://gldbotserver.com');
+    const reasonBlock = safeReason
+        ? `<div style="background:#fff9ed;border:2px solid #c9a227;border-radius:10px;margin:0 0 22px;padding:16px 20px;">
+                    <p style="margin:0 0 8px;font-size:12px;letter-spacing:1.2px;text-transform:uppercase;color:#8b6914;font-weight:bold;">Reason</p>
+                    <p style="margin:0;color:#3d2814;">${safeReason}</p>
+                  </div>`
+        : '';
+
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GladiusBot — Order not confirmed</title>
+</head>
+<body style="margin:0;padding:0;background-color:#1a1208;font-family:Georgia,'Times New Roman',serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#1a1208;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:linear-gradient(180deg,#f4e4bc 0%,#e8d4a8 100%);border:3px solid #8b6914;border-radius:12px;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.35);">
+          <tr>
+            <td style="background:linear-gradient(180deg,#5c3d1e 0%,#3d2814 100%);padding:28px 24px;text-align:center;border-bottom:3px solid #c9a227;">
+              <img src="cid:gladiusboticon" alt="GladiusBot" width="96" height="96" style="display:block;margin:0 auto 12px;border-radius:12px;border:2px solid #c9a227;">
+              <h1 style="margin:0;color:#f4e4bc;font-size:22px;letter-spacing:1px;font-weight:normal;">Order not confirmed</h1>
+              <p style="margin:8px 0 0;color:#c9a227;font-size:12px;letter-spacing:2px;text-transform:uppercase;">GladiusBot · Paid with ${safeMethod}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 26px;color:#3d2814;font-size:16px;line-height:1.65;">
+              <p style="margin:0 0 16px;">Hi, <strong>${safeName}</strong>,</p>
+              <p style="margin:0 0 20px;">Unfortunately we could not confirm your payment for <strong>${safePlan}</strong>, so the order was not approved and no license was issued.</p>
+              ${reasonBlock}
+              <p style="margin:0 0 20px;">If you believe this is a mistake, just reply to this email with your payment details (transaction hash or gift card code and a screenshot) and we'll review it again.</p>
+              <p style="margin:0;font-size:14px;color:#6b5344;">You can also check your order status here: <a href="${safeUrl}" style="color:#5c3d1e;">${safeUrl}</a></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#3d2814;padding:20px 24px;text-align:center;border-top:2px solid #8b6914;">
+              <p style="margin:0 0 8px;color:#c9a227;font-size:13px;">
+                <a href="https://gldbotserver.com" style="color:#f4e4bc;text-decoration:none;">gldbotserver.com</a>
+                &nbsp;·&nbsp;
+                <a href="https://gldbotserver.com/privacy" style="color:#f4e4bc;text-decoration:none;">Privacy</a>
+              </p>
+              <p style="margin:0;color:#8b7355;font-size:11px;">&copy; ${year} GladiusBot. Independent product for Gladiatus.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
 module.exports = {
     PURCHASE_FROM,
     PURCHASE_REPLY_TO,
     buildPurchaseEmailHtml,
+    buildCryptoConfirmationEmailHtml,
+    buildCryptoRejectionEmailHtml,
     getPurchaseEmailAttachments,
     formatPurchaseDate,
 };

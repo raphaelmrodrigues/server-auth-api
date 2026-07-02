@@ -123,6 +123,9 @@
         <a href="#" onclick="showPanel('bot-monitor-section')" id="nav-bot-monitor" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Monitoramento do Bot</a>
         <a href="#" onclick="showPanel('security-section')" id="nav-security" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Segurança</a>
       </li>
+      <li class="mr-2">
+        <a href="#" onclick="showPanel('crypto-orders-section')" id="nav-crypto-orders" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Cripto / Gift Card</a>
+      </li>
     </ul>
   </nav>
 
@@ -519,6 +522,28 @@
     </div>
   </section>
 
+  <section id="crypto-orders-section" class="hidden space-y-6">
+    <div class="p-4 md:p-6 bg-white rounded-lg shadow-xl">
+      <div class="flex flex-wrap justify-between items-center gap-3 mb-2">
+        <h2 class="text-2xl font-semibold text-gray-800">Pedidos por Cripto (Binance Gift Card)</h2>
+        <button onclick="loadCryptoOrders()" class="text-sm text-blue-600 hover:underline">Atualizar</button>
+      </div>
+      <p class="text-sm text-gray-500 mb-6">O cliente compra um gift card, envia o código pela página de pagamento e o pedido aparece aqui. Verifique o código na Binance, gere a licença manualmente e cole abaixo para enviá-la ao cliente (ele vê no link e recebe por e-mail).</p>
+
+      <div class="flex flex-wrap gap-2 mb-4">
+        <button type="button" onclick="setCryptoFilter('pending')" id="crypto-filter-pending" class="crypto-filter-btn bg-amber-500 text-white font-semibold py-2 px-4 rounded-lg text-sm">Pendentes</button>
+        <button type="button" onclick="setCryptoFilter('generated')" id="crypto-filter-generated" class="crypto-filter-btn bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm">Geradas</button>
+        <button type="button" onclick="setCryptoFilter('rejected')" id="crypto-filter-rejected" class="crypto-filter-btn bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm">Rejeitadas</button>
+        <button type="button" onclick="setCryptoFilter('')" id="crypto-filter-all" class="crypto-filter-btn bg-gray-200 text-gray-800 font-semibold py-2 px-4 rounded-lg text-sm">Todos</button>
+        <span id="crypto-orders-meta" class="text-sm text-gray-500 self-center ml-2">Carregando...</span>
+      </div>
+
+      <div id="crypto-orders-list" class="space-y-4">
+        <p class="text-gray-500">Carregando pedidos...</p>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <script>
@@ -535,6 +560,7 @@
     'itch-licenses-section': 'nav-itch-licenses',
     'bot-monitor-section': 'nav-bot-monitor',
     'security-section': 'nav-security',
+    'crypto-orders-section': 'nav-crypto-orders',
   };
 
   // --- Funções de Autenticação e Navegação ---
@@ -615,6 +641,162 @@
 
     if (panelId === 'security-section') {
       fetchSecurityPanel();
+    }
+
+    if (panelId === 'crypto-orders-section') {
+      loadCryptoOrders();
+    }
+  }
+
+  // --- Pedidos por cripto (Binance Gift Card) ---
+  let cryptoOrderFilter = 'pending';
+
+  function setCryptoFilter(status) {
+    cryptoOrderFilter = status;
+    document.querySelectorAll('.crypto-filter-btn').forEach(function (btn) {
+      btn.classList.remove('bg-amber-500', 'bg-blue-500', 'text-white');
+      btn.classList.add('bg-gray-200', 'text-gray-800');
+    });
+    const activeId = status === '' ? 'crypto-filter-all' : ('crypto-filter-' + status);
+    const activeBtn = document.getElementById(activeId);
+    if (activeBtn) {
+      activeBtn.classList.remove('bg-gray-200', 'text-gray-800');
+      activeBtn.classList.add(status === 'pending' ? 'bg-amber-500' : 'bg-blue-500', 'text-white');
+    }
+    loadCryptoOrders();
+  }
+
+  function cryptoStatusBadge(status) {
+    if (status === 'generated') return '<span class="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700">Licença gerada</span>';
+    if (status === 'rejected') return '<span class="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700">Rejeitado</span>';
+    return '<span class="px-2 py-1 rounded text-xs font-bold bg-amber-100 text-amber-700">Pendente</span>';
+  }
+
+  function escapeAttr(str) {
+    return String(str == null ? '' : str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async function loadCryptoOrders() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const list = document.getElementById('crypto-orders-list');
+    const meta = document.getElementById('crypto-orders-meta');
+    list.innerHTML = '<p class="text-gray-500">Carregando pedidos...</p>';
+    try {
+      const url = `${API_DOMAIN}/admin/crypto-orders` + (cryptoOrderFilter ? ('?status=' + cryptoOrderFilter) : '');
+      const response = await fetch(url, { headers: { 'Authorization': `Bearer ${token}` } });
+      if (!response.ok) throw new Error('Falha ao carregar');
+      const data = await response.json();
+      const orders = data.orders || [];
+      meta.textContent = orders.length + ' pedido(s)';
+
+      if (orders.length === 0) {
+        list.innerHTML = '<p class="text-gray-500">Nenhum pedido neste filtro.</p>';
+        return;
+      }
+
+      list.innerHTML = orders.map(function (o) {
+        const created = new Date(o.createdAt).toLocaleString('pt-BR');
+        const proof = o.hasProof ? '<span class="text-green-600">Sim (ver e-mail)</span>' : '<span class="text-gray-400">Não</span>';
+        const licenseValue = o.licenseKey ? escapeAttr(o.licenseKey) : '';
+        const isGenerated = o.status === 'generated';
+        const isUsdt = o.method === 'usdt';
+        const methodBadge = isUsdt
+          ? '<span class="px-2 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-800">USDT · Solana</span>'
+          : '<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">Gift Card</span>';
+        let paymentBlock;
+        if (isUsdt) {
+          const solscan = 'https://solscan.io/tx/' + encodeURIComponent(o.txHash || '');
+          const amount = o.amount ? (' · esperado: ' + escapeAttr(o.amount) + ' USDT') : '';
+          paymentBlock =
+            '<div class="md:col-span-2"><span class="text-gray-500">Transaction hash (TXID):</span>' + amount + '<br>' +
+              '<code class="block bg-white border border-gray-300 rounded px-2 py-1 mt-1 break-all">' + escapeAttr(o.txHash || '') + '</code>' +
+              '<a href="' + solscan + '" target="_blank" class="text-blue-600 hover:underline text-xs">Conferir no Solscan</a>' +
+            '</div>';
+        } else {
+          paymentBlock =
+            '<div class="md:col-span-2"><span class="text-gray-500">Código do gift card:</span><br>' +
+              '<code class="block bg-white border border-gray-300 rounded px-2 py-1 mt-1 break-all">' + escapeAttr(o.giftCardCode || '') + '</code>' +
+            '</div>';
+        }
+        return '' +
+          '<div class="border border-gray-200 rounded-lg p-4 bg-gray-50">' +
+            '<div class="flex flex-wrap justify-between items-start gap-2 mb-3">' +
+              '<div>' +
+                '<div class="flex items-center gap-2 mb-1">' +
+                  '<p class="font-mono text-sm text-gray-800 font-bold">' + escapeAttr(o.orderId) + '</p>' +
+                  methodBadge +
+                '</div>' +
+                '<p class="text-sm text-gray-600">' + escapeAttr(o.planLabel || (o.planDays + ' dias')) + ' · ' + created + '</p>' +
+              '</div>' +
+              cryptoStatusBadge(o.status) +
+            '</div>' +
+            '<div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-3">' +
+              '<div><span class="text-gray-500">E-mail:</span> <strong>' + escapeAttr(o.email) + '</strong></div>' +
+              '<div><span class="text-gray-500">Comprovante:</span> ' + proof + '</div>' +
+              paymentBlock +
+              '<div class="md:col-span-2"><span class="text-gray-500">Link do cliente:</span> <a href="' + escapeAttr(o.link) + '" target="_blank" class="text-blue-600 hover:underline break-all">' + escapeAttr(o.link) + '</a></div>' +
+            '</div>' +
+            '<div class="flex flex-wrap gap-2 items-center border-t border-gray-200 pt-3">' +
+              '<input type="text" id="license-input-' + escapeAttr(o.orderId) + '" value="' + licenseValue + '" placeholder="Cole a licença gerada" class="flex-1 min-w-[220px] border border-gray-300 rounded-md px-3 py-2 text-sm font-mono">' +
+              '<button onclick="sendCryptoLicense(\'' + escapeAttr(o.orderId) + '\')" class="bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 px-4 rounded-lg">' + (isGenerated ? 'Reenviar licença' : 'Enviar licença') + '</button>' +
+              (o.status !== 'rejected' ? '<button onclick="rejectCryptoOrder(\'' + escapeAttr(o.orderId) + '\')" class="bg-gray-200 hover:bg-red-100 text-gray-700 text-sm font-semibold py-2 px-4 rounded-lg">Rejeitar</button>' : '') +
+              '<span id="crypto-msg-' + escapeAttr(o.orderId) + '" class="text-sm"></span>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+    } catch (error) {
+      list.innerHTML = '<p class="text-red-600">Erro ao carregar pedidos.</p>';
+      meta.textContent = '';
+    }
+  }
+
+  async function sendCryptoLicense(orderId) {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const input = document.getElementById('license-input-' + orderId);
+    const msg = document.getElementById('crypto-msg-' + orderId);
+    const licenseKey = (input.value || '').trim();
+    if (!licenseKey) {
+      msg.textContent = 'Informe a licença.';
+      msg.className = 'text-sm text-red-600';
+      return;
+    }
+    msg.textContent = 'Enviando...';
+    msg.className = 'text-sm text-gray-500';
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/crypto-orders/${encodeURIComponent(orderId)}/license`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ licenseKey })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Falha');
+      msg.textContent = 'Licença enviada e e-mail disparado!';
+      msg.className = 'text-sm text-green-600';
+      setTimeout(loadCryptoOrders, 1200);
+    } catch (error) {
+      msg.textContent = 'Erro ao enviar licença.';
+      msg.className = 'text-sm text-red-600';
+    }
+  }
+
+  async function rejectCryptoOrder(orderId) {
+    const reason = prompt('Motivo da rejeição (será enviado ao cliente por e-mail e mostrado na página do pedido):', '');
+    if (reason === null) return;
+    const token = localStorage.getItem(TOKEN_KEY);
+    const msg = document.getElementById('crypto-msg-' + orderId);
+    if (msg) { msg.textContent = 'Rejeitando...'; msg.className = 'text-sm text-gray-500'; }
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/crypto-orders/${encodeURIComponent(orderId)}/reject`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notes: reason.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success) throw new Error(data.message || 'Falha');
+      if (msg) { msg.textContent = 'Pedido rejeitado e e-mail enviado.'; msg.className = 'text-sm text-red-600'; }
+      setTimeout(loadCryptoOrders, 1200);
+    } catch (error) {
+      if (msg) { msg.textContent = 'Erro ao rejeitar.'; msg.className = 'text-sm text-red-600'; }
     }
   }
 

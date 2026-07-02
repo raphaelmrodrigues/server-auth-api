@@ -71,6 +71,8 @@ const {
     PURCHASE_FROM,
     PURCHASE_REPLY_TO,
     buildPurchaseEmailHtml,
+    buildCryptoConfirmationEmailHtml,
+    buildCryptoRejectionEmailHtml,
     getPurchaseEmailAttachments,
 } = require('./purchase-email');
 const {
@@ -187,6 +189,51 @@ const saleAuditSchema = new mongoose.Schema({
 });
 
 const SaleAudit = mongoose.model('SaleAudit', saleAuditSchema);
+
+// Planos disponíveis para pagamento via Binance Gift Card (cripto).
+const CRYPTO_GIFTCARD_PLANS = {
+    '15DAYS': { days: 15, label: 'GLDbot - 15 days', giftUsd: 2 },
+    '30DAYS': { days: 30, label: 'GLDbot - 30 days', giftUsd: 4 },
+    '60DAYS': { days: 60, label: 'GLDbot - 60 days', giftUsd: 6 },
+};
+
+// Planos disponíveis para transferência direta em USDT (rede Solana).
+const CRYPTO_USDT_PLANS = {
+    '15DAYS': { days: 15, label: 'GLDbot - 15 days', usdt: '1.92' },
+    '30DAYS': { days: 30, label: 'GLDbot - 30 days', usdt: '3.38' },
+    '60DAYS': { days: 60, label: 'GLDbot - 60 days', usdt: '6.62' },
+};
+
+// Pedido de licença pago com criptomoeda (gift card ou USDT) — verificação manual.
+const cryptoOrderSchema = new mongoose.Schema({
+    orderId: { type: String, required: true, unique: true, index: true },
+    method: { type: String, enum: ['giftcard', 'usdt'], default: 'giftcard' },
+    plan: { type: String, enum: ['15DAYS', '30DAYS', '60DAYS'], required: true },
+    planDays: { type: Number, required: true },
+    planLabel: { type: String },
+    email: { type: String, required: true },
+    giftCardCode: { type: String, default: null },
+    txHash: { type: String, default: null },
+    amount: { type: String, default: null },
+    hasProof: { type: Boolean, default: false },
+    status: { type: String, enum: ['pending', 'generated', 'rejected'], default: 'pending' },
+    licenseKey: { type: String, default: null },
+    adminNotes: { type: String, default: '' },
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now },
+});
+
+const CryptoOrder = mongoose.model('CryptoOrder', cryptoOrderSchema);
+
+// Upload dedicado ao comprovante (print) do gift card — opcional, até 8MB.
+const uploadCryptoProof = multer({
+    storage: storage,
+    limits: { fileSize: 8 * 1024 * 1024 },
+}).single('proof');
+
+function generateCryptoOrderId() {
+    return 'GC-' + crypto.randomBytes(9).toString('hex').toUpperCase();
+}
 
 app.post ('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
     const sig = request.headers['stripe-signature'];
@@ -468,6 +515,386 @@ app.post('/contact', upload, async (req, res) => {
             console.error(error.response.body);
         }
         res.status(500).json({ success: false, message: 'Erro ao enviar a mensagem, tente novamente mais tarde.' });
+    }
+});
+
+// ============================================================================
+// Pagamento com criptomoeda (Binance Gift Card) — verificação manual
+// ============================================================================
+
+function cryptoOrderPublicPayload(order) {
+    return {
+        orderId: order.orderId,
+        method: order.method || 'giftcard',
+        plan: order.plan,
+        planLabel: order.planLabel,
+        planDays: order.planDays,
+        amount: order.amount || null,
+        email: order.email,
+        status: order.status,
+        licenseKey: order.status === 'generated' ? order.licenseKey : null,
+        rejectionReason: order.status === 'rejected' ? (order.adminNotes || null) : null,
+        hasProof: order.hasProof,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+    };
+}
+
+function cryptoOrderStatusPage(order) {
+    const page = (order.method === 'usdt') ? 'usdt.html' : 'giftcard.html';
+    return `https://gldbotserver.com/${page}?order=${order.orderId}`;
+}
+
+// Cria um pedido de licença por gift card (usuário informa código + e-mail).
+app.post('/crypto/giftcard/order', (req, res) => {
+    uploadCryptoProof(req, res, async function (uploadErr) {
+        if (uploadErr) {
+            return res.status(400).json({ success: false, message: 'Could not process the attachment. Max size is 8MB.' });
+        }
+
+        const plan = String(req.body.plan || '').trim().toUpperCase();
+        const email = normalizeEmail(req.body.email || '');
+        const giftCardCode = String(req.body.giftCardCode || '').trim();
+        const proof = req.file;
+
+        const planInfo = CRYPTO_GIFTCARD_PLANS[plan];
+        if (!planInfo) {
+            return res.status(400).json({ success: false, message: 'Invalid plan.' });
+        }
+        if (!isValidEmail(email)) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid email.' });
+        }
+        if (!giftCardCode || giftCardCode.length < 6 || giftCardCode.length > 64) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid gift card code.' });
+        }
+
+        try {
+            let orderId = generateCryptoOrderId();
+            // Garante unicidade do orderId
+            for (let i = 0; i < 3; i += 1) {
+                const clash = await CryptoOrder.findOne({ orderId });
+                if (!clash) break;
+                orderId = generateCryptoOrderId();
+            }
+
+            const order = new CryptoOrder({
+                orderId,
+                method: 'giftcard',
+                plan,
+                planDays: planInfo.days,
+                planLabel: planInfo.label,
+                email,
+                giftCardCode,
+                hasProof: !!proof,
+                status: 'pending',
+            });
+            await order.save();
+
+            const statusUrl = `https://gldbotserver.com/giftcard.html?order=${orderId}`;
+            const msg = {
+                to: 'gldbotsuport@gmail.com',
+                from: PURCHASE_FROM,
+                replyTo: PURCHASE_REPLY_TO,
+                subject: `New crypto (gift card) order — ${planInfo.label} — ${orderId}`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px; background:#f7f4ee; color:#2c2113;">
+                        <h2 style="color:#8b6914;">New gift card order</h2>
+                        <p><strong>Order ID:</strong> ${orderId}</p>
+                        <p><strong>Plan:</strong> ${planInfo.label} (${planInfo.days} days) — expected gift: $${planInfo.giftUsd}</p>
+                        <p><strong>Customer email:</strong> ${email}</p>
+                        <p><strong>Gift card code:</strong></p>
+                        <pre style="background:#fff;border:1px solid #d8c9a3;border-radius:6px;padding:12px;font-size:15px;white-space:pre-wrap;word-break:break-all;">${giftCardCode}</pre>
+                        <p><strong>Proof attached:</strong> ${proof ? 'Yes' : 'No'}</p>
+                        <p style="margin-top:16px;"><a href="${statusUrl}">Open order page</a></p>
+                        <hr>
+                        <p style="font-size:13px;color:#6b5b3a;">Verify the code on Binance, then send the license from the admin panel (Crypto / Gift Card).</p>
+                    </div>
+                `,
+            };
+            if (proof) {
+                msg.attachments = [{
+                    filename: proof.originalname || 'proof',
+                    content: proof.buffer.toString('base64'),
+                    type: proof.mimetype,
+                    disposition: 'attachment',
+                }];
+            }
+
+            try {
+                await sgMail.send(msg);
+            } catch (mailErr) {
+                console.error('Erro ao enviar e-mail de pedido gift card:', mailErr?.response?.body || mailErr);
+            }
+
+            return res.status(200).json({
+                success: true,
+                orderId,
+                status: 'pending',
+                statusUrl,
+            });
+        } catch (error) {
+            console.error('Erro ao criar pedido de gift card:', error);
+            return res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
+        }
+    });
+});
+
+// Consulta pública do status de um pedido (o usuário acompanha pelo link).
+app.get('/crypto/giftcard/order/:orderId', async (req, res) => {
+    const orderId = String(req.params.orderId || '').trim();
+    if (!orderId) {
+        return res.status(400).json({ success: false, message: 'Order ID required.' });
+    }
+    try {
+        const order = await CryptoOrder.findOne({ orderId });
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found.' });
+        }
+        return res.status(200).json({ success: true, order: cryptoOrderPublicPayload(order) });
+    } catch (error) {
+        console.error('Erro ao consultar pedido de gift card:', error);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Cria um pedido de licença por transferência USDT (usuário informa TXID + e-mail + plano).
+app.post('/crypto/usdt/order', (req, res) => {
+    uploadCryptoProof(req, res, async function (uploadErr) {
+        if (uploadErr) {
+            return res.status(400).json({ success: false, message: 'Could not process the attachment. Max size is 8MB.' });
+        }
+
+        const plan = String(req.body.plan || '').trim().toUpperCase();
+        const email = normalizeEmail(req.body.email || '');
+        const txHash = String(req.body.txHash || '').trim();
+        const proof = req.file;
+
+        const planInfo = CRYPTO_USDT_PLANS[plan];
+        if (!planInfo) {
+            return res.status(400).json({ success: false, message: 'Invalid plan.' });
+        }
+        if (!isValidEmail(email)) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid email.' });
+        }
+        if (!txHash || txHash.length < 20 || txHash.length > 120) {
+            return res.status(400).json({ success: false, message: 'Please provide a valid transaction hash (TXID).' });
+        }
+
+        try {
+            let orderId = generateCryptoOrderId();
+            for (let i = 0; i < 3; i += 1) {
+                const clash = await CryptoOrder.findOne({ orderId });
+                if (!clash) break;
+                orderId = generateCryptoOrderId();
+            }
+
+            const order = new CryptoOrder({
+                orderId,
+                method: 'usdt',
+                plan,
+                planDays: planInfo.days,
+                planLabel: planInfo.label,
+                amount: planInfo.usdt,
+                email,
+                txHash,
+                hasProof: !!proof,
+                status: 'pending',
+            });
+            await order.save();
+
+            const statusUrl = cryptoOrderStatusPage(order);
+            const explorerUrl = `https://solscan.io/tx/${encodeURIComponent(txHash)}`;
+            const msg = {
+                to: 'gldbotsuport@gmail.com',
+                from: PURCHASE_FROM,
+                replyTo: PURCHASE_REPLY_TO,
+                subject: `New crypto (USDT) order — ${planInfo.label} — ${orderId}`,
+                html: `
+                    <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px; background:#f7f4ee; color:#2c2113;">
+                        <h2 style="color:#8b6914;">New USDT (Solana) order</h2>
+                        <p><strong>Order ID:</strong> ${orderId}</p>
+                        <p><strong>Plan:</strong> ${planInfo.label} (${planInfo.days} days) — expected: ${planInfo.usdt} USDT</p>
+                        <p><strong>Customer email:</strong> ${email}</p>
+                        <p><strong>Transaction hash (TXID):</strong></p>
+                        <pre style="background:#fff;border:1px solid #d8c9a3;border-radius:6px;padding:12px;font-size:14px;white-space:pre-wrap;word-break:break-all;">${txHash}</pre>
+                        <p><a href="${explorerUrl}" target="_blank">Check on Solscan</a></p>
+                        <p><strong>Proof attached:</strong> ${proof ? 'Yes' : 'No'}</p>
+                        <p style="margin-top:16px;"><a href="${statusUrl}">Open order page</a></p>
+                        <hr>
+                        <p style="font-size:13px;color:#6b5b3a;">Confirm the transfer arrived in your Solana USDT wallet, then send the license from the admin panel (Crypto / Gift Card).</p>
+                    </div>
+                `,
+            };
+            if (proof) {
+                msg.attachments = [{
+                    filename: proof.originalname || 'proof',
+                    content: proof.buffer.toString('base64'),
+                    type: proof.mimetype,
+                    disposition: 'attachment',
+                }];
+            }
+
+            try {
+                await sgMail.send(msg);
+            } catch (mailErr) {
+                console.error('Erro ao enviar e-mail de pedido USDT:', mailErr?.response?.body || mailErr);
+            }
+
+            return res.status(200).json({
+                success: true,
+                orderId,
+                status: 'pending',
+                statusUrl,
+            });
+        } catch (error) {
+            console.error('Erro ao criar pedido USDT:', error);
+            return res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
+        }
+    });
+});
+
+// Consulta pública genérica do status de um pedido (gift card ou USDT).
+app.get('/crypto/order/:orderId', async (req, res) => {
+    const orderId = String(req.params.orderId || '').trim();
+    if (!orderId) {
+        return res.status(400).json({ success: false, message: 'Order ID required.' });
+    }
+    try {
+        const order = await CryptoOrder.findOne({ orderId });
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found.' });
+        }
+        return res.status(200).json({ success: true, order: cryptoOrderPublicPayload(order) });
+    } catch (error) {
+        console.error('Erro ao consultar pedido de cripto:', error);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Admin — lista de pedidos de licença por cripto (gift card).
+app.get('/admin/crypto-orders', authenticateAdminToken, async (req, res) => {
+    try {
+        const statusFilter = String(req.query.status || '').trim();
+        const query = {};
+        if (['pending', 'generated', 'rejected'].includes(statusFilter)) {
+            query.status = statusFilter;
+        }
+        const orders = await CryptoOrder.find(query).sort({ createdAt: -1 }).limit(300).lean();
+        const payload = orders.map(o => {
+            const method = o.method || 'giftcard';
+            const page = method === 'usdt' ? 'usdt.html' : 'giftcard.html';
+            return {
+                orderId: o.orderId,
+                method,
+                plan: o.plan,
+                planLabel: o.planLabel,
+                planDays: o.planDays,
+                amount: o.amount,
+                email: o.email,
+                giftCardCode: o.giftCardCode,
+                txHash: o.txHash,
+                hasProof: o.hasProof,
+                status: o.status,
+                licenseKey: o.licenseKey,
+                adminNotes: o.adminNotes,
+                createdAt: o.createdAt,
+                updatedAt: o.updatedAt,
+                link: `https://gldbotserver.com/${page}?order=${o.orderId}`,
+            };
+        });
+        return res.status(200).json({ success: true, orders: payload });
+    } catch (error) {
+        console.error('Erro ao listar pedidos de cripto:', error);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Admin — anexa a licença gerada manualmente e confirma o pedido (envia e-mail ao cliente).
+app.post('/admin/crypto-orders/:orderId/license', authenticateAdminToken, async (req, res) => {
+    const orderId = String(req.params.orderId || '').trim();
+    const licenseKey = String(req.body.licenseKey || '').trim();
+
+    if (!licenseKey) {
+        return res.status(400).json({ success: false, message: 'License key is required.' });
+    }
+
+    try {
+        const order = await CryptoOrder.findOne({ orderId });
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found.' });
+        }
+
+        order.licenseKey = licenseKey;
+        order.status = 'generated';
+        order.updatedAt = new Date();
+        await order.save();
+
+        try {
+            const msg = {
+                to: order.email,
+                from: PURCHASE_FROM,
+                replyTo: PURCHASE_REPLY_TO,
+                subject: 'GladiusBot — Crypto purchase confirmed',
+                html: buildCryptoConfirmationEmailHtml({
+                    customerName: order.email.split('@')[0],
+                    planLabel: order.planLabel,
+                    planDays: order.planDays,
+                    licenseKey,
+                    methodLabel: order.method === 'usdt' ? 'USDT (Tether · Solana)' : 'Binance Gift Card',
+                }),
+                attachments: getPurchaseEmailAttachments(),
+            };
+            await sgMail.send(msg);
+        } catch (mailErr) {
+            console.error('Erro ao enviar confirmação de cripto:', mailErr?.response?.body || mailErr);
+        }
+
+        return res.status(200).json({ success: true, order: cryptoOrderPublicPayload(order) });
+    } catch (error) {
+        console.error('Erro ao anexar licença ao pedido de cripto:', error);
+        return res.status(500).json({ success: false, message: 'Server error.' });
+    }
+});
+
+// Admin — rejeita um pedido (código inválido, etc.).
+app.post('/admin/crypto-orders/:orderId/reject', authenticateAdminToken, async (req, res) => {
+    const orderId = String(req.params.orderId || '').trim();
+    const notes = String(req.body.notes || '').trim().slice(0, 500);
+
+    try {
+        const order = await CryptoOrder.findOne({ orderId });
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found.' });
+        }
+        order.status = 'rejected';
+        if (notes) order.adminNotes = notes;
+        order.updatedAt = new Date();
+        await order.save();
+
+        try {
+            const msg = {
+                to: order.email,
+                from: PURCHASE_FROM,
+                replyTo: PURCHASE_REPLY_TO,
+                subject: 'GladiusBot — Crypto order could not be confirmed',
+                html: buildCryptoRejectionEmailHtml({
+                    customerName: order.email.split('@')[0],
+                    planLabel: order.planLabel,
+                    reason: notes,
+                    methodLabel: order.method === 'usdt' ? 'USDT (Tether · Solana)' : 'Binance Gift Card',
+                    statusUrl: cryptoOrderStatusPage(order),
+                }),
+                attachments: getPurchaseEmailAttachments(),
+            };
+            await sgMail.send(msg);
+        } catch (mailErr) {
+            console.error('Erro ao enviar e-mail de rejeição de cripto:', mailErr?.response?.body || mailErr);
+        }
+
+        return res.status(200).json({ success: true, order: cryptoOrderPublicPayload(order) });
+    } catch (error) {
+        console.error('Erro ao rejeitar pedido de cripto:', error);
+        return res.status(500).json({ success: false, message: 'Server error.' });
     }
 });
 
