@@ -2471,7 +2471,7 @@ app.post('/get-trial', async (req, res) => {
         if (!licenseData) {
             const newLicenseKey = uuidv4();
             const newExpireDate = new Date();
-            newExpireDate.setDate(newExpireDate.getDate() + 1);
+            newExpireDate.setDate(newExpireDate.getDate() + 3);
 
             // Cria um novo documento no banco de dados
             licenseData = new License({
@@ -2499,9 +2499,9 @@ app.post('/get-trial', async (req, res) => {
             // Gera uma nova licenseKey
             const newLicenseKey = uuidv4();
 
-            // Define a nova data de expiração para um dia a mais
+            // Define a nova data de expiração para três dias a mais
             const newExpireDate = new Date(currentDate);
-            newExpireDate.setDate(newExpireDate.getDate() + 1);
+            newExpireDate.setDate(newExpireDate.getDate() + 3);
 
             // Atualiza a licença no banco de dados
             licenseData.licenseKey = newLicenseKey;
