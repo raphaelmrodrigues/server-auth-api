@@ -92,6 +92,31 @@ configurePlayerGuard({ sgMail });
 
 const app = express();
 app.use(cors());
+
+const CANONICAL_HOST = process.env.CANONICAL_HOST || 'gldbotserver.com';
+app.use((req, res, next) => {
+    const host = (req.headers.host || '').toLowerCase();
+    if (host.startsWith('www.')) {
+        return res.redirect(301, 'https://' + CANONICAL_HOST + req.originalUrl);
+    }
+    next();
+});
+
+app.get('/robots.txt', (req, res) => {
+    res.type('text/plain').send(
+        'User-agent: *\nAllow: /\n\nSitemap: https://' + CANONICAL_HOST + '/sitemap.xml\n'
+    );
+});
+
+app.get('/sitemap.xml', (req, res) => {
+    const paths = ['/', '/privacy'];
+    const body = '<?xml version="1.0" encoding="UTF-8"?>\n' +
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+        paths.map(p => '  <url><loc>https://' + CANONICAL_HOST + p + '</loc></url>').join('\n') +
+        '\n</urlset>\n';
+    res.type('application/xml').send(body);
+});
+
 app.use(express.static('public'));
 app.use(express.static('src'));
 const port = 4000;
@@ -111,6 +136,7 @@ const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
 const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
 const endpointSecret = process.env.ENDPOINT_SECRET;
 var globalAnnouncement = '';
+var globalAnnouncementUpdatedAt = null;
 const ITCH_HUB_URL = process.env.ITCH_HUB_URL || 'https://gladiusbot.itch.io/gladiusbot';
 const CHROME_WEB_STORE_URL = process.env.CHROME_WEB_STORE_URL || 'https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa';
 
@@ -224,6 +250,45 @@ const cryptoOrderSchema = new mongoose.Schema({
 });
 
 const CryptoOrder = mongoose.model('CryptoOrder', cryptoOrderSchema);
+
+// Persiste o último anúncio global num único documento, para sobreviver a reinícios do servidor.
+const announcementSchema = new mongoose.Schema({
+    key: { type: String, default: 'global', unique: true, index: true },
+    text: { type: String, default: '' },
+    updatedAt: { type: Date, default: Date.now },
+});
+const Announcement = mongoose.model('Announcement', announcementSchema);
+
+// Carrega o anúncio salvo no banco para a memória (chamado na inicialização, após conectar ao Mongo).
+async function loadAnnouncementFromDb() {
+    try {
+        const doc = await Announcement.findOne({ key: 'global' }).lean();
+        if (doc) {
+            globalAnnouncement = doc.text || '';
+            globalAnnouncementUpdatedAt = doc.updatedAt || null;
+            console.log('Anúncio carregado do banco de dados.');
+        }
+    } catch (err) {
+        console.error('Erro ao carregar anúncio do banco:', err);
+    }
+}
+
+// Atualiza a memória (mantém a funcionalidade mesmo se o banco falhar) e persiste no Mongo (best-effort).
+async function persistAnnouncement(text) {
+    const clean = text || '';
+    const now = new Date();
+    globalAnnouncement = clean;
+    globalAnnouncementUpdatedAt = now;
+    try {
+        await Announcement.findOneAndUpdate(
+            { key: 'global' },
+            { $set: { key: 'global', text: clean, updatedAt: now } },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+        );
+    } catch (err) {
+        console.error('Erro ao salvar anúncio no banco:', err);
+    }
+}
 
 // Upload dedicado ao comprovante (print) do gift card — opcional, até 8MB.
 const uploadCryptoProof = multer({
@@ -905,7 +970,7 @@ app.post('/announcement', authenticateAdminToken, async (req, res) => {
         return res.status(400).json({ success: false, message: 'Invalid announcement string' });
     }
 
-    globalAnnouncement = announcement || '';
+    await persistAnnouncement(announcement);
 
     return res.status(200).json({
         success: true,
@@ -923,7 +988,7 @@ app.get('/admin/announcement', authenticateAdminToken, (req, res) => {
     return res.status(200).json({
         success: true,
         announcement: globalAnnouncement,
-        updatedAt: globalAnnouncement ? null : null,
+        updatedAt: globalAnnouncementUpdatedAt,
     });
 });
 
@@ -932,7 +997,7 @@ app.post('/admin/announcement', authenticateAdminToken, async (req, res) => {
     if (announcement !== undefined && typeof announcement !== 'string') {
         return res.status(400).json({ success: false, message: 'Texto de anúncio inválido.' });
     }
-    globalAnnouncement = announcement || '';
+    await persistAnnouncement(announcement);
     return res.json({
         success: true,
         message: globalAnnouncement
@@ -2557,6 +2622,7 @@ app.listen(port, () => {
     });
     mongoose.connection.on('connected', () => {
         console.log('Conectado ao MongoDB!');
+        loadAnnouncementFromDb();
     });
 
     console.log('app rodando')
