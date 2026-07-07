@@ -18,7 +18,7 @@
 <aside class="sidebar">
     <div class="sidebar-brand">
         <img class="sidebar-logo-full" src="./images/gladiusbot-logo.svg" alt="GladiusBot">
-        <span class="sidebar-version">v3.0.7</span>
+        <span class="sidebar-version">v3.0.8</span>
     </div>
     <nav class="sidebar-nav">
         <button type="button" id="back" style="display: none;"><i class="fas fa-arrow-left"></i> Back</button>
@@ -53,7 +53,7 @@
                 </ul>
                 <div class="hero-actions">
                     <button type="button" class="hero-btn hero-btn-primary" id="hero-download">
-                        <i class="fas fa-download"></i> Download
+                        <i class="fab fa-chrome"></i> Install
                     </button>
                     <button type="button" class="hero-btn hero-btn-secondary" id="hero-buy">
                         <i class="fas fa-shopping-cart"></i> Get license
@@ -402,7 +402,7 @@
     })();
 
     document.getElementById('hero-download').addEventListener('click', function () {
-        document.getElementById('download').click();
+        window.open('https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa', '_blank', 'noopener');
     });
 
     document.getElementById('hero-buy').addEventListener('click', function () {
