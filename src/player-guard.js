@@ -375,6 +375,7 @@ module.exports = {
     BlockedPlayer,
     AbuseEvent,
     AbuseAlertSent,
+    getClientIp,
     buildClientContext,
     configurePlayerGuard,
     guardPrecheck,

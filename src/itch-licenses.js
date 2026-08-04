@@ -1,11 +1,34 @@
 const crypto = require('crypto');
 
 const ITCH_LICENSE_PREFIX = 'ITCH';
+const MESSAGER_LICENSE_PREFIX = 'MSG';
 
 const ITCH_PLANS = {
     '15DAYS': { duration: 15, title: 'GLDbot - 15 dias' },
     '30DAYS': { duration: 30, title: 'GLDbot - 30 dias' },
     '60DAYS': { duration: 60, title: 'GLDbot - 60 dias' },
+};
+
+/** Planos GladiusBot - Messager (créditos = 1 envio por destinatário). */
+const MESSAGER_ITCH_PLANS = {
+    MSG_1000: {
+        messages: 1000,
+        title: 'Messager - 1000 Sends',
+        priceUsd: 10,
+        itchSlug: 'gladiusbot-messager-1000',
+    },
+    MSG_3000: {
+        messages: 3000,
+        title: 'Messager - 3000 Sends',
+        priceUsd: 23,
+        itchSlug: 'gladiusbot-messager-3000',
+    },
+    MSG_LIFE: {
+        messages: 999999,
+        title: 'Messager - Lifetime',
+        priceUsd: 100,
+        itchSlug: 'gladiusbot-messager-lifetime',
+    },
 };
 
 function randomSegment(length) {
@@ -28,18 +51,39 @@ function generateItchLicenseKey() {
     ].join('-');
 }
 
+function generateMessagerLicenseKey() {
+    return [
+        MESSAGER_LICENSE_PREFIX,
+        randomSegment(7),
+        randomSegment(5),
+        randomSegment(8),
+        randomSegment(9),
+    ].join('-');
+}
+
 function isItchLicenseKey(licenseKey) {
     return typeof licenseKey === 'string'
         && licenseKey.toUpperCase().startsWith(`${ITCH_LICENSE_PREFIX}-`);
 }
 
+function isMessagerLicenseKey(licenseKey) {
+    return typeof licenseKey === 'string'
+        && licenseKey.toUpperCase().startsWith(`${MESSAGER_LICENSE_PREFIX}-`);
+}
+
 function isItchLicenseRecord(license) {
     if (!license) return false;
+    if (isMessagerLicenseKey(license.licenseKey)) return false;
+    if (license.valid === 'valid' || license.valid === 'used') return false;
     return license.payment_method === 'itch' || isItchLicenseKey(license.licenseKey);
 }
 
 function getItchPlanByCode(planCode) {
     return ITCH_PLANS[planCode] || null;
+}
+
+function getMessagerItchPlanByCode(planCode) {
+    return MESSAGER_ITCH_PLANS[planCode] || null;
 }
 
 function getItchDurationFromPlan(planTitle) {
@@ -91,20 +135,46 @@ function buildItchLicenseDocument(planCode) {
     };
 }
 
+/** Keys de recarga/vitalício do Messager (campo messages + valid). */
+function buildMessagerItchLicenseDocument(planCode) {
+    const plan = getMessagerItchPlanByCode(planCode);
+    if (!plan) {
+        throw new Error(`Plano Messager itch inválido: ${planCode}`);
+    }
+
+    return {
+        user: '',
+        licenseKey: generateMessagerLicenseKey(),
+        valid: 'valid',
+        plan: plan.title,
+        messages: plan.messages,
+        email: '',
+        country: '',
+        payment_method: 'itch-messager',
+        trial: false,
+    };
+}
+
 function licensesToItchCsv(licenses) {
     return licenses.map((lic) => lic.licenseKey).join('\n');
 }
 
 module.exports = {
     ITCH_LICENSE_PREFIX,
+    MESSAGER_LICENSE_PREFIX,
     ITCH_PLANS,
+    MESSAGER_ITCH_PLANS,
     generateItchLicenseKey,
+    generateMessagerLicenseKey,
     isItchLicenseKey,
+    isMessagerLicenseKey,
     isItchLicenseRecord,
     getItchPlanByCode,
+    getMessagerItchPlanByCode,
     getItchDurationFromPlan,
     itchLicenseNeedsActivation,
     applyItchActivationDates,
     buildItchLicenseDocument,
+    buildMessagerItchLicenseDocument,
     licensesToItchCsv,
 };

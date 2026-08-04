@@ -21,6 +21,21 @@ const {
     verifySessionMark,
     buildSessionIssueOptions,
 } = require('./license-session');
+const {
+    issueMessagerSession,
+    verifyMessagerSession,
+    issueMessagerSendTicket,
+    maskMessageCount,
+} = require('./messager-session');
+const { resolveMessagerTargets } = require('./messager-filters');
+const {
+    MESSAGER_TRIAL_CREDITS,
+    normalizePlayerId,
+    buildMessagerClientMeta,
+    tryClaimMessagerTrial,
+    recordMessagerSend,
+    getMessagerAdminSummary,
+} = require('./messager-monitor');
 
 function sessionJsonPayload(session, extra = {}) {
     const payload = {
@@ -77,10 +92,12 @@ const {
 } = require('./purchase-email');
 const {
     ITCH_PLANS,
+    MESSAGER_ITCH_PLANS,
     isItchLicenseKey,
     isItchLicenseRecord,
     applyItchActivationDates,
     buildItchLicenseDocument,
+    buildMessagerItchLicenseDocument,
     licensesToItchCsv,
 } = require('./itch-licenses');
 const {
@@ -197,7 +214,18 @@ const License = mongoose.model('license', {
     resetTokenExpiration: Date,
     isAdmin: Boolean,
     transaction_amount: Number,
-})
+    /** Messager: trial gratuito já concedido nesta conta */
+    msgTrialClaimed: Boolean,
+    /** Messager: playerId que recebeu o trial nesta conta */
+    msgTrialPlayerId: String,
+    /** Messager: trial negado porque playerId já usou em outra conta */
+    msgTrialDenied: Boolean,
+    msgLastPlayerId: String,
+    msgLastIp: String,
+    msgLastCountry: String,
+    msgLastCity: String,
+    msgLastSendAt: Date,
+});
 
 // Modelo para Auditoria de Webhooks e Logs
 const saleAuditSchema = new mongoose.Schema({
@@ -1623,10 +1651,13 @@ app.post('/admin/itch/licenses/generate', authenticateAdminToken, async (req, re
         const { planCode, quantity } = req.body;
         const qty = Math.min(Math.max(parseInt(quantity, 10) || 0, 1), 500);
 
-        if (!ITCH_PLANS[planCode]) {
+        const isMessagerPlan = Boolean(MESSAGER_ITCH_PLANS[planCode]);
+        const isBotPlan = Boolean(ITCH_PLANS[planCode]);
+
+        if (!isMessagerPlan && !isBotPlan) {
             return res.status(400).json({
                 success: false,
-                message: 'Plano inválido. Use 15DAYS, 30DAYS ou 60DAYS.',
+                message: 'Plano inválido. Use 15DAYS/30DAYS/60DAYS ou MSG_1000/MSG_3000/MSG_LIFE.',
             });
         }
 
@@ -1636,7 +1667,9 @@ app.post('/admin/itch/licenses/generate', authenticateAdminToken, async (req, re
 
         while (docs.length < qty && attempts < qty * 8) {
             attempts += 1;
-            const doc = buildItchLicenseDocument(planCode);
+            const doc = isMessagerPlan
+                ? buildMessagerItchLicenseDocument(planCode)
+                : buildItchLicenseDocument(planCode);
             if (keys.has(doc.licenseKey)) continue;
 
             const exists = await License.findOne({ licenseKey: doc.licenseKey }).select('_id');
@@ -1655,15 +1688,21 @@ app.post('/admin/itch/licenses/generate', authenticateAdminToken, async (req, re
 
         await License.insertMany(docs);
 
+        const planMeta = isMessagerPlan
+            ? MESSAGER_ITCH_PLANS[planCode]
+            : ITCH_PLANS[planCode];
+
         return res.json({
             success: true,
             message: `${docs.length} licença(s) itch gerada(s). Faça upload do CSV no itch.io → Distribute → External keys.`,
             count: docs.length,
             planCode,
-            plan: ITCH_PLANS[planCode].title,
+            plan: planMeta.title,
+            kind: isMessagerPlan ? 'messager' : 'bot',
             licenses: docs.map((doc) => ({
                 licenseKey: doc.licenseKey,
                 plan: doc.plan,
+                messages: doc.messages,
             })),
             csv: licensesToItchCsv(docs),
         });
@@ -2060,7 +2099,7 @@ app.post('/manage-license', async (req, res) => {
 });
 
 app.post('/login', async (req, res) => {
-    const { user, password } = req.body;
+    const { user, password, pid } = req.body;
 
     if (!user || !password) {
         return res.status(400).json({ success: false, message: 'User and password are required' });
@@ -2077,12 +2116,31 @@ app.post('/login', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid password' });
         }
 
-        let newMessageCount = existingUser.messages;
-        if (newMessageCount > 50000) {
-            newMessageCount = -43;
+        const meta = await buildMessagerClientMeta(req);
+        const playerId = normalizePlayerId(pid);
+        let trial = { granted: false, reason: 'skipped', credits: 0 };
+
+        if (playerId && !existingUser.msgTrialClaimed) {
+            trial = await tryClaimMessagerTrial(existingUser, playerId, meta);
+        } else if (playerId) {
+            existingUser.msgLastPlayerId = playerId;
+            await existingUser.save();
         }
 
-        return res.status(200).json({ success: true, q: newMessageCount, message: 'Login successful' });
+        const session = issueMessagerSession(JWT_SECRET, user);
+        const fresh = await License.findOne({ user }).select('messages msgTrialClaimed msgTrialDenied').lean();
+
+        return res.status(200).json({
+            success: true,
+            q: maskMessageCount(fresh?.messages ?? existingUser.messages),
+            s: session,
+            trialGranted: !!trial.granted,
+            trialCredits: trial.granted ? trial.credits : 0,
+            trialReason: trial.reason,
+            message: trial.granted
+                ? `Login successful. +${trial.credits} free trial sends applied.`
+                : 'Login successful',
+        });
     } catch (error) {
         console.error('Error in /login:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -2097,31 +2155,34 @@ app.post('/register', async (req, res) => {
     }
 
     try {
-        // Verifica se o usuário já existe
         const existingUser = await License.findOne({ user });
 
         if (existingUser) {
             return res.status(200).json({ success: false, message: 'User already exists' });
         }
-        // Verifica se o e-mail já está registrado com um usuário vinculado
         const emailInUse = await License.findOne({ email, user: { $ne: null } });
         if (emailInUse) {
             return res.status(200).json({ success: false, message: 'Email already registered' });
         }
 
-        // Criptografa a senha
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Cria e salva o novo usuário com a senha criptografada
+        // Créditos trial só após login in-game com playerId (anti multi-conta)
         const newUser = new License({
             user: user,
             password: hashedPassword,
             messages: 0,
             email: email,
+            msgTrialClaimed: false,
+            msgTrialDenied: false,
         });
 
         await newUser.save();
-        return res.status(201).json({ success: true, message: 'User registered successfully' });
+        return res.status(201).json({
+            success: true,
+            message: `User registered successfully. Login in-game to receive ${MESSAGER_TRIAL_CREDITS} free trial sends (once per game character).`,
+            trialCredits: MESSAGER_TRIAL_CREDITS,
+        });
     } catch (error) {
         console.error('Error in /register:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -2246,52 +2307,51 @@ app.post('/api/reset-password', async (req, res) => {
 
 
 app.post('/ps', async (req, res) => {
-    const { licenseKey, user } = req.body;
+    const { licenseKey, user, s } = req.body;
 
-    // Verifica se os campos obrigatórios foram enviados
     if (!licenseKey || !user) {
         return res.status(400).json({ success: false, message: 'License key and user are required' });
     }
 
     try {
-        // Procura a licença no banco de dados
+        try {
+            verifyMessagerSession(JWT_SECRET, s, user);
+        } catch (authErr) {
+            return res.status(403).json({ success: false, message: 'Session expired. Please login again.' });
+        }
+
         const licenseRecord = await License.findOne({ licenseKey });
 
         if (!licenseRecord) {
             return res.status(404).json({ success: false, message: 'License key does not exist' });
         }
 
-        // Verifica se a licença está válida ou já utilizada
         if (licenseRecord.valid === 'used') {
             return res.status(400).json({ success: false, message: 'License key already used' });
         } else if (licenseRecord.valid !== 'valid') {
             return res.status(400).json({ success: false, message: 'License key is not valid' });
         }
 
-        // Procura o usuário no banco de dados
         const userRecord = await License.findOne({ user });
 
         if (!userRecord) {
             return res.status(404).json({ success: false, message: 'User does not exist, please login' });
         }
 
-        // Soma as mensagens
         let newMessageCount = userRecord.messages + licenseRecord.messages;
 
-        // Atualiza o registro do usuário com o novo valor de mensagens
         userRecord.messages = newMessageCount;
         await userRecord.save();
 
-        // Marca a licença como "used"
         licenseRecord.valid = 'used';
         await licenseRecord.save();
 
-        if (newMessageCount > 50000) {
-            newMessageCount = -43;
-        }
-
-        // Retorna o novo valor de mensagens
-        return res.status(200).json({ success: true, message: 'License key applied successfully', newMessageCount });
+        return res.status(200).json({
+            success: true,
+            message: 'License key applied successfully',
+            newMessageCount: maskMessageCount(newMessageCount),
+            s: issueMessagerSession(JWT_SECRET, user),
+        });
     } catch (error) {
         console.error('Error in /ps route:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -2299,42 +2359,202 @@ app.post('/ps', async (req, res) => {
 });
 
 app.post('/ls', async (req, res) => {
-    const { user } = req.body;
+    const { user, s, n } = req.body;
 
     if (!user) {
         return res.status(400).json({ success: false, message: "Usuário não fornecido." });
     }
 
     try {
+        try {
+            verifyMessagerSession(JWT_SECRET, s, user);
+        } catch (authErr) {
+            return res.status(403).json({
+                success: false,
+                message: "Sessão inválida. Faça login novamente.",
+            });
+        }
+
+        const debit = Math.max(1, Math.min(parseInt(n, 10) || 1, 500));
         const foundLicense = await License.findOne({ user });
 
         if (!foundLicense) {
             return res.status(404).json({ success: false, message: "Usuário não encontrado." });
         }
 
-        if (foundLicense.messages <= 0) {
+        if (foundLicense.messages < debit) {
             return res.json({
                 success: false,
-                message: "Você possui 0 mensagens disponíveis, faça uma recarga!",
+                message: foundLicense.messages <= 0
+                    ? "Você possui 0 mensagens disponíveis, faça uma recarga!"
+                    : `Créditos insuficientes. Disponíveis: ${maskMessageCount(foundLicense.messages)}, necessários: ${debit}.`,
             });
         }
 
-        let remainingMessages = foundLicense.messages - 1;
-        foundLicense.messages = remainingMessages;
+        foundLicense.messages -= debit;
         await foundLicense.save();
 
-        if (remainingMessages > 50000) {
-            remainingMessages = -43;
-        }
+        const ticket = issueMessagerSendTicket(JWT_SECRET, user, debit);
+        const decoded = jwt.decode(ticket);
 
         res.json({
             success: true,
-            w: remainingMessages,
-            t: "index.php?mod=messages&submod=messageNew",
+            w: maskMessageCount(foundLicense.messages),
+            t: decoded.t,
+            f: decoded.f,
+            k: ticket,
+            n: debit,
         });
     } catch (error) {
         console.error("Erro ao processar a rota '/ls':", error);
         res.status(500).json({ success: false, message: "Erro interno no servidor." });
+    }
+});
+
+/** Resolve filtros + reserva créditos + ticket (fluxo principal do Messager 2.x). */
+app.post('/mx', async (req, res) => {
+    const { user, s, pool, cfg, pid } = req.body;
+
+    if (!user) {
+        return res.status(400).json({ success: false, message: 'Usuário não fornecido.' });
+    }
+
+    try {
+        try {
+            verifyMessagerSession(JWT_SECRET, s, user);
+        } catch (authErr) {
+            return res.status(403).json({
+                success: false,
+                message: 'Sessão inválida. Faça login novamente.',
+            });
+        }
+
+        if (!Array.isArray(pool) || pool.length === 0) {
+            return res.json({
+                success: true,
+                r: [],
+                sk: [],
+                message: 'Pool vazio.',
+            });
+        }
+
+        const { recipients, skips } = resolveMessagerTargets(pool, cfg || {});
+
+        if (!recipients.length) {
+            return res.json({
+                success: true,
+                r: [],
+                sk: skips,
+                message: 'Nenhum destinatário após filtros.',
+            });
+        }
+
+        const meta = await buildMessagerClientMeta(req);
+        const playerId = normalizePlayerId(pid);
+        const foundLicense = await License.findOne({ user });
+
+        if (!foundLicense) {
+            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
+        }
+
+        // Trial tardio (conta criada antes do login com pid, ou login sem pid)
+        let trial = { granted: false };
+        if (playerId && !foundLicense.msgTrialClaimed) {
+            trial = await tryClaimMessagerTrial(foundLicense, playerId, meta);
+        }
+
+        const debit = recipients.length;
+        const fresh = await License.findOne({ user });
+        if (!fresh) {
+            return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
+        }
+
+        if (fresh.messages < debit) {
+            return res.json({
+                success: false,
+                r: [],
+                sk: skips,
+                message: fresh.messages <= 0
+                    ? 'Você possui 0 mensagens disponíveis, faça uma recarga!'
+                    : `Créditos insuficientes. Disponíveis: ${maskMessageCount(fresh.messages)}, necessários: ${debit}.`,
+            });
+        }
+
+        fresh.messages -= debit;
+        fresh.msgLastPlayerId = playerId || fresh.msgLastPlayerId || '';
+        fresh.msgLastIp = meta.ip || fresh.msgLastIp;
+        fresh.msgLastCountry = meta.country || fresh.msgLastCountry;
+        fresh.msgLastCity = meta.city || fresh.msgLastCity;
+        fresh.msgLastSendAt = new Date();
+        await fresh.save();
+
+        await recordMessagerSend({
+            user,
+            playerId,
+            count: debit,
+            remainingAfter: fresh.messages,
+            ip: meta.ip,
+            country: meta.country,
+            city: meta.city,
+            userAgent: meta.userAgent,
+        });
+
+        const ticket = issueMessagerSendTicket(JWT_SECRET, user, debit);
+        const decoded = jwt.decode(ticket);
+
+        return res.json({
+            success: true,
+            r: recipients,
+            sk: skips,
+            w: maskMessageCount(fresh.messages),
+            t: decoded.t,
+            f: decoded.f,
+            k: ticket,
+            n: debit,
+            trialGranted: !!trial.granted,
+            trialCredits: trial.granted ? trial.credits : 0,
+        });
+    } catch (error) {
+        console.error("Erro ao processar a rota '/mx':", error);
+        return res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
+    }
+});
+
+app.get('/admin/messager/summary', authenticateAdminToken, async (req, res) => {
+    try {
+        const days = parseInt(req.query.days, 10) || 7;
+        const data = await getMessagerAdminSummary(days);
+        return res.json({ success: true, ...data });
+    } catch (error) {
+        console.error('Erro messager summary:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao carregar monitoramento Messager.' });
+    }
+});
+
+app.get('/admin/messager/users', authenticateAdminToken, async (req, res) => {
+    try {
+        const q = String(req.query.q || '').trim();
+        const filter = {
+            user: { $exists: true, $nin: [null, ''] },
+            password: { $exists: true, $nin: [null, ''] },
+        };
+        if (q) {
+            filter.$or = [
+                { user: { $regex: q, $options: 'i' } },
+                { email: { $regex: q, $options: 'i' } },
+                { msgLastPlayerId: q },
+                { msgTrialPlayerId: q },
+            ];
+        }
+        const users = await License.find(filter)
+            .select('user email messages msgTrialClaimed msgTrialDenied msgTrialPlayerId msgLastPlayerId msgLastIp msgLastCountry msgLastCity msgLastSendAt')
+            .sort({ msgLastSendAt: -1 })
+            .limit(100)
+            .lean();
+        return res.json({ success: true, users });
+    } catch (error) {
+        console.error('Erro messager users:', error);
+        return res.status(500).json({ success: false, message: 'Erro ao listar usuários Messager.' });
     }
 });
 

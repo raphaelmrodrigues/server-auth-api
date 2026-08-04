@@ -120,7 +120,12 @@
         <a href="#" onclick="showPanel('itch-licenses-section')" id="nav-itch-licenses" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Licenças itch.io</a>
       </li>
       <li class="mr-2">
+        <a href="#" onclick="showPanel('messager-section')" id="nav-messager" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Messager</a>
+      </li>
+      <li class="mr-2">
         <a href="#" onclick="showPanel('bot-monitor-section')" id="nav-bot-monitor" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Monitoramento do Bot</a>
+      </li>
+      <li class="mr-2">
         <a href="#" onclick="showPanel('security-section')" id="nav-security" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Segurança</a>
       </li>
       <li class="mr-2">
@@ -303,8 +308,8 @@
     <div class="p-4 md:p-6 bg-white rounded-lg shadow-xl">
       <h2 class="text-2xl font-semibold mb-2 text-gray-800">Licenças itch.io (External keys)</h2>
       <p class="text-sm text-gray-500 mb-6">
-        Gere chaves com prefixo <code class="bg-gray-100 px-1 rounded">ITCH-</code>, faça upload no itch.io (Distribute → External keys) e o comprador ativa no bot.
-        A data de expiração só começa na primeira validação — igual ao fluxo de venda externa.
+        Gere chaves <code class="bg-gray-100 px-1 rounded">ITCH-</code> (bot) ou <code class="bg-gray-100 px-1 rounded">MSG-</code> (Messager), faça upload no itch.io (Distribute → External keys).
+        Bot: expiração começa na 1ª validação. Messager: créditos somados ao redeem no bot.
       </p>
 
       <div id="itch-stats-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
@@ -323,6 +328,9 @@
                 <option value="15DAYS">15 dias — GLDbot - 15 dias</option>
                 <option value="30DAYS">30 dias — GLDbot - 30 dias</option>
                 <option value="60DAYS">60 dias — GLDbot - 60 dias</option>
+                <option value="MSG_1000">Messager — 1000 Sends ($10)</option>
+                <option value="MSG_3000">Messager — 3000 Sends ($23)</option>
+                <option value="MSG_LIFE">Messager — Lifetime ($100)</option>
               </select>
             </div>
             <div>
@@ -366,6 +374,91 @@
           </div>
           <button onclick="enrichItchLicense()" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg">Buscar e-mail no itch</button>
           <div id="itch-enrich-notification" class="hidden text-sm rounded-lg px-4 py-3"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="messager-section" class="hidden space-y-6">
+    <div class="p-4 md:p-6 bg-white rounded-lg shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-2xl font-semibold text-gray-800">GladiusBot - Messager</h2>
+          <p class="text-sm text-gray-500">Envios, trial gratuito (30) por playerId, IP e localização.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <select id="messager-days" class="p-2 border border-gray-300 rounded-md text-sm" onchange="loadMessagerPanel()">
+            <option value="1">Último dia</option>
+            <option value="7" selected>7 dias</option>
+            <option value="30">30 dias</option>
+            <option value="90">90 dias</option>
+          </select>
+          <button onclick="loadMessagerPanel()" class="bg-violet-600 hover:bg-violet-700 text-white font-semibold py-2 px-4 rounded text-sm">Atualizar</button>
+        </div>
+      </div>
+
+      <div id="messager-stats" class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-6">
+        <p class="text-gray-500 col-span-full text-sm">Carregando...</p>
+      </div>
+
+      <div class="mb-6">
+        <h3 class="font-semibold text-gray-800 mb-2">Buscar contas Messager</h3>
+        <div class="flex gap-2 mb-3">
+          <input id="messager-user-q" type="text" placeholder="user, email ou playerId" class="flex-1 p-2 border border-gray-300 rounded-md text-sm">
+          <button onclick="searchMessagerUsers()" class="bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2 px-4 rounded text-sm">Buscar</button>
+        </div>
+        <div class="overflow-x-auto border border-gray-200 rounded-lg">
+          <table class="min-w-full text-sm">
+            <thead class="bg-gray-50 text-left text-gray-600">
+              <tr>
+                <th class="p-2">User</th>
+                <th class="p-2">Créditos</th>
+                <th class="p-2">Trial</th>
+                <th class="p-2">PlayerId</th>
+                <th class="p-2">IP</th>
+                <th class="p-2">Local</th>
+                <th class="p-2">Último envio</th>
+              </tr>
+            </thead>
+            <tbody id="messager-users-body" class="divide-y divide-gray-100"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-semibold text-gray-800 mb-2">Envios recentes</h3>
+          <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 text-left text-gray-600 sticky top-0">
+                <tr>
+                  <th class="p-2">Quando</th>
+                  <th class="p-2">User</th>
+                  <th class="p-2">PID</th>
+                  <th class="p-2">Qtd</th>
+                  <th class="p-2">IP / Local</th>
+                </tr>
+              </thead>
+              <tbody id="messager-sends-body" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
+        </div>
+        <div>
+          <h3 class="font-semibold text-gray-800 mb-2">Trials reclamados (playerId)</h3>
+          <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-96 overflow-y-auto">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 text-left text-gray-600 sticky top-0">
+                <tr>
+                  <th class="p-2">PlayerId</th>
+                  <th class="p-2">User</th>
+                  <th class="p-2">Créditos</th>
+                  <th class="p-2">IP / Local</th>
+                  <th class="p-2">Quando</th>
+                </tr>
+              </thead>
+              <tbody id="messager-trials-body" class="divide-y divide-gray-100"></tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
@@ -558,6 +651,7 @@
     'sales-audit-section': 'nav-audit',
     'license-control-section': 'nav-license-control',
     'itch-licenses-section': 'nav-itch-licenses',
+    'messager-section': 'nav-messager',
     'bot-monitor-section': 'nav-bot-monitor',
     'security-section': 'nav-security',
     'crypto-orders-section': 'nav-crypto-orders',
@@ -626,6 +720,11 @@
 
     if (panelId === 'itch-licenses-section') {
       loadItchStats();
+    }
+
+    if (panelId === 'messager-section') {
+      loadMessagerPanel();
+      searchMessagerUsers();
     }
 
     if (panelId === 'sales-overview-section') {
@@ -1951,6 +2050,123 @@
       return;
     }
     sendBroadcastEmailRequest({ mode: 'all', filter: emailCampaignFilter });
+  }
+
+  function fmtMessagerDate(value) {
+    if (!value) return '—';
+    try {
+      return new Date(value).toLocaleString('pt-BR');
+    } catch (e) {
+      return String(value);
+    }
+  }
+
+  function fmtMessagerLocal(country, city) {
+    const parts = [city, country].filter(Boolean);
+    return parts.length ? parts.join(', ') : '—';
+  }
+
+  async function loadMessagerPanel() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const days = document.getElementById('messager-days')?.value || '7';
+    const statsEl = document.getElementById('messager-stats');
+    const sendsBody = document.getElementById('messager-sends-body');
+    const trialsBody = document.getElementById('messager-trials-body');
+    if (!token) return logout();
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/messager/summary?days=${encodeURIComponent(days)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 401 || response.status === 403) return logout();
+      const data = await response.json();
+      if (!data.success) {
+        if (statsEl) statsEl.innerHTML = `<p class="text-red-500 col-span-full">${data.message || 'Erro'}</p>`;
+        return;
+      }
+
+      const s = data.stats || {};
+      if (statsEl) {
+        statsEl.innerHTML = `
+          <div class="bg-violet-50 border border-violet-100 p-3 rounded-xl"><p class="text-xs text-violet-700">Envios</p><p class="text-2xl font-bold text-violet-700">${s.totalSends || 0}</p></div>
+          <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl"><p class="text-xs text-indigo-700">Lotes</p><p class="text-2xl font-bold text-indigo-700">${s.batches || 0}</p></div>
+          <div class="bg-blue-50 border border-blue-100 p-3 rounded-xl"><p class="text-xs text-blue-700">Users</p><p class="text-2xl font-bold text-blue-700">${s.uniqueUsers || 0}</p></div>
+          <div class="bg-amber-50 border border-amber-100 p-3 rounded-xl"><p class="text-xs text-amber-700">PlayerIds</p><p class="text-2xl font-bold text-amber-700">${s.uniquePlayers || 0}</p></div>
+          <div class="bg-emerald-50 border border-emerald-100 p-3 rounded-xl"><p class="text-xs text-emerald-700">Trials</p><p class="text-2xl font-bold text-emerald-700">${s.trialClaims || 0}</p></div>
+        `;
+      }
+
+      if (sendsBody) {
+        const rows = (data.recentSends || []).map((row) => `
+          <tr>
+            <td class="p-2 whitespace-nowrap">${fmtMessagerDate(row.createdAt)}</td>
+            <td class="p-2 font-medium">${row.user || '—'}</td>
+            <td class="p-2">${row.playerId || '—'}</td>
+            <td class="p-2 font-semibold">${row.count || 0}</td>
+            <td class="p-2 text-xs">${row.ip || '—'}<br>${fmtMessagerLocal(row.country, row.city)}</td>
+          </tr>
+        `).join('');
+        sendsBody.innerHTML = rows || '<tr><td class="p-3 text-gray-500" colspan="5">Nenhum envio no período.</td></tr>';
+      }
+
+      if (trialsBody) {
+        const rows = (data.trials || []).map((row) => `
+          <tr>
+            <td class="p-2">${row.playerId || '—'}</td>
+            <td class="p-2 font-medium">${row.user || '—'}</td>
+            <td class="p-2">${row.credits || 0}</td>
+            <td class="p-2 text-xs">${row.ip || '—'}<br>${fmtMessagerLocal(row.country, row.city)}</td>
+            <td class="p-2 whitespace-nowrap">${fmtMessagerDate(row.claimedAt)}</td>
+          </tr>
+        `).join('');
+        trialsBody.innerHTML = rows || '<tr><td class="p-3 text-gray-500" colspan="5">Nenhum trial ainda.</td></tr>';
+      }
+    } catch (error) {
+      console.error('Erro messager panel:', error);
+      if (statsEl) statsEl.innerHTML = '<p class="text-red-500 col-span-full">Erro de conexão.</p>';
+    }
+  }
+
+  async function searchMessagerUsers() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const q = document.getElementById('messager-user-q')?.value?.trim() || '';
+    const body = document.getElementById('messager-users-body');
+    if (!token) return logout();
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/messager/users?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 401 || response.status === 403) return logout();
+      const data = await response.json();
+      if (!body) return;
+      if (!data.success) {
+        body.innerHTML = `<tr><td class="p-3 text-red-500" colspan="7">${data.message || 'Erro'}</td></tr>`;
+        return;
+      }
+
+      const rows = (data.users || []).map((u) => {
+        let trialLabel = 'Pendente';
+        if (u.msgTrialClaimed) trialLabel = 'OK';
+        else if (u.msgTrialDenied) trialLabel = 'Negado';
+        const credits = u.messages > 50000 ? '∞' : (u.messages ?? 0);
+        return `
+          <tr>
+            <td class="p-2"><div class="font-medium">${u.user || '—'}</div><div class="text-xs text-gray-500">${u.email || ''}</div></td>
+            <td class="p-2 font-semibold">${credits}</td>
+            <td class="p-2">${trialLabel}</td>
+            <td class="p-2 text-xs">${u.msgLastPlayerId || u.msgTrialPlayerId || '—'}</td>
+            <td class="p-2 text-xs">${u.msgLastIp || '—'}</td>
+            <td class="p-2 text-xs">${fmtMessagerLocal(u.msgLastCountry, u.msgLastCity)}</td>
+            <td class="p-2 whitespace-nowrap text-xs">${fmtMessagerDate(u.msgLastSendAt)}</td>
+          </tr>
+        `;
+      }).join('');
+      body.innerHTML = rows || '<tr><td class="p-3 text-gray-500" colspan="7">Nenhuma conta encontrada.</td></tr>';
+    } catch (error) {
+      console.error('Erro messager users:', error);
+      if (body) body.innerHTML = '<tr><td class="p-3 text-red-500" colspan="7">Erro de conexão.</td></tr>';
+    }
   }
 
   document.getElementById('logout-button').addEventListener('click', logout);
