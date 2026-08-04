@@ -88,6 +88,11 @@ const {
     buildPurchaseEmailHtml,
     buildCryptoConfirmationEmailHtml,
     buildCryptoRejectionEmailHtml,
+    buildPasswordResetEmailHtml,
+    buildPasswordResetEmailText,
+    buildMessagerWelcomeEmailHtml,
+    buildMessagerWelcomeEmailText,
+    buildMessagerRegisterAdminEmailHtml,
     getPurchaseEmailAttachments,
 } = require('./purchase-email');
 const {
@@ -2178,9 +2183,44 @@ app.post('/register', async (req, res) => {
         });
 
         await newUser.save();
+
+        const attachments = getPurchaseEmailAttachments();
+        try {
+            await sgMail.send({
+                to: email,
+                from: PURCHASE_FROM,
+                replyTo: PURCHASE_REPLY_TO,
+                subject: 'GladiusBot Messager — Account created',
+                text: buildMessagerWelcomeEmailText({
+                    userName: user,
+                    trialCredits: MESSAGER_TRIAL_CREDITS,
+                }),
+                html: buildMessagerWelcomeEmailHtml({
+                    userName: user,
+                    trialCredits: MESSAGER_TRIAL_CREDITS,
+                }),
+                attachments,
+            });
+        } catch (mailErr) {
+            console.error('Erro ao enviar e-mail de boas-vindas Messager:', mailErr?.response?.body || mailErr);
+        }
+
+        try {
+            await sgMail.send({
+                to: 'gldbotsuport@gmail.com',
+                from: PURCHASE_FROM,
+                replyTo: PURCHASE_REPLY_TO,
+                subject: `New Messager registration — ${user}`,
+                html: buildMessagerRegisterAdminEmailHtml({ userName: user, email }),
+                attachments,
+            });
+        } catch (mailErr) {
+            console.error('Erro ao notificar admin do registro Messager:', mailErr?.response?.body || mailErr);
+        }
+
         return res.status(201).json({
             success: true,
-            message: `User registered successfully. Login in-game to receive ${MESSAGER_TRIAL_CREDITS} free trial sends (once per game character).`,
+            message: `User registered successfully. Check your email. Login in-game to receive ${MESSAGER_TRIAL_CREDITS} free trial sends (once per game character).`,
             trialCredits: MESSAGER_TRIAL_CREDITS,
         });
     } catch (error) {
@@ -2197,72 +2237,45 @@ app.post('/request-password-reset', async (req, res) => {
     }
 
     try {
-        // Verifica se o usuário existe no banco
         const existingUser = await License.findOne({ user });
-        if (!existingUser) {
-            return res.status(404).json({ success: false, message: 'User does not exist' });
+        const okPayload = {
+            success: true,
+            message: 'If this username exists, a password reset link was sent to the registered email.',
+        };
+
+        if (!existingUser || !existingUser.email) {
+            return res.status(200).json(okPayload);
         }
 
-        // Gera um token de redefinição de senha
+        const RESET_TTL_MS = 60 * 60 * 1000;
         const resetToken = crypto.randomBytes(32).toString('hex');
-        const resetTokenExpiration = Date.now() + 3600000; // Token válido por 1 hora
-        const imagePath = path.join(__dirname, 'images/gldicon.png');
-        const imageData = fs.readFileSync(imagePath).toString('base64');
-
-
         existingUser.resetToken = resetToken;
-        existingUser.resetTokenExpiration = resetTokenExpiration;
+        existingUser.resetTokenExpiration = Date.now() + RESET_TTL_MS;
         await existingUser.save();
 
-        // Cria o link para redefinição de senha
         const resetLink = `https://gldbotserver.com/reset_password.html?token=${resetToken}`;
-
+        const expiresInMinutes = Math.round(RESET_TTL_MS / 60000);
 
         const msg = {
             to: existingUser.email,
-            from: 'gldbotsuport@gmail.com',
-            subject: 'Password Reset',
-            html: `
-                <div style="font-family: Arial, sans-serif; background-color: #f4f4f4; padding: 20px; max-width: 600px; margin: auto; border-radius: 8px;">
-                    <div style="background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);">
-                        <div style="text-align: center;">
-                            <img src="cid:gldicon" alt="GLDbot" style="width: 200px;">
-                            <h2 style="color: #4d3131; text-align: center;">Password Reset</h2>
-                        </div>
-                        <p style="font-size: 16px; color: #555555;">Hello, ${existingUser.user}</p>
-                        <p style="font-size: 16px; color: #555555;">
-                            We received a request to reset your password. Please click the button below to reset your password.
-                        </p>
-                        <div style="text-align: center;">
-                            <a href="${resetLink}" style="background-color: #590f0f; color: #ffffff; padding: 15px 25px; font-size: 16px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px;">
-                                Reset Password
-                            </a>
-                        </div>
-                        <p style="font-size: 14px; color: #555555; margin-top: 20px;">
-                            This link will expire in 1 hour. If you did not request this, you can ignore this email.
-                        </p>
-                        <hr style="border: 0; border-top: 1px solid #eee; margin: 30px 0;">
-                        <p style="font-size: 14px; color: #888888; text-align: center;">
-                            If you have any questions, feel free to contact our support team.
-                        </p>
-                    </div>
-                </div>
-            `,
-            attachments: [
-                {
-                    filename: 'gldicon.png',
-                    content: imageData,
-                    type: 'image/png',
-                    disposition: 'inline',
-                    content_id: 'gldicon'
-                }
-            ]
+            from: PURCHASE_FROM,
+            replyTo: PURCHASE_REPLY_TO,
+            subject: 'GladiusBot — Password reset',
+            text: buildPasswordResetEmailText({
+                userName: existingUser.user,
+                resetLink,
+                expiresInMinutes,
+            }),
+            html: buildPasswordResetEmailHtml({
+                userName: existingUser.user,
+                resetLink,
+                expiresInMinutes,
+            }),
+            attachments: getPurchaseEmailAttachments(),
         };
 
-        // Envia o e-mail via SendGrid
         await sgMail.send(msg);
-
-        return res.status(200).json({ success: true, message: 'Password reset link sent to email' });
+        return res.status(200).json(okPayload);
     } catch (error) {
         console.error('Error in /request-password-reset:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
@@ -2272,33 +2285,41 @@ app.post('/request-password-reset', async (req, res) => {
 app.post('/api/reset-password', async (req, res) => {
     const { token, password } = req.body;
 
-    // Verificar se todos os dados foram fornecidos
     if (!token || !password) {
         return res.status(400).json({ success: false, message: 'Token and password are required' });
     }
 
+    if (typeof password !== 'string' || password.length < 6) {
+        return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+    }
+
+    if (password.length > 128) {
+        return res.status(400).json({ success: false, message: 'Password is too long' });
+    }
+
     try {
-        // Procurar o usuário no banco de dados com base no token e na validade do token
         const user = await License.findOne({
             resetToken: token,
-            resetTokenExpiration: { $gt: Date.now() }, // Certificar que o token não expirou
+            resetTokenExpiration: { $gt: Date.now() },
         });
 
         if (!user) {
-            return res.status(400).json({ success: false, message: 'Invalid or expired token' });
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid or expired link. Request a new password reset.',
+            });
         }
 
-        // Criptografar a nova senha
         const hashedPassword = await bcrypt.hash(password, 10);
-
-        // Atualizar a senha no banco e limpar o token e sua validade
         user.password = hashedPassword;
         user.resetToken = undefined;
         user.resetTokenExpiration = undefined;
-
         await user.save();
 
-        return res.status(200).json({ success: true, message: 'Password reset successful' });
+        return res.status(200).json({
+            success: true,
+            message: 'Password reset successful. You can log in again in the Messager bot.',
+        });
     } catch (error) {
         console.error('Error resetting password:', error);
         return res.status(500).json({ success: false, message: 'Internal server error' });
