@@ -2461,13 +2461,14 @@ app.post('/mx', async (req, res) => {
             });
         }
 
-        const { recipients, skips } = resolveMessagerTargets(pool, cfg || {});
+        const { recipients, skips, stats } = resolveMessagerTargets(pool, cfg || {});
 
         if (!recipients.length) {
             return res.json({
                 success: true,
                 r: [],
                 sk: skips,
+                stats,
                 message: 'Nenhum destinatário após filtros.',
             });
         }
@@ -2510,6 +2511,7 @@ app.post('/mx', async (req, res) => {
             w: maskMessageCount(fresh.messages),
             n: recipients.length,
             avail: maskMessageCount(fresh.messages),
+            stats,
             trialGranted: !!trial.granted,
             trialCredits: trial.granted ? trial.credits : 0,
             message: fresh.messages < recipients.length
