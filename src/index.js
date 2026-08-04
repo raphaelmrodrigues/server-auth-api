@@ -24,6 +24,8 @@ const {
 const {
     issueMessagerSession,
     verifyMessagerSession,
+    issueMessagerBatchTicket,
+    verifyMessagerBatchTicket,
     issueMessagerSendTicket,
     maskMessageCount,
 } = require('./messager-session');
@@ -1957,7 +1959,7 @@ app.post('/gumroad', async (req, res) => {
                         additionalMessages = 30;
                         break;
                     case 'Vitalicy':
-                        additionalMessages = 999999;
+                        additionalMessages = 99999999;
                         break;
                 }
 
@@ -2432,7 +2434,7 @@ app.post('/ls', async (req, res) => {
     }
 });
 
-/** Resolve filtros + reserva créditos + ticket (fluxo principal do Messager 2.x). */
+/** Resolve filtros + ticket de lote (sem debitar). Débito 1 a 1 em POST /md. */
 app.post('/mx', async (req, res) => {
     const { user, s, pool, cfg, pid } = req.body;
 
@@ -2484,59 +2486,133 @@ app.post('/mx', async (req, res) => {
             trial = await tryClaimMessagerTrial(foundLicense, playerId, meta);
         }
 
-        const debit = recipients.length;
         const fresh = await License.findOne({ user });
         if (!fresh) {
             return res.status(404).json({ success: false, message: 'Usuário não encontrado.' });
         }
 
-        if (fresh.messages < debit) {
+        if (fresh.messages < 1) {
             return res.json({
                 success: false,
                 r: [],
                 sk: skips,
-                message: fresh.messages <= 0
-                    ? 'Você possui 0 mensagens disponíveis, faça uma recarga!'
-                    : `Créditos insuficientes. Disponíveis: ${maskMessageCount(fresh.messages)}, necessários: ${debit}.`,
+                message: 'Você possui 0 mensagens disponíveis, faça uma recarga!',
             });
         }
 
-        fresh.messages -= debit;
-        fresh.msgLastPlayerId = playerId || fresh.msgLastPlayerId || '';
-        fresh.msgLastIp = meta.ip || fresh.msgLastIp;
-        fresh.msgLastCountry = meta.country || fresh.msgLastCountry;
-        fresh.msgLastCity = meta.city || fresh.msgLastCity;
-        fresh.msgLastSendAt = new Date();
-        await fresh.save();
+        const batch = issueMessagerBatchTicket(JWT_SECRET, user, recipients);
+
+        return res.json({
+            success: true,
+            r: recipients,
+            sk: skips,
+            b: batch,
+            w: maskMessageCount(fresh.messages),
+            n: recipients.length,
+            avail: maskMessageCount(fresh.messages),
+            trialGranted: !!trial.granted,
+            trialCredits: trial.granted ? trial.credits : 0,
+            message: fresh.messages < recipients.length
+                ? `Créditos insuficientes para todos (${maskMessageCount(fresh.messages)}/${recipients.length}). O envio para ao acabar os créditos.`
+                : undefined,
+        });
+    } catch (error) {
+        console.error("Erro ao processar a rota '/mx':", error);
+        return res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
+    }
+});
+
+/** Debita 1 crédito e libera path/fields para um destinatário do lote. */
+app.post('/md', async (req, res) => {
+    const { user, s, b, to, pid } = req.body;
+
+    if (!user || !to) {
+        return res.status(400).json({ success: false, message: 'Dados incompletos.' });
+    }
+
+    try {
+        try {
+            verifyMessagerSession(JWT_SECRET, s, user);
+        } catch (authErr) {
+            return res.status(403).json({
+                success: false,
+                message: 'Sessão inválida. Faça login novamente.',
+            });
+        }
+
+        let batch;
+        try {
+            batch = verifyMessagerBatchTicket(JWT_SECRET, b, user);
+        } catch (batchErr) {
+            return res.status(403).json({
+                success: false,
+                message: 'Lote de envio inválido ou expirado. Reinicie o envio.',
+            });
+        }
+
+        const target = String(to).trim();
+        if (!target || !batch.r.includes(target)) {
+            return res.status(403).json({
+                success: false,
+                message: 'Destinatário não autorizado neste lote.',
+            });
+        }
+
+        const meta = await buildMessagerClientMeta(req);
+        const playerId = normalizePlayerId(pid);
+
+        const setFields = { msgLastSendAt: new Date() };
+        if (playerId) setFields.msgLastPlayerId = playerId;
+        if (meta.ip) setFields.msgLastIp = meta.ip;
+        if (meta.country) setFields.msgLastCountry = meta.country;
+        if (meta.city) setFields.msgLastCity = meta.city;
+
+        const updated = await License.findOneAndUpdate(
+            { user, messages: { $gte: 1 } },
+            {
+                $inc: { messages: -1 },
+                $set: setFields,
+            },
+            { new: true }
+        );
+
+        if (!updated) {
+            const cur = await License.findOne({ user }).select('messages').lean();
+            const left = cur?.messages ?? 0;
+            return res.json({
+                success: false,
+                message: left <= 0
+                    ? 'Você possui 0 mensagens disponíveis, faça uma recarga!'
+                    : 'Créditos insuficientes.',
+                w: maskMessageCount(left),
+            });
+        }
 
         await recordMessagerSend({
             user,
             playerId,
-            count: debit,
-            remainingAfter: fresh.messages,
+            count: 1,
+            remainingAfter: updated.messages,
             ip: meta.ip,
             country: meta.country,
             city: meta.city,
             userAgent: meta.userAgent,
         });
 
-        const ticket = issueMessagerSendTicket(JWT_SECRET, user, debit);
+        const ticket = issueMessagerSendTicket(JWT_SECRET, user, 1);
         const decoded = jwt.decode(ticket);
 
         return res.json({
             success: true,
-            r: recipients,
-            sk: skips,
-            w: maskMessageCount(fresh.messages),
+            w: maskMessageCount(updated.messages),
             t: decoded.t,
             f: decoded.f,
             k: ticket,
-            n: debit,
-            trialGranted: !!trial.granted,
-            trialCredits: trial.granted ? trial.credits : 0,
+            n: 1,
+            to: target,
         });
     } catch (error) {
-        console.error("Erro ao processar a rota '/mx':", error);
+        console.error("Erro ao processar a rota '/md':", error);
         return res.status(500).json({ success: false, message: 'Erro interno no servidor.' });
     }
 });
