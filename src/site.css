@@ -1006,6 +1006,52 @@ body.app::before {
 
 .crypto-card-head h3 i { margin-right: 0.4rem; color: var(--gld-gold); }
 
+.crypto-network-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.65rem;
+    margin-top: 0.35rem;
+}
+
+.crypto-network-label {
+    font-size: 0.86rem;
+    color: var(--gld-text-muted);
+}
+
+.crypto-network-toggle {
+    display: inline-flex;
+    padding: 3px;
+    background: rgb(0 0 0 / 0.35);
+    border: 1px solid rgb(255 204 102 / 0.28);
+    border-radius: 999px;
+    gap: 2px;
+}
+
+.crypto-network-opt {
+    padding: 0.38rem 0.85rem;
+    font-family: inherit;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    color: var(--gld-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: color 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.crypto-network-opt:hover {
+    color: var(--gld-parchment);
+}
+
+.crypto-network-opt.is-active {
+    color: #1a1008;
+    background: linear-gradient(180deg, #ffcc66, #ba9700);
+    box-shadow: 0 0 10px rgb(240 185 11 / 0.25);
+}
+
 .crypto-network {
     font-size: 0.86rem;
     color: var(--gld-text-muted);
@@ -1042,6 +1088,7 @@ body.app::before {
     background: #fff;
     border: 2px solid var(--gld-border);
     border-radius: var(--gld-radius-sm);
+    object-fit: contain;
 }
 
 .crypto-addr-label {

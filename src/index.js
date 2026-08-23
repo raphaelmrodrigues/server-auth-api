@@ -269,6 +269,7 @@ const CRYPTO_USDT_PLANS = {
 const cryptoOrderSchema = new mongoose.Schema({
     orderId: { type: String, required: true, unique: true, index: true },
     method: { type: String, enum: ['giftcard', 'usdt'], default: 'giftcard' },
+    network: { type: String, enum: ['solana', 'bsc'], default: 'solana' },
     plan: { type: String, enum: ['15DAYS', '30DAYS', '60DAYS'], required: true },
     planDays: { type: Number, required: true },
     planLabel: { type: String },
@@ -622,8 +623,34 @@ app.post('/contact', upload, async (req, res) => {
 // Pagamento com criptomoeda (Binance Gift Card) — verificação manual
 // ============================================================================
 
+function normalizeUsdtNetwork(network) {
+    const n = String(network || 'solana').trim().toLowerCase();
+    return n === 'bsc' ? 'bsc' : 'solana';
+}
+
+function usdtNetworkLabel(network) {
+    return normalizeUsdtNetwork(network) === 'bsc'
+        ? 'USDT (Tether · BSC / BEP-20)'
+        : 'USDT (Tether · Solana)';
+}
+
+function usdtTxExplorerUrl(network, txHash) {
+    const tx = encodeURIComponent(txHash || '');
+    return normalizeUsdtNetwork(network) === 'bsc'
+        ? `https://bscscan.com/tx/${tx}`
+        : `https://solscan.io/tx/${tx}`;
+}
+
+function isValidUsdtTxHash(network, txHash) {
+    const tx = String(txHash || '').trim();
+    if (normalizeUsdtNetwork(network) === 'bsc') {
+        return /^0x[a-fA-F0-9]{64}$/.test(tx);
+    }
+    return tx.length >= 20 && tx.length <= 120;
+}
+
 function cryptoOrderPublicPayload(order) {
-    return {
+    const payload = {
         orderId: order.orderId,
         method: order.method || 'giftcard',
         plan: order.plan,
@@ -638,6 +665,10 @@ function cryptoOrderPublicPayload(order) {
         createdAt: order.createdAt,
         updatedAt: order.updatedAt,
     };
+    if (order.method === 'usdt') {
+        payload.network = normalizeUsdtNetwork(order.network);
+    }
+    return payload;
 }
 
 function cryptoOrderStatusPage(order) {
@@ -767,6 +798,7 @@ app.post('/crypto/usdt/order', (req, res) => {
         const plan = String(req.body.plan || '').trim().toUpperCase();
         const email = normalizeEmail(req.body.email || '');
         const txHash = String(req.body.txHash || '').trim();
+        const network = normalizeUsdtNetwork(req.body.network);
         const proof = req.file;
 
         const planInfo = CRYPTO_USDT_PLANS[plan];
@@ -776,8 +808,11 @@ app.post('/crypto/usdt/order', (req, res) => {
         if (!isValidEmail(email)) {
             return res.status(400).json({ success: false, message: 'Please provide a valid email.' });
         }
-        if (!txHash || txHash.length < 20 || txHash.length > 120) {
-            return res.status(400).json({ success: false, message: 'Please provide a valid transaction hash (TXID).' });
+        if (!isValidUsdtTxHash(network, txHash)) {
+            const hint = network === 'bsc'
+                ? 'Please provide a valid BSC transaction hash (0x + 64 hex characters).'
+                : 'Please provide a valid Solana transaction hash (TXID).';
+            return res.status(400).json({ success: false, message: hint });
         }
 
         try {
@@ -791,6 +826,7 @@ app.post('/crypto/usdt/order', (req, res) => {
             const order = new CryptoOrder({
                 orderId,
                 method: 'usdt',
+                network,
                 plan,
                 planDays: planInfo.days,
                 planLabel: planInfo.label,
@@ -803,25 +839,28 @@ app.post('/crypto/usdt/order', (req, res) => {
             await order.save();
 
             const statusUrl = cryptoOrderStatusPage(order);
-            const explorerUrl = `https://solscan.io/tx/${encodeURIComponent(txHash)}`;
+            const explorerUrl = usdtTxExplorerUrl(network, txHash);
+            const networkTitle = network === 'bsc' ? 'BSC (BEP-20)' : 'Solana';
+            const explorerName = network === 'bsc' ? 'BscScan' : 'Solscan';
             const msg = {
                 to: 'gldbotsuport@gmail.com',
                 from: PURCHASE_FROM,
                 replyTo: PURCHASE_REPLY_TO,
-                subject: `New crypto (USDT) order — ${planInfo.label} — ${orderId}`,
+                subject: `New crypto (USDT · ${networkTitle}) order — ${planInfo.label} — ${orderId}`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px; background:#f7f4ee; color:#2c2113;">
-                        <h2 style="color:#8b6914;">New USDT (Solana) order</h2>
+                        <h2 style="color:#8b6914;">New USDT (${networkTitle}) order</h2>
                         <p><strong>Order ID:</strong> ${orderId}</p>
+                        <p><strong>Network:</strong> ${networkTitle}</p>
                         <p><strong>Plan:</strong> ${planInfo.label} (${planInfo.days} days) — expected: ${planInfo.usdt} USDT</p>
                         <p><strong>Customer email:</strong> ${email}</p>
                         <p><strong>Transaction hash (TXID):</strong></p>
                         <pre style="background:#fff;border:1px solid #d8c9a3;border-radius:6px;padding:12px;font-size:14px;white-space:pre-wrap;word-break:break-all;">${txHash}</pre>
-                        <p><a href="${explorerUrl}" target="_blank">Check on Solscan</a></p>
+                        <p><a href="${explorerUrl}" target="_blank">Check on ${explorerName}</a></p>
                         <p><strong>Proof attached:</strong> ${proof ? 'Yes' : 'No'}</p>
                         <p style="margin-top:16px;"><a href="${statusUrl}">Open order page</a></p>
                         <hr>
-                        <p style="font-size:13px;color:#6b5b3a;">Confirm the transfer arrived in your Solana USDT wallet, then send the license from the admin panel (Crypto / Gift Card).</p>
+                        <p style="font-size:13px;color:#6b5b3a;">Confirm the transfer arrived in your ${networkTitle} USDT wallet, then send the license from the admin panel (Crypto / Gift Card).</p>
                     </div>
                 `,
             };
@@ -886,6 +925,7 @@ app.get('/admin/crypto-orders', authenticateAdminToken, async (req, res) => {
             return {
                 orderId: o.orderId,
                 method,
+                network: method === 'usdt' ? normalizeUsdtNetwork(o.network) : undefined,
                 plan: o.plan,
                 planLabel: o.planLabel,
                 planDays: o.planDays,
@@ -940,7 +980,7 @@ app.post('/admin/crypto-orders/:orderId/license', authenticateAdminToken, async 
                     planLabel: order.planLabel,
                     planDays: order.planDays,
                     licenseKey,
-                    methodLabel: order.method === 'usdt' ? 'USDT (Tether · Solana)' : 'Binance Gift Card',
+                    methodLabel: order.method === 'usdt' ? usdtNetworkLabel(order.network) : 'Binance Gift Card',
                 }),
                 attachments: getPurchaseEmailAttachments(),
             };
@@ -981,7 +1021,7 @@ app.post('/admin/crypto-orders/:orderId/reject', authenticateAdminToken, async (
                     customerName: order.email.split('@')[0],
                     planLabel: order.planLabel,
                     reason: notes,
-                    methodLabel: order.method === 'usdt' ? 'USDT (Tether · Solana)' : 'Binance Gift Card',
+                    methodLabel: order.method === 'usdt' ? usdtNetworkLabel(order.network) : 'Binance Gift Card',
                     statusUrl: cryptoOrderStatusPage(order),
                 }),
                 attachments: getPurchaseEmailAttachments(),

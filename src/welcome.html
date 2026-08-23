@@ -244,7 +244,7 @@
         </div>
 
         <div class="crypto-prices">
-            <p class="crypto-prices-label">USDT · Solana — direct transfer price</p>
+            <p class="crypto-prices-label" id="crypto-prices-label">USDT — direct transfer price</p>
             <div class="crypto-prices-grid" id="crypto-prices-grid"></div>
             <p class="crypto-prices-note">USDT is a stablecoin pegged to the US dollar, so the price stays fixed. Prefer the Binance Gift Card? See the plans on the right — no network fee, no risk of choosing the wrong network.</p>
         </div>
@@ -254,31 +254,37 @@
                 <div class="crypto-card-head">
                     <span class="crypto-badge is-recommended">Recommended</span>
                     <h3><i class="fas fa-coins"></i> USDT (Tether)</h3>
-                    <p class="crypto-network">Network: <strong>Solana (SOL)</strong></p>
+                    <div class="crypto-network-row">
+                        <span class="crypto-network-label">Network:</span>
+                        <div class="crypto-network-toggle" role="group" aria-label="Select USDT network">
+                            <button type="button" class="crypto-network-opt is-active" data-network="solana" aria-pressed="true">Sol (Solana)</button>
+                            <button type="button" class="crypto-network-opt" data-network="bsc" aria-pressed="false">BSC (BEP-20)</button>
+                        </div>
+                    </div>
                 </div>
 
                 <div class="crypto-warning">
                     <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
-                    <span>Send <strong>only via the Solana network</strong>. USDT sent on any other network may be lost forever.</span>
+                    <span id="crypto-warning-text">Send <strong>only via the Solana network</strong>. USDT sent on any other network may be lost forever.</span>
                 </div>
 
                 <div class="crypto-qr-wrap">
                     <img id="crypto-qr" class="crypto-qr" alt="USDT Solana wallet QR code" width="180" height="180">
                 </div>
 
-                <label class="crypto-addr-label" for="crypto-address">My wallet address · USDT (Solana)</label>
+                <label class="crypto-addr-label" for="crypto-address" id="crypto-addr-label">My wallet address · USDT (Solana)</label>
                 <div class="crypto-addr-row">
-                    <input type="text" id="crypto-address" readonly aria-label="USDT Solana wallet address">
+                    <input type="text" id="crypto-address" readonly aria-label="USDT wallet address">
                     <button type="button" id="crypto-copy"><i class="fas fa-copy" aria-hidden="true"></i> <span id="crypto-copy-label">Copy</span></button>
                 </div>
 
                 <ol class="crypto-steps">
                     <li>In your wallet or exchange, choose <strong>Send / Withdraw USDT</strong>.</li>
-                    <li>Select the <strong>Solana</strong> network.</li>
+                    <li id="crypto-step-network">Select the <strong>Solana</strong> network.</li>
                     <li>Paste the address above (or scan the QR) and send the exact amount for your plan.</li>
                     <li>Confirm your transfer here — paste the <strong>transaction hash (TXID)</strong> and your email so we can send your license:</li>
                 </ol>
-                <a class="crypto-confirm-link" href="usdt.html" target="_blank" rel="noopener">
+                <a class="crypto-confirm-link" id="crypto-confirm-link" href="usdt.html?network=solana" target="_blank" rel="noopener">
                     <i class="fas fa-paper-plane" aria-hidden="true"></i> Confirm USDT transfer
                 </a>
             </article>
@@ -332,11 +338,25 @@
 
     // Pagamento em cripto — edite estes valores conforme sua carteira/preços.
     const CRYPTO_CONFIG = {
-        // Endereço USDT na rede SOLANA (copie da Binance → Receber → via endereço).
-        usdtSolanaAddress: '3xfroudB2dUrPjtVVjgn2hd22DGpJeukKitpFSKBc8H7',
-        // QR code da carteira (imagem estática). Deixe vazio para gerar automaticamente.
-        usdtSolanaQr: './images/qrcode_theter_solana.png',
-        // Preço de cada plano em USDT (≈ dólar) para pagamento direto na rede Solana.
+        usdtNetworks: {
+            solana: {
+                address: '3xfroudB2dUrPjtVVjgn2hd22DGpJeukKitpFSKBc8H7',
+                qr: './images/qrcode_theter_solana.png',
+                warning: 'Send <strong>only via the Solana network</strong>. USDT sent on any other network may be lost forever.',
+                addrLabel: 'My wallet address · USDT (Solana)',
+                stepNetwork: 'Select the <strong>Solana</strong> network.',
+                qrAlt: 'USDT Solana wallet QR code',
+            },
+            bsc: {
+                address: '0x4914b1cda7124f05714265bd3047430f6e4bea38',
+                qr: './images/qrcode_theter_bsc.png',
+                warning: 'Send <strong>only via BSC (BNB Smart Chain · BEP-20)</strong>. USDT sent on any other network may be lost forever.',
+                addrLabel: 'My wallet address · USDT (BSC)',
+                stepNetwork: 'Select <strong>BSC (BEP-20)</strong> — also called BNB Smart Chain.',
+                qrAlt: 'USDT BSC wallet QR code',
+            },
+        },
+        // Preço de cada plano em USDT (≈ dólar) para pagamento direto.
         plans: [
             { name: '15 days', usdt: '1.92' },
             { name: '30 days', usdt: '3.38' },
@@ -639,6 +659,38 @@
     document.getElementById('crypto-contact-btn').addEventListener('click', openContactFromCrypto);
 
     let cryptoViewReady = false;
+    let currentUsdtNetwork = 'solana';
+
+    function setUsdtNetwork(network) {
+        const id = (network === 'bsc') ? 'bsc' : 'solana';
+        currentUsdtNetwork = id;
+        const cfg = CRYPTO_CONFIG.usdtNetworks[id];
+        if (!cfg) return;
+
+        document.querySelectorAll('.crypto-network-opt').forEach(function (btn) {
+            const active = btn.getAttribute('data-network') === id;
+            btn.classList.toggle('is-active', active);
+            btn.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        const addrInput = document.getElementById('crypto-address');
+        const qrImg = document.getElementById('crypto-qr');
+        const warning = document.getElementById('crypto-warning-text');
+        const addrLabel = document.getElementById('crypto-addr-label');
+        const stepNetwork = document.getElementById('crypto-step-network');
+        const confirmLink = document.getElementById('crypto-confirm-link');
+
+        if (addrInput) addrInput.value = cfg.address;
+        if (qrImg) {
+            qrImg.src = cfg.qr || ('https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=' + encodeURIComponent(cfg.address));
+            qrImg.alt = cfg.qrAlt;
+        }
+        if (warning) warning.innerHTML = cfg.warning;
+        if (addrLabel) addrLabel.textContent = cfg.addrLabel;
+        if (stepNetwork) stepNetwork.innerHTML = cfg.stepNetwork;
+        if (confirmLink) confirmLink.href = 'usdt.html?network=' + encodeURIComponent(id);
+    }
+
     function initCryptoView() {
         if (cryptoViewReady) return;
         cryptoViewReady = true;
@@ -653,15 +705,12 @@
             }).join('');
         }
 
-        const addrInput = document.getElementById('crypto-address');
-        const qrImg = document.getElementById('crypto-qr');
-        const addr = CRYPTO_CONFIG.usdtSolanaAddress || '';
-        if (addrInput) addrInput.value = addr;
-        if (qrImg) {
-            qrImg.src = CRYPTO_CONFIG.usdtSolanaQr
-                ? CRYPTO_CONFIG.usdtSolanaQr
-                : 'https://api.qrserver.com/v1/create-qr-code/?size=180x180&margin=8&data=' + encodeURIComponent(addr);
-        }
+        document.querySelectorAll('.crypto-network-opt').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                setUsdtNetwork(btn.getAttribute('data-network'));
+            });
+        });
+        setUsdtNetwork('solana');
 
         const merchantsLink = document.getElementById('crypto-merchants-link');
         if (merchantsLink) merchantsLink.href = CRYPTO_CONFIG.binanceMerchantsUrl;
@@ -678,7 +727,8 @@
     }
 
     document.getElementById('crypto-copy').addEventListener('click', function () {
-        const addr = CRYPTO_CONFIG.usdtSolanaAddress || '';
+        const cfg = CRYPTO_CONFIG.usdtNetworks[currentUsdtNetwork];
+        const addr = (cfg && cfg.address) || '';
         const label = document.getElementById('crypto-copy-label');
         function done() {
             if (!label) return;

@@ -799,17 +799,24 @@
         const licenseValue = o.licenseKey ? escapeAttr(o.licenseKey) : '';
         const isGenerated = o.status === 'generated';
         const isUsdt = o.method === 'usdt';
+        const usdtNetwork = (o.network === 'bsc') ? 'bsc' : 'solana';
         const methodBadge = isUsdt
-          ? '<span class="px-2 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-800">USDT · Solana</span>'
+          ? (usdtNetwork === 'bsc'
+            ? '<span class="px-2 py-0.5 rounded text-xs font-bold bg-amber-100 text-amber-900">USDT · BSC</span>'
+            : '<span class="px-2 py-0.5 rounded text-xs font-bold bg-yellow-100 text-yellow-800">USDT · Solana</span>')
           : '<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">Gift Card</span>';
         let paymentBlock;
         if (isUsdt) {
-          const solscan = 'https://solscan.io/tx/' + encodeURIComponent(o.txHash || '');
+          const explorerUrl = usdtNetwork === 'bsc'
+            ? ('https://bscscan.com/tx/' + encodeURIComponent(o.txHash || ''))
+            : ('https://solscan.io/tx/' + encodeURIComponent(o.txHash || ''));
+          const explorerName = usdtNetwork === 'bsc' ? 'BscScan' : 'Solscan';
           const amount = o.amount ? (' · esperado: ' + escapeAttr(o.amount) + ' USDT') : '';
           paymentBlock =
+            '<div class="md:col-span-2"><span class="text-gray-500">Rede:</span> <strong>' + (usdtNetwork === 'bsc' ? 'BSC (BEP-20)' : 'Solana') + '</strong></div>' +
             '<div class="md:col-span-2"><span class="text-gray-500">Transaction hash (TXID):</span>' + amount + '<br>' +
               '<code class="block bg-white border border-gray-300 rounded px-2 py-1 mt-1 break-all">' + escapeAttr(o.txHash || '') + '</code>' +
-              '<a href="' + solscan + '" target="_blank" class="text-blue-600 hover:underline text-xs">Conferir no Solscan</a>' +
+              '<a href="' + explorerUrl + '" target="_blank" class="text-blue-600 hover:underline text-xs">Conferir no ' + explorerName + '</a>' +
             '</div>';
         } else {
           paymentBlock =

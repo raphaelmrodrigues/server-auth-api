@@ -129,7 +129,7 @@
             <div class="gc-header">
                 <img src="./images/gladiusbot-icon-128.png" alt="GladiusBot">
                 <h1>Confirm your USDT transfer</h1>
-                <p class="gc-sub">GladiusBot · USDT (Tether) · Solana</p>
+                <p class="gc-sub" id="gc-network-sub">GladiusBot · USDT (Tether) · Solana</p>
             </div>
 
             <div class="gc-body">
@@ -139,10 +139,10 @@
                 <div id="gc-form-view" class="gc-hidden">
                     <div class="gc-warning">
                         <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
-                        <span>Only transfers sent as <strong>USDT on the Solana network</strong> can be confirmed. Already sent it? Pick your plan and paste the transaction hash below.</span>
+                        <span id="gc-warning-text">Only transfers sent as <strong>USDT on the Solana network</strong> can be confirmed. Already sent it? Pick your plan and paste the transaction hash below.</span>
                     </div>
 
-                    <p class="gc-inst-title"><i class="fas fa-coins" aria-hidden="true"></i> USDT · Solana — direct transfer price</p>
+                    <p class="gc-inst-title" id="gc-inst-title"><i class="fas fa-coins" aria-hidden="true"></i> USDT · Solana — direct transfer price</p>
                     <div class="gc-plans" id="gc-plans"></div>
 
                     <form id="gc-form">
@@ -154,7 +154,7 @@
                         <div class="gc-field">
                             <label for="gc-tx">Transaction hash (TXID)</label>
                             <input type="text" id="gc-tx" placeholder="Paste the Solana transaction hash" required>
-                            <p class="gc-hint">Find it in your wallet/exchange transaction details after sending.</p>
+                            <p class="gc-hint" id="gc-tx-hint">Find it in your wallet/exchange transaction details after sending.</p>
                         </div>
                         <div class="gc-field">
                             <label>Payment proof (optional)</label>
@@ -210,11 +210,50 @@
             '60DAYS': { label: '60 days', usdt: '6.62' }
         };
 
+        const USDT_NETWORKS = {
+            solana: {
+                title: 'Solana',
+                instTitle: 'USDT · Solana — direct transfer price',
+                warning: 'Only transfers sent as <strong>USDT on the Solana network</strong> can be confirmed. Already sent it? Pick your plan and paste the transaction hash below.',
+                txPlaceholder: 'Paste the Solana transaction hash',
+                txHint: 'Find the Solana TXID in your wallet or exchange after sending.',
+                pendingNote: 'Your order is <strong>pending verification</strong>. We are checking your transaction on the <strong>Solana</strong> network. Once it\'s confirmed, you\'ll also receive an <strong>email with your license</strong>. Keep this link — refresh this page anytime to see your license here as soon as it\'s ready.',
+            },
+            bsc: {
+                title: 'BSC (BEP-20)',
+                instTitle: 'USDT · BSC (BEP-20) — direct transfer price',
+                warning: 'Only transfers sent as <strong>USDT on BSC (BNB Smart Chain · BEP-20)</strong> can be confirmed. Already sent it? Pick your plan and paste the transaction hash below.',
+                txPlaceholder: 'Paste the BSC transaction hash (0x…)',
+                txHint: 'Find the BSC TX hash on BscScan or in your wallet after sending.',
+                pendingNote: 'Your order is <strong>pending verification</strong>. We are checking your transaction on the <strong>BSC (BEP-20)</strong> network. Once it\'s confirmed, you\'ll also receive an <strong>email with your license</strong>. Keep this link — refresh this page anytime to see your license here as soon as it\'s ready.',
+            },
+        };
+
+        function normalizeNetwork(network) {
+            return String(network || 'solana').trim().toLowerCase() === 'bsc' ? 'bsc' : 'solana';
+        }
+
         const params = new URLSearchParams(window.location.search);
         const orderParam = (params.get('order') || '').trim();
         const planParam = (params.get('plan') || '').trim().toUpperCase();
+        let selectedNetwork = normalizeNetwork(params.get('network'));
 
         let selectedPlan = USDT_PLANS[planParam] ? planParam : '30DAYS';
+
+        function applyNetworkUi(network) {
+            selectedNetwork = normalizeNetwork(network);
+            const cfg = USDT_NETWORKS[selectedNetwork];
+            el('gc-network-sub').textContent = 'GladiusBot · USDT (Tether) · ' + cfg.title;
+            el('gc-warning-text').innerHTML = cfg.warning;
+            el('gc-inst-title').innerHTML = '<i class="fas fa-coins" aria-hidden="true"></i> ' + cfg.instTitle;
+            el('gc-tx').placeholder = cfg.txPlaceholder;
+            el('gc-tx-hint').textContent = cfg.txHint;
+            el('gc-pending-note').innerHTML = cfg.pendingNote;
+        }
+
+        function networkStatusLabel(network) {
+            return normalizeNetwork(network) === 'bsc' ? 'BSC (BEP-20)' : 'Solana';
+        }
 
         const el = (id) => document.getElementById(id);
         function show(id) { el(id).classList.remove('gc-hidden'); }
@@ -254,7 +293,9 @@
             el('gc-order-id').textContent = 'Order: ' + order.orderId;
             const planLabel = (USDT_PLANS[order.plan] && USDT_PLANS[order.plan].label) || (order.planDays + ' days');
             const amount = order.amount ? (' · ' + order.amount + ' USDT') : '';
-            el('gc-status-plan').textContent = 'Plan: ' + planLabel + amount + ' · ' + order.email;
+            const netLabel = networkStatusLabel(order.network);
+            el('gc-status-plan').textContent = 'Plan: ' + planLabel + amount + ' · ' + netLabel + ' · ' + order.email;
+            applyNetworkUi(order.network);
 
             const badge = el('gc-status-badge');
             badge.classList.remove('is-pending', 'is-generated', 'is-rejected');
@@ -289,6 +330,7 @@
 
         function initForm() {
             hide('gc-loading'); show('gc-form-view');
+            applyNetworkUi(selectedNetwork);
             renderPlans();
 
             el('gc-proof').addEventListener('change', function () {
@@ -318,6 +360,7 @@
                     fd.append('plan', selectedPlan);
                     fd.append('email', email);
                     fd.append('txHash', txHash);
+                    fd.append('network', selectedNetwork);
                     if (proof) fd.append('proof', proof);
 
                     const res = await fetch('/crypto/usdt/order', { method: 'POST', body: fd });
@@ -333,6 +376,7 @@
                         planDays: USDT_PLANS[selectedPlan].label,
                         amount: USDT_PLANS[selectedPlan].usdt,
                         email: email,
+                        network: selectedNetwork,
                         status: 'pending',
                         licenseKey: null
                     });
