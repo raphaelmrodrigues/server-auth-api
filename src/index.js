@@ -635,18 +635,65 @@ function usdtNetworkLabel(network) {
 }
 
 function usdtTxExplorerUrl(network, txHash) {
-    const tx = encodeURIComponent(txHash || '');
-    return normalizeUsdtNetwork(network) === 'bsc'
-        ? `https://bscscan.com/tx/${tx}`
-        : `https://solscan.io/tx/${tx}`;
+    const tx = String(txHash || '').trim();
+    if (normalizeUsdtNetwork(network) === 'bsc') {
+        // Só tem página no BscScan se for hash on-chain.
+        if (/^0x[a-fA-F0-9]{64}$/i.test(tx)) {
+            return `https://bscscan.com/tx/${encodeURIComponent(tx)}`;
+        }
+        return null;
+    }
+    return `https://solscan.io/tx/${encodeURIComponent(tx)}`;
+}
+
+/**
+ * Normaliza o TX / ID colado pelo usuário.
+ * - BSC on-chain: 0x + 64 hex (aceita sem 0x ou URL do BscScan)
+ * - BSC off-chain (Binance internal): IDs numéricos / "Off-chain Transfer 123…"
+ * - Solana: assinatura base58 (ou URL do Solscan)
+ */
+function normalizeUsdtTxHash(network, txHash) {
+    let tx = String(txHash || '').trim();
+    if (!tx) return '';
+
+    // "Off-chain Transfer 404140484023" → só o ID
+    const offChain = tx.match(/off[-\s]?chain\s*transfer[:\s#-]*([0-9]{6,20})/i);
+    if (offChain) return offChain[1];
+
+    tx = tx.replace(/\s+/g, '');
+
+    const bscUrl = tx.match(/(?:bscscan\.com|etherscan\.io)\/tx\/(0x[a-fA-F0-9]{64}|[a-fA-F0-9]{64})/i);
+    if (bscUrl) tx = bscUrl[1];
+
+    const solUrl = tx.match(/solscan\.io\/tx\/([1-9A-HJ-NP-Za-km-z]+)/);
+    if (solUrl) tx = solUrl[1];
+
+    if (normalizeUsdtNetwork(network) === 'bsc') {
+        if (/^[a-fA-F0-9]{64}$/.test(tx)) tx = '0x' + tx;
+        if (/^0X[a-fA-F0-9]{64}$/.test(tx)) tx = '0x' + tx.slice(2);
+        // IDs internos da Binance às vezes vêm com prefixo # ou TX-
+        if (/^(?:#|TX-?|ID-?)([0-9]{6,20})$/i.test(tx)) {
+            tx = tx.replace(/^(?:#|TX-?|ID-?)/i, '');
+        }
+    }
+    return tx;
 }
 
 function isValidUsdtTxHash(network, txHash) {
-    const tx = String(txHash || '').trim();
+    const tx = normalizeUsdtTxHash(network, txHash);
     if (normalizeUsdtNetwork(network) === 'bsc') {
-        return /^0x[a-fA-F0-9]{64}$/.test(tx);
+        // Hash on-chain BSC/Ethereum
+        if (/^0x[a-fA-F0-9]{64}$/.test(tx)) return true;
+        // Transferência interna Binance (off-chain) — ID numérico, sem hash 0x
+        if (/^[0-9]{6,20}$/.test(tx)) return true;
+        return false;
     }
-    return tx.length >= 20 && tx.length <= 120;
+    // Solana: assinatura base58 (não começa com 0x)
+    return /^[1-9A-HJ-NP-Za-km-z]{43,120}$/.test(tx);
+}
+
+function isBinanceOffChainTxId(txHash) {
+    return /^[0-9]{6,20}$/.test(String(txHash || '').trim());
 }
 
 function cryptoOrderPublicPayload(order) {
@@ -797,8 +844,8 @@ app.post('/crypto/usdt/order', (req, res) => {
 
         const plan = String(req.body.plan || '').trim().toUpperCase();
         const email = normalizeEmail(req.body.email || '');
-        const txHash = String(req.body.txHash || '').trim();
         const network = normalizeUsdtNetwork(req.body.network);
+        const txHash = normalizeUsdtTxHash(network, req.body.txHash);
         const proof = req.file;
 
         const planInfo = CRYPTO_USDT_PLANS[plan];
@@ -810,8 +857,8 @@ app.post('/crypto/usdt/order', (req, res) => {
         }
         if (!isValidUsdtTxHash(network, txHash)) {
             const hint = network === 'bsc'
-                ? 'Please provide a valid BSC transaction hash (0x + 64 hex characters).'
-                : 'Please provide a valid Solana transaction hash (TXID).';
+                ? 'Please paste the BSC TxID from your withdrawal details: either the on-chain hash (0x…) or the Binance “Off-chain Transfer” number. You can also paste a BscScan link.'
+                : 'Please paste a valid Solana transaction signature (TXID from Solscan or your wallet). Solana IDs look different from BSC (they do not start with 0x).';
             return res.status(400).json({ success: false, message: hint });
         }
 
@@ -842,25 +889,35 @@ app.post('/crypto/usdt/order', (req, res) => {
             const explorerUrl = usdtTxExplorerUrl(network, txHash);
             const networkTitle = network === 'bsc' ? 'BSC (BEP-20)' : 'Solana';
             const explorerName = network === 'bsc' ? 'BscScan' : 'Solscan';
+            const offChain = network === 'bsc' && isBinanceOffChainTxId(txHash);
+            const txLabel = offChain ? 'Binance Off-chain Transfer ID' : 'Transaction hash (TXID)';
+            const explorerLine = explorerUrl
+                ? `<p><a href="${explorerUrl}" target="_blank">Check on ${explorerName}</a></p>`
+                : (offChain
+                    ? `<p style="background:#fff3cd;border:1px solid #e0c36a;border-radius:6px;padding:10px;"><strong>Off-chain / internal Binance transfer</strong> — there is no BscScan page. Check your Binance <em>Deposit / Transaction History</em> for ID <code>${txHash}</code> (network fee was usually 0).</p>`
+                    : '');
+            const verifyHint = offChain
+                ? 'This looks like a Binance internal (off-chain) deposit. Confirm it in your Binance history, then send the license from the admin panel.'
+                : `Confirm the transfer arrived in your ${networkTitle} USDT wallet, then send the license from the admin panel (Crypto / Gift Card).`;
             const msg = {
                 to: 'gldbotsuport@gmail.com',
                 from: PURCHASE_FROM,
                 replyTo: PURCHASE_REPLY_TO,
-                subject: `New crypto (USDT · ${networkTitle}) order — ${planInfo.label} — ${orderId}`,
+                subject: `New crypto (USDT · ${networkTitle}${offChain ? ' · off-chain' : ''}) order — ${planInfo.label} — ${orderId}`,
                 html: `
                     <div style="font-family: Arial, sans-serif; max-width: 640px; margin: 0 auto; padding: 20px; background:#f7f4ee; color:#2c2113;">
-                        <h2 style="color:#8b6914;">New USDT (${networkTitle}) order</h2>
+                        <h2 style="color:#8b6914;">New USDT (${networkTitle}) order${offChain ? ' — off-chain' : ''}</h2>
                         <p><strong>Order ID:</strong> ${orderId}</p>
                         <p><strong>Network:</strong> ${networkTitle}</p>
                         <p><strong>Plan:</strong> ${planInfo.label} (${planInfo.days} days) — expected: ${planInfo.usdt} USDT</p>
                         <p><strong>Customer email:</strong> ${email}</p>
-                        <p><strong>Transaction hash (TXID):</strong></p>
+                        <p><strong>${txLabel}:</strong></p>
                         <pre style="background:#fff;border:1px solid #d8c9a3;border-radius:6px;padding:12px;font-size:14px;white-space:pre-wrap;word-break:break-all;">${txHash}</pre>
-                        <p><a href="${explorerUrl}" target="_blank">Check on ${explorerName}</a></p>
+                        ${explorerLine}
                         <p><strong>Proof attached:</strong> ${proof ? 'Yes' : 'No'}</p>
                         <p style="margin-top:16px;"><a href="${statusUrl}">Open order page</a></p>
                         <hr>
-                        <p style="font-size:13px;color:#6b5b3a;">Confirm the transfer arrived in your ${networkTitle} USDT wallet, then send the license from the admin panel (Crypto / Gift Card).</p>
+                        <p style="font-size:13px;color:#6b5b3a;">${verifyHint}</p>
                     </div>
                 `,
             };

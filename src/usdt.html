@@ -152,7 +152,7 @@
                             <p class="gc-hint">We send the license and confirmation to this email.</p>
                         </div>
                         <div class="gc-field">
-                            <label for="gc-tx">Transaction hash (TXID)</label>
+                            <label for="gc-tx" id="gc-tx-label">Transaction hash (TXID)</label>
                             <input type="text" id="gc-tx" placeholder="Paste the Solana transaction hash" required>
                             <p class="gc-hint" id="gc-tx-hint">Find it in your wallet/exchange transaction details after sending.</p>
                         </div>
@@ -215,17 +215,19 @@
                 title: 'Solana',
                 instTitle: 'USDT · Solana — direct transfer price',
                 warning: 'Only transfers sent as <strong>USDT on the Solana network</strong> can be confirmed. Already sent it? Pick your plan and paste the transaction hash below.',
-                txPlaceholder: 'Paste the Solana transaction hash',
-                txHint: 'Find the Solana TXID in your wallet or exchange after sending.',
+                txPlaceholder: 'Paste the Solana transaction signature',
+                txHint: 'Find the Solana TXID in your wallet or exchange after sending (long base58 code — does not start with 0x).',
+                txLabel: 'Transaction hash (TXID)',
                 pendingNote: 'Your order is <strong>pending verification</strong>. We are checking your transaction on the <strong>Solana</strong> network. Once it\'s confirmed, you\'ll also receive an <strong>email with your license</strong>. Keep this link — refresh this page anytime to see your license here as soon as it\'s ready.',
             },
             bsc: {
                 title: 'BSC (BEP-20)',
                 instTitle: 'USDT · BSC (BEP-20) — direct transfer price',
-                warning: 'Only transfers sent as <strong>USDT on BSC (BNB Smart Chain · BEP-20)</strong> can be confirmed. Already sent it? Pick your plan and paste the transaction hash below.',
-                txPlaceholder: 'Paste the BSC transaction hash (0x…)',
-                txHint: 'Find the BSC TX hash on BscScan or in your wallet after sending.',
-                pendingNote: 'Your order is <strong>pending verification</strong>. We are checking your transaction on the <strong>BSC (BEP-20)</strong> network. Once it\'s confirmed, you\'ll also receive an <strong>email with your license</strong>. Keep this link — refresh this page anytime to see your license here as soon as it\'s ready.',
+                warning: 'Only transfers sent as <strong>USDT on BSC (BNB Smart Chain · BEP-20)</strong> can be confirmed. Already sent it? Pick your plan and paste the transaction ID below.',
+                txPlaceholder: '0x… hash or Off-chain Transfer number',
+                txHint: 'Paste the TxID from withdrawal details: on-chain hash (0x…) or Binance “Off-chain Transfer” number (e.g. 404140484023). BscScan links also work.',
+                txLabel: 'Transaction ID (TxID)',
+                pendingNote: 'Your order is <strong>pending verification</strong>. We are checking your transaction on the <strong>BSC (BEP-20)</strong> network (or Binance off-chain deposit). Once it\'s confirmed, you\'ll also receive an <strong>email with your license</strong>. Keep this link — refresh this page anytime to see your license here as soon as it\'s ready.',
             },
         };
 
@@ -248,6 +250,7 @@
             el('gc-inst-title').innerHTML = '<i class="fas fa-coins" aria-hidden="true"></i> ' + cfg.instTitle;
             el('gc-tx').placeholder = cfg.txPlaceholder;
             el('gc-tx-hint').textContent = cfg.txHint;
+            el('gc-tx-label').textContent = cfg.txLabel;
             el('gc-pending-note').innerHTML = cfg.pendingNote;
         }
 

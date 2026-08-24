@@ -14,19 +14,19 @@ const MESSAGER_ITCH_PLANS = {
     MSG_1000: {
         messages: 1000,
         title: 'Messager - 1000 Sends',
-        priceUsd: 10,
+        priceUsd: 1.9,
         itchSlug: 'gladiusbot-messager-1000',
     },
     MSG_3000: {
         messages: 3000,
         title: 'Messager - 3000 Sends',
-        priceUsd: 23,
+        priceUsd: 3.8,
         itchSlug: 'gladiusbot-messager-3000',
     },
     MSG_LIFE: {
-        messages: 999999,
+        messages: 99999999,
         title: 'Messager - Lifetime',
-        priceUsd: 100,
+        priceUsd: 60,
         itchSlug: 'gladiusbot-messager-lifetime',
     },
 };

@@ -807,16 +807,26 @@
           : '<span class="px-2 py-0.5 rounded text-xs font-bold bg-blue-100 text-blue-800">Gift Card</span>';
         let paymentBlock;
         if (isUsdt) {
-          const explorerUrl = usdtNetwork === 'bsc'
-            ? ('https://bscscan.com/tx/' + encodeURIComponent(o.txHash || ''))
-            : ('https://solscan.io/tx/' + encodeURIComponent(o.txHash || ''));
-          const explorerName = usdtNetwork === 'bsc' ? 'BscScan' : 'Solscan';
+          const tx = String(o.txHash || '');
+          const isOffChain = usdtNetwork === 'bsc' && /^[0-9]{6,20}$/.test(tx);
+          const isOnChainBsc = usdtNetwork === 'bsc' && /^0x[a-fA-F0-9]{64}$/i.test(tx);
+          let explorerLink = '';
+          if (isOnChainBsc) {
+            explorerLink = '<a href="https://bscscan.com/tx/' + encodeURIComponent(tx) + '" target="_blank" class="text-blue-600 hover:underline text-xs">Conferir no BscScan</a>';
+          } else if (usdtNetwork === 'solana' && tx) {
+            explorerLink = '<a href="https://solscan.io/tx/' + encodeURIComponent(tx) + '" target="_blank" class="text-blue-600 hover:underline text-xs">Conferir no Solscan</a>';
+          } else if (isOffChain) {
+            explorerLink = '<span class="text-amber-700 text-xs font-medium">Off-chain Binance — conferir no histórico de depósito da Binance (sem BscScan)</span>';
+          }
           const amount = o.amount ? (' · esperado: ' + escapeAttr(o.amount) + ' USDT') : '';
+          const txLabel = isOffChain ? 'ID Off-chain Binance:' : 'Transaction hash (TXID):';
           paymentBlock =
-            '<div class="md:col-span-2"><span class="text-gray-500">Rede:</span> <strong>' + (usdtNetwork === 'bsc' ? 'BSC (BEP-20)' : 'Solana') + '</strong></div>' +
-            '<div class="md:col-span-2"><span class="text-gray-500">Transaction hash (TXID):</span>' + amount + '<br>' +
-              '<code class="block bg-white border border-gray-300 rounded px-2 py-1 mt-1 break-all">' + escapeAttr(o.txHash || '') + '</code>' +
-              '<a href="' + explorerUrl + '" target="_blank" class="text-blue-600 hover:underline text-xs">Conferir no ' + explorerName + '</a>' +
+            '<div class="md:col-span-2"><span class="text-gray-500">Rede:</span> <strong>' + (usdtNetwork === 'bsc' ? 'BSC (BEP-20)' : 'Solana') + '</strong>' +
+              (isOffChain ? ' <span class="px-1.5 py-0.5 rounded text-xs bg-amber-100 text-amber-800">off-chain</span>' : '') +
+            '</div>' +
+            '<div class="md:col-span-2"><span class="text-gray-500">' + txLabel + '</span>' + amount + '<br>' +
+              '<code class="block bg-white border border-gray-300 rounded px-2 py-1 mt-1 break-all">' + escapeAttr(tx) + '</code>' +
+              explorerLink +
             '</div>';
         } else {
           paymentBlock =
