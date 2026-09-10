@@ -18,19 +18,21 @@
 <aside class="sidebar">
     <div class="sidebar-brand">
         <img class="sidebar-logo-full" src="./images/gladiusbot-logo.svg" alt="GladiusBot">
-        <span class="sidebar-version">v4.0.0</span>
+        <span class="sidebar-version">v4.0.1</span>
     </div>
     <nav class="sidebar-nav">
         <button type="button" id="back" style="display: none;"><i class="fas fa-arrow-left"></i> Back</button>
         <button type="button" id="contactus"><i class="fas fa-envelope"></i> Contact us</button>
         <button type="button" id="tutorial"><i class="fas fa-play-circle"></i> Tutorial</button>
         <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener" id="chrome-extension" class="sidebar-link sidebar-link-chrome"><i class="fab fa-chrome"></i> Install Extension</a>
+        <a href="/patch-notes" class="sidebar-link"><i class="fas fa-scroll"></i> Patch notes &amp; Forum</a>
         <button type="button" id="download"><i class="fas fa-download"></i> Download Bot</button>
         <button type="button" id="buyButton" class="is-accent"><i class="fas fa-shopping-cart"></i> Buy</button>
         <button type="button" id="cryptoButton" class="is-crypto"><i class="fab fa-bitcoin"></i> Buy with crypto</button>
     </nav>
     <div class="sidebar-footer-links">
         <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>
+        <a href="/patch-notes">Patch notes &amp; Forum</a>
     </div>
 </aside>
 
@@ -104,6 +106,52 @@
                     </div>
                 </div>
 
+                <div id="tutorial-guide" class="tutorial-guide hidden" hidden>
+                    <p class="tutorial-guide-intro">Chrome itself does not allow extensions on phones. Use these browsers, then add GladiusBot from the Chrome Web Store.</p>
+                    <div class="mobile-install-grid">
+                        <article class="mobile-install-card">
+                            <header>
+                                <span class="mobile-os-badge is-android"><i class="fab fa-android"></i> Android</span>
+                                <h3>Lemur Browser</h3>
+                            </header>
+                            <ol>
+                                <li>Install <strong>Lemur Browser</strong> from the Play Store.</li>
+                                <li>Open Lemur and go to the <strong>Chrome Web Store</strong>.</li>
+                                <li>Open the GladiusBot page and tap <strong>Add to Lemur</strong> / Add to Chrome.</li>
+                                <li>Open Gladiatus in Lemur and turn the bot on from the extension.</li>
+                            </ol>
+                            <div class="mobile-store-links">
+                                <a class="store-badge-link" href="https://play.google.com/store/apps/details?id=com.lemurbrowser.exts" target="_blank" rel="noopener">
+                                    <img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png" alt="Get it on Google Play" height="54">
+                                </a>
+                                <a class="store-text-link" href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">
+                                    <i class="fab fa-chrome"></i> Add GladiusBot
+                                </a>
+                            </div>
+                        </article>
+                        <article class="mobile-install-card">
+                            <header>
+                                <span class="mobile-os-badge is-ios"><i class="fab fa-apple"></i> iOS</span>
+                                <h3>Orion Browser</h3>
+                            </header>
+                            <ol>
+                                <li>Install <strong>Orion Browser by Kagi</strong> from the App Store.</li>
+                                <li>In Orion settings, enable <strong>Chrome extensions</strong>.</li>
+                                <li>Open the Chrome Web Store inside Orion and add <strong>GladiusBot</strong>.</li>
+                                <li>Open Gladiatus in Orion and enable the bot.</li>
+                            </ol>
+                            <div class="mobile-store-links">
+                                <a class="store-badge-link is-apple" href="https://apps.apple.com/app/orion-browser-by-kagi/id1484498200" target="_blank" rel="noopener">
+                                    <img src="https://developer.apple.com/assets/elements/badges/download-on-the-app-store.svg" alt="Download on the App Store" height="40">
+                                </a>
+                                <a class="store-text-link" href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">
+                                    <i class="fab fa-chrome"></i> Add GladiusBot
+                                </a>
+                            </div>
+                        </article>
+                    </div>
+                </div>
+
                 <article class="tutorial-detail">
                     <span class="tutorial-category" id="tutorial-category">Installation</span>
                     <h3 class="tutorial-title" id="tutorial-title">Manual install on desktop browser</h3>
@@ -143,96 +191,8 @@
         <h2>Select your country</h2>
         <p class="subtitle">We will redirect you to the best payment option for your region.</p>
         <div class="country-row">
-            <span id="selected-flag" class="fi fi-es flag-icon"></span>
-            <select id="country-select">
-                <option value="es" data-flag="es">Spain</option>
-                <option value="us" data-flag="us">United States</option>
-                <option value="br" data-flag="br">Brazil</option>
-                <option value="ca" data-flag="ca">Canada</option>
-                <option value="fr" data-flag="fr">France</option>
-                <option value="de" data-flag="de">Germany</option>
-                <option value="tr" data-flag="tr">Turkey</option>
-                <option value="jp" data-flag="jp">Japan</option>
-                <option value="in" data-flag="in">India</option>
-                <option value="cn" data-flag="cn">China</option>
-                <option value="it" data-flag="it">Italy</option>
-                <option value="gb" data-flag="gb">United Kingdom</option>
-                <option value="ru" data-flag="ru">Russia</option>
-                <option value="au" data-flag="au">Australia</option>
-                <option value="mx" data-flag="mx">Mexico</option>
-                <option value="kr" data-flag="kr">South Korea</option>
-                <option value="se" data-flag="se">Sweden</option>
-                <option value="no" data-flag="no">Norway</option>
-                <option value="nl" data-flag="nl">Netherlands</option>
-                <option value="ch" data-flag="ch">Switzerland</option>
-                <option value="pl" data-flag="pl">Poland</option>
-                <option value="gr" data-flag="gr">Greece</option>
-                <option value="be" data-flag="be">Belgium</option>
-                <option value="pt" data-flag="pt">Portugal</option>
-                <option value="cz" data-flag="cz">Czech Republic</option>
-                <option value="at" data-flag="at">Austria</option>
-                <option value="dk" data-flag="dk">Denmark</option>
-                <option value="fi" data-flag="fi">Finland</option>
-                <option value="ar" data-flag="ar">Argentina</option>
-                <option value="cl" data-flag="cl">Chile</option>
-                <option value="co" data-flag="co">Colombia</option>
-                <option value="ve" data-flag="ve">Venezuela</option>
-                <option value="pe" data-flag="pe">Peru</option>
-                <option value="uy" data-flag="uy">Uruguay</option>
-                <option value="ec" data-flag="ec">Ecuador</option>
-                <option value="sa" data-flag="sa">Saudi Arabia</option>
-                <option value="ae" data-flag="ae">United Arab Emirates</option>
-                <option value="kw" data-flag="kw">Kuwait</option>
-                <option value="qa" data-flag="qa">Qatar</option>
-                <option value="bh" data-flag="bh">Bahrain</option>
-                <option value="om" data-flag="om">Oman</option>
-                <option value="il" data-flag="il">Israel</option>
-                <option value="eg" data-flag="eg">Egypt</option>
-                <option value="ma" data-flag="ma">Morocco</option>
-                <option value="tn" data-flag="tn">Tunisia</option>
-                <option value="ke" data-flag="ke">Kenya</option>
-                <option value="ng" data-flag="ng">Nigeria</option>
-                <option value="za" data-flag="za">South Africa</option>
-                <option value="dz" data-flag="dz">Algeria</option>
-                <option value="pk" data-flag="pk">Pakistan</option>
-                <option value="bd" data-flag="bd">Bangladesh</option>
-                <option value="lk" data-flag="lk">Sri Lanka</option>
-                <option value="np" data-flag="np">Nepal</option>
-                <option value="mm" data-flag="mm">Myanmar</option>
-                <option value="kh" data-flag="kh">Cambodia</option>
-                <option value="vn" data-flag="vn">Vietnam</option>
-                <option value="th" data-flag="th">Thailand</option>
-                <option value="sg" data-flag="sg">Singapore</option>
-                <option value="my" data-flag="my">Malaysia</option>
-                <option value="ph" data-flag="ph">Philippines</option>
-                <option value="id" data-flag="id">Indonesia</option>
-                <option value="ro" data-flag="ro">Romania</option>
-                <option value="hu" data-flag="hu">Hungary</option>
-                <option value="bg" data-flag="bg">Bulgaria</option>
-                <option value="hr" data-flag="hr">Croatia</option>
-                <option value="rs" data-flag="rs">Serbia</option>
-                <option value="mk" data-flag="mk">North Macedonia</option>
-                <option value="ua" data-flag="ua">Ukraine</option>
-                <option value="sk" data-flag="sk">Slovakia</option>
-                <option value="lt" data-flag="lt">Lithuania</option>
-                <option value="ee" data-flag="ee">Estonia</option>
-                <option value="lv" data-flag="lv">Latvia</option>
-                <option value="by" data-flag="by">Belarus</option>
-                <option value="py" data-flag="py">Paraguay</option>
-                <option value="bo" data-flag="bo">Bolivia</option>
-                <option value="gy" data-flag="gy">Guyana</option>
-                <option value="sr" data-flag="sr">Suriname</option>
-                <option value="do" data-flag="do">Dominican Republic</option>
-                <option value="hn" data-flag="hn">Honduras</option>
-                <option value="ni" data-flag="ni">Nicaragua</option>
-                <option value="cr" data-flag="cr">Costa Rica</option>
-                <option value="sv" data-flag="sv">El Salvador</option>
-                <option value="gt" data-flag="gt">Guatemala</option>
-                <option value="bz" data-flag="bz">Belize</option>
-                <option value="pa" data-flag="pa">Panama</option>
-                <option value="jm" data-flag="jm">Jamaica</option>
-                <option value="tt" data-flag="tt">Trinidad and Tobago</option>
-            </select>
+            <div id="buy-country-picker"></div>
+            <input type="hidden" id="country-select" value="es">
             <button type="button" id="submit-button">GO</button>
         </div>
     </section>
@@ -327,6 +287,7 @@
 
 </main>
 
+<script src="country-picker.js"></script>
 <script>
     const views = {
         hero: document.getElementById('hero-view'),
@@ -496,9 +457,9 @@
             id: 'manual-mobile',
             category: 'Installation',
             title: 'Manual install on mobile',
-            description: 'How to sideload the extension on Android browsers that support unpacked extensions (Kiwi, Lemur, etc.).',
-            type: 'video',
-            available: false
+            description: 'Android uses Lemur Browser and iOS uses Orion Browser. Install the browser from the store, then add GladiusBot from the Chrome Web Store.',
+            type: 'guide',
+            available: true
         },
         {
             id: 'trial-license',
@@ -590,6 +551,8 @@
         const iframe = document.getElementById('tutorial-iframe');
         const placeholder = document.getElementById('tutorial-placeholder');
         const linkCard = document.getElementById('tutorial-link-card');
+        const guide = document.getElementById('tutorial-guide');
+        const player = document.getElementById('tutorial-player');
 
         iframe.classList.add('hidden');
         iframe.hidden = true;
@@ -597,6 +560,26 @@
         placeholder.hidden = true;
         linkCard.classList.add('hidden');
         linkCard.hidden = true;
+        if (guide) {
+            guide.classList.add('hidden');
+            guide.hidden = true;
+        }
+        if (player) {
+            player.classList.remove('hidden');
+            player.hidden = false;
+        }
+
+        if (item.type === 'guide' && item.available) {
+            if (player) {
+                player.classList.add('hidden');
+                player.hidden = true;
+            }
+            if (guide) {
+                guide.classList.remove('hidden');
+                guide.hidden = false;
+            }
+            return;
+        }
 
         if (item.type === 'link' && item.available) {
             linkCard.classList.remove('hidden');
@@ -747,13 +730,14 @@
     });
 
     const select = document.getElementById('country-select');
-    const flagIcon = document.getElementById('selected-flag');
     const submitButton = document.getElementById('submit-button');
 
-    select.addEventListener('change', function () {
-        const opt = select.options[select.selectedIndex];
-        flagIcon.className = 'fi fi-' + opt.getAttribute('data-flag') + ' flag-icon';
-    });
+    if (window.gldCountryPicker) {
+        window.gldCountryPicker.mount(document.getElementById('buy-country-picker'), {
+            value: 'es',
+            hiddenInput: select
+        });
+    }
 
     const ITCH_HUB_URL = 'https://gladiusbot.itch.io/gladiusbot';
 
@@ -833,5 +817,6 @@
             .catch(err => showSiteAlert('Error: ' + err.message, false));
     });
 </script>
+<script src="site-auth-ui.js"></script>
 </body>
 </html>

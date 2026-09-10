@@ -255,11 +255,12 @@ function buildCryptoRejectionEmailHtml({ customerName, planLabel, reason, method
 </html>`;
 }
 
-function buildPasswordResetEmailHtml({ userName, resetLink, expiresInMinutes = 60 }) {
+function buildPasswordResetEmailHtml({ userName, resetLink, expiresInMinutes = 60, productLabel = 'Messager' }) {
     const year = new Date().getFullYear();
     const safeName = escapeHtml(userName || 'player');
     const safeLink = escapeHtml(resetLink || '');
     const mins = Math.max(5, Number(expiresInMinutes) || 60);
+    const product = productLabel === 'website' ? 'website account' : 'Messager account';
 
     return `<!DOCTYPE html>
 <html lang="en">
@@ -277,13 +278,13 @@ function buildPasswordResetEmailHtml({ userName, resetLink, expiresInMinutes = 6
             <td style="background:#3d2814;padding:28px 24px;text-align:center;border-bottom:3px solid #c9a227;">
               <img src="cid:gladiusboticon" alt="GladiusBot" width="88" height="88" style="display:block;margin:0 auto 12px;border-radius:12px;border:2px solid #c9a227;">
               <h1 style="margin:0;color:#f4e4bc;font-size:22px;letter-spacing:1px;font-weight:normal;">Password reset</h1>
-              <p style="margin:8px 0 0;color:#c9a227;font-size:12px;letter-spacing:2px;text-transform:uppercase;">GladiusBot · Messager</p>
+              <p style="margin:8px 0 0;color:#c9a227;font-size:12px;letter-spacing:2px;text-transform:uppercase;">GladiusBot · ${productLabel === 'website' ? 'Account' : 'Messager'}</p>
             </td>
           </tr>
           <tr>
             <td style="padding:28px 26px;color:#3d2814;font-size:16px;line-height:1.65;">
               <p style="margin:0 0 16px;">Hello, <strong>${safeName}</strong>!</p>
-              <p style="margin:0 0 20px;">We received a request to reset the password for your GladiusBot Messager account. Click the button below to choose a new password.</p>
+              <p style="margin:0 0 20px;">We received a request to reset the password for your GladiusBot ${product}. Click the button below to choose a new password.</p>
 
               <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin:0 0 22px;">
                 <tr>
@@ -320,12 +321,13 @@ function buildPasswordResetEmailHtml({ userName, resetLink, expiresInMinutes = 6
 </html>`;
 }
 
-function buildPasswordResetEmailText({ userName, resetLink, expiresInMinutes = 60 }) {
+function buildPasswordResetEmailText({ userName, resetLink, expiresInMinutes = 60, productLabel = 'Messager' }) {
     const mins = Math.max(5, Number(expiresInMinutes) || 60);
+    const product = productLabel === 'website' ? 'website account' : 'Messager';
     return [
         `Hello, ${userName || 'player'}!`,
         '',
-        'We received a request to reset your GladiusBot Messager password.',
+        `We received a request to reset your GladiusBot ${product} password.`,
         `Open this link to set a new password (valid for ${mins} minutes):`,
         resetLink,
         '',
@@ -420,6 +422,69 @@ function buildMessagerWelcomeEmailText({ userName, trialCredits = 30 }) {
     ].join('\n');
 }
 
+function buildSiteWelcomeEmailHtml({ userName }) {
+    const year = new Date().getFullYear();
+    const safeName = escapeHtml(userName || 'player');
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GladiusBot — Welcome</title>
+</head>
+<body style="margin:0;padding:0;background-color:#1a1208;font-family:Georgia,'Times New Roman',serif;">
+  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#1a1208;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;background:#f4e4bc;border:3px solid #8b6914;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="background:#3d2814;padding:28px 24px;text-align:center;border-bottom:3px solid #c9a227;">
+              <img src="cid:gladiusboticon" alt="GladiusBot" width="88" height="88" style="display:block;margin:0 auto 12px;border-radius:12px;border:2px solid #c9a227;">
+              <h1 style="margin:0;color:#f4e4bc;font-size:22px;letter-spacing:1px;font-weight:normal;">Welcome to GladiusBot</h1>
+              <p style="margin:8px 0 0;color:#c9a227;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Website account</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 26px;color:#3d2814;font-size:16px;line-height:1.65;">
+              <p style="margin:0 0 16px;">Hello, <strong>${safeName}</strong>!</p>
+              <p style="margin:0 0 16px;">Your account on gldbotserver.com is ready. You can log in to comment on patch notes, follow updates and — soon — manage your licenses in one place.</p>
+              <ol style="margin:0 0 20px;padding-left:22px;">
+                <li style="margin-bottom:8px;">Open <a href="https://gldbotserver.com/account" style="color:#5c3d1e;font-weight:bold;">your account</a> to sign in.</li>
+                <li style="margin-bottom:8px;">Visit <a href="https://gldbotserver.com/patch-notes" style="color:#5c3d1e;font-weight:bold;">Patch notes &amp; forum</a> to join the discussion.</li>
+                <li>Keep this email — your username is <strong>${safeName}</strong>.</li>
+              </ol>
+              <p style="margin:0;font-size:14px;color:#6b5344;">Support: <a href="mailto:gldbotsuport@gmail.com" style="color:#5c3d1e;">gldbotsuport@gmail.com</a></p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#3d2814;padding:20px 24px;text-align:center;border-top:2px solid #8b6914;">
+              <p style="margin:0 0 8px;color:#c9a227;font-size:13px;">
+                <a href="https://gldbotserver.com" style="color:#f4e4bc;text-decoration:none;">gldbotserver.com</a>
+              </p>
+              <p style="margin:0;color:#8b7355;font-size:11px;">&copy; ${year} GladiusBot. Independent product for Gladiatus.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+function buildSiteWelcomeEmailText({ userName }) {
+    return [
+        `Hello, ${userName || 'player'}!`,
+        '',
+        'Your GladiusBot website account is ready.',
+        'Log in: https://gldbotserver.com/account',
+        'Forum: https://gldbotserver.com/patch-notes',
+        '',
+        'Support: gldbotsuport@gmail.com',
+        '— GladiusBot · gldbotserver.com',
+    ].join('\n');
+}
+
 function buildMessagerRegisterAdminEmailHtml({ userName, email }) {
     const safeName = escapeHtml(userName || '');
     const safeEmail = escapeHtml(email || '');
@@ -462,6 +527,8 @@ module.exports = {
     buildMessagerWelcomeEmailHtml,
     buildMessagerWelcomeEmailText,
     buildMessagerRegisterAdminEmailHtml,
+    buildSiteWelcomeEmailHtml,
+    buildSiteWelcomeEmailText,
     getPurchaseEmailAttachments,
     formatPurchaseDate,
 };

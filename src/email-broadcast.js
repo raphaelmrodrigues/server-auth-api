@@ -6,7 +6,7 @@ const BROADCAST_FROM = {
     name: 'GladiusBot',
 };
 const BROADCAST_REPLY_TO = 'gldbotsuport@gmail.com';
-const DEFAULT_SUBJECT = 'GladiusBot — Informação importante';
+const DEFAULT_SUBJECT = 'GladiusBot — Important update';
 
 function escapeHtml(str) {
     return String(str || '')
@@ -40,7 +40,7 @@ function buildBroadcastEmailHtml(messageBody) {
 
     return `
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
 <body style="margin:0;padding:0;background-color:#1a1208;font-family:Georgia,'Times New Roman',serif;">
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color:#1a1208;padding:24px 12px;">
@@ -51,26 +51,28 @@ function buildBroadcastEmailHtml(messageBody) {
             <td style="background:linear-gradient(180deg,#5c3d1e 0%,#3d2814 100%);padding:28px 24px;text-align:center;border-bottom:3px solid #c9a227;">
               <img src="cid:gladiusboticon" alt="GladiusBot" width="96" height="96" style="display:block;margin:0 auto 12px;border-radius:12px;border:2px solid #c9a227;">
               <h1 style="margin:0;color:#f4e4bc;font-size:22px;letter-spacing:1px;font-weight:normal;">GladiusBot</h1>
-              <p style="margin:6px 0 0;color:#c9a227;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Mensagem oficial</p>
+              <p style="margin:6px 0 0;color:#c9a227;font-size:12px;letter-spacing:2px;text-transform:uppercase;">Official message</p>
             </td>
           </tr>
           <tr>
             <td style="padding:32px 28px;color:#3d2814;font-size:16px;line-height:1.65;">
-              <p style="margin:0 0 16px;">Olá,</p>
+              <p style="margin:0 0 16px;">Hello,</p>
               <div style="background:#fff9ed;border:1px solid #c9a227;border-radius:8px;padding:20px 22px;margin:0 0 24px;box-shadow:inset 0 1px 0 rgba(255,255,255,0.6);">
                 ${bodyHtml}
               </div>
-              <p style="margin:0 0 8px;">Atenciosamente,</p>
-              <p style="margin:0;font-weight:bold;color:#5c3d1e;">Equipe GladiusBot</p>
+              <p style="margin:0 0 8px;">Best regards,</p>
+              <p style="margin:0;font-weight:bold;color:#5c3d1e;">The GladiusBot Team</p>
             </td>
           </tr>
           <tr>
             <td style="background:#3d2814;padding:20px 24px;text-align:center;border-top:2px solid #8b6914;">
               <p style="margin:0 0 8px;color:#c9a227;font-size:13px;">
                 <a href="https://gldbotserver.com" style="color:#f4e4bc;text-decoration:none;">gldbotserver.com</a>
+                &nbsp;·&nbsp;
+                <a href="https://gldbotserver.com/patch-notes" style="color:#f4e4bc;text-decoration:none;">Patch notes</a>
               </p>
-              <p style="margin:0;color:#8b7355;font-size:11px;">&copy; ${year} GladiusBot. Produto independente para Gladiatus.</p>
-              <p style="margin:8px 0 0;color:#8b7355;font-size:11px;">Dúvidas? Responda este e-mail ou escreva para gldbotsuport@gmail.com</p>
+              <p style="margin:0;color:#8b7355;font-size:11px;">&copy; ${year} GladiusBot. Independent product for Gladiatus. Not affiliated with Gameforge.</p>
+              <p style="margin:8px 0 0;color:#8b7355;font-size:11px;">Questions? Reply to this email or write to gldbotsuport@gmail.com</p>
             </td>
           </tr>
         </table>

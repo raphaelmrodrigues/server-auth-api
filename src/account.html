@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
+    <title>GladiusBot — Account</title>
+    <link rel="canonical" href="https://gldbotserver.com/account">
+    <meta name="description" content="Log in or create a GladiusBot website account to comment on patch notes.">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flag-icons/6.6.6/css/flag-icons.min.css">
+    <link rel="stylesheet" href="site.css">
+</head>
+<body class="legal-page account-page">
+<div class="legal-wrap account-wrap">
+    <a class="legal-back" href="/"><i class="fas fa-arrow-left"></i> Back to home</a>
+
+    <div class="account-card">
+        <header class="account-head">
+            <img src="./images/gladiusbot-icon-128.png" width="72" height="72" alt="GladiusBot">
+            <h1>Your account</h1>
+            <p>Forum, patch notes and upcoming license dashboard</p>
+        </header>
+
+        <div class="account-tabs" role="tablist">
+            <button type="button" class="is-active" data-tab="login">Log in</button>
+            <button type="button" data-tab="register">Register</button>
+            <button type="button" data-tab="forgot">Forgot password</button>
+        </div>
+
+        <p id="account-status" class="account-status" role="status"></p>
+
+        <form id="panel-login" class="account-form is-active" autocomplete="on">
+            <label>Username or email
+                <input type="text" id="login-user" name="username" autocomplete="username" required>
+            </label>
+            <label>Password
+                <input type="password" id="login-pass" name="password" autocomplete="current-password" required>
+            </label>
+            <button type="submit" class="btn-primary"><i class="fas fa-right-to-bracket"></i> Log in</button>
+        </form>
+
+        <form id="panel-register" class="account-form" autocomplete="on">
+            <p class="account-hint">Creates a website account. Your admin login also works here. Messager bot accounts stay separate.</p>
+            <div class="forum-hp" aria-hidden="true">
+                <label for="reg-website">Website</label>
+                <input type="text" id="reg-website" name="website" tabindex="-1" autocomplete="off">
+            </div>
+            <label>Username
+                <input type="text" id="reg-user" name="username" minlength="3" maxlength="24" pattern="[A-Za-z0-9_]{3,24}" autocomplete="username" required>
+            </label>
+            <label>Display name <span class="optional">(optional)</span>
+                <input type="text" id="reg-display" name="displayName" maxlength="32" placeholder="Shown on the forum">
+            </label>
+            <label>Email
+                <input type="email" id="reg-email" name="email" autocomplete="email" required>
+            </label>
+            <label>Password
+                <input type="password" id="reg-pass" name="password" minlength="6" maxlength="128" autocomplete="new-password" required>
+            </label>
+            <div class="account-country-field">
+                <span>Country <span class="optional">(optional, for future license region)</span></span>
+                <div id="reg-country-picker"></div>
+                <input type="hidden" id="reg-country" name="country" value="">
+            </div>
+            <label class="account-check">
+                <input type="checkbox" id="reg-marketing"> Email me about new versions (optional)
+            </label>
+            <button type="submit" class="btn-primary"><i class="fas fa-user-plus"></i> Create account</button>
+        </form>
+
+        <form id="panel-forgot" class="account-form">
+            <p class="account-hint">Enter your username or email. If the account exists, we send a reset link valid for 1 hour.</p>
+            <label>Username or email
+                <input type="text" id="forgot-lookup" required>
+            </label>
+            <button type="submit" class="btn-primary"><i class="fas fa-envelope"></i> Send reset link</button>
+        </form>
+    </div>
+</div>
+<script src="site-auth-ui.js"></script>
+<script src="country-picker.js"></script>
+<script>
+(function () {
+    const params = new URLSearchParams(location.search);
+    const next = params.get('next') || '/';
+    const statusEl = document.getElementById('account-status');
+
+    if (window.gldCountryPicker) {
+        window.gldCountryPicker.mount(document.getElementById('reg-country-picker'), {
+            placeholder: 'Select country',
+            hiddenInput: document.getElementById('reg-country'),
+            storeName: true
+        });
+    }
+
+    function setStatus(text, isError) {
+        statusEl.textContent = text || '';
+        statusEl.classList.toggle('is-error', !!isError);
+    }
+
+    function showTab(id) {
+        document.querySelectorAll('.account-tabs button').forEach(function (btn) {
+            btn.classList.toggle('is-active', btn.getAttribute('data-tab') === id);
+        });
+        document.querySelectorAll('.account-form').forEach(function (form) {
+            form.classList.toggle('is-active', form.id === 'panel-' + id);
+        });
+        setStatus('');
+    }
+
+    document.querySelectorAll('.account-tabs button').forEach(function (btn) {
+        btn.addEventListener('click', function () { showTab(btn.getAttribute('data-tab')); });
+    });
+
+    const initial = params.get('tab');
+    if (initial === 'register' || initial === 'forgot') showTab(initial);
+
+    if (window.gldSiteAuth && window.gldSiteAuth.getToken()) {
+        window.gldSiteAuth.fetchMe().then(function (user) {
+            if (user) location.replace(next);
+        });
+    }
+
+    document.getElementById('panel-login').addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        setStatus('Signing in…');
+        try {
+            const res = await fetch('/api/site/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('login-user').value,
+                    password: document.getElementById('login-pass').value
+                })
+            });
+            const data = await res.json();
+            if (!data.success || !data.token) {
+                setStatus(data.message || 'Invalid username, email or password.', true);
+                return;
+            }
+            window.gldSiteAuth.setToken(data.token);
+            location.href = next;
+        } catch (e) {
+            setStatus('Connection error.', true);
+        }
+    });
+
+    document.getElementById('panel-register').addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        setStatus('Creating account…');
+        try {
+            const res = await fetch('/api/site/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    username: document.getElementById('reg-user').value,
+                    displayName: document.getElementById('reg-display').value,
+                    email: document.getElementById('reg-email').value,
+                    password: document.getElementById('reg-pass').value,
+                    country: document.getElementById('reg-country').value,
+                    marketingOptIn: document.getElementById('reg-marketing').checked,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || '',
+                    website: document.getElementById('reg-website').value
+                })
+            });
+            const data = await res.json();
+            if (!data.success) {
+                setStatus(data.message || 'Could not register.', true);
+                return;
+            }
+            if (data.token) window.gldSiteAuth.setToken(data.token);
+            location.href = next;
+        } catch (e) {
+            setStatus('Connection error.', true);
+        }
+    });
+
+    document.getElementById('panel-forgot').addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        setStatus('Sending…');
+        try {
+            const res = await fetch('/api/site/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: document.getElementById('forgot-lookup').value })
+            });
+            const data = await res.json();
+            setStatus(data.message || 'If that account exists, we sent an email.', !data.success);
+        } catch (e) {
+            setStatus('Connection error.', true);
+        }
+    });
+})();
+</script>
+</body>
+</html>

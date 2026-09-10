@@ -123,6 +123,9 @@
         <a href="#" onclick="showPanel('messager-section')" id="nav-messager" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Messager</a>
       </li>
       <li class="mr-2">
+        <a href="#" onclick="showPanel('site-users-section')" id="nav-site-users" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Usuários do site</a>
+      </li>
+      <li class="mr-2">
         <a href="#" onclick="showPanel('bot-monitor-section')" id="nav-bot-monitor" class="inline-block py-2 px-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-blue-600 hover:border-blue-300">Monitoramento do Bot</a>
       </li>
       <li class="mr-2">
@@ -211,7 +214,7 @@
           <div class="space-y-4">
             <div>
               <label for="email-campaign-subject" class="block text-sm font-medium text-gray-700 mb-2">Assunto</label>
-              <input type="text" id="email-campaign-subject" maxlength="200" placeholder="GladiusBot — Informação importante" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800">
+              <input type="text" id="email-campaign-subject" maxlength="200" placeholder="GladiusBot — Important update" class="w-full p-3 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-800">
             </div>
             <div>
               <label for="email-campaign-message" class="block text-sm font-medium text-gray-700 mb-2">Mensagem</label>
@@ -637,6 +640,38 @@
     </div>
   </section>
 
+  <section id="site-users-section" class="hidden space-y-6">
+    <div class="p-4 md:p-6 bg-white rounded-lg shadow-xl">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-2xl font-semibold text-gray-800">Usuários do site</h2>
+          <p class="text-sm text-gray-500">Contas criadas em gldbotserver.com (fórum). Futuro: vincular licença e playerId.</p>
+        </div>
+        <span id="site-users-meta" class="text-sm text-gray-500">Carregando...</span>
+      </div>
+      <div class="flex gap-2 mb-4">
+        <input id="site-users-q" type="text" placeholder="username, e-mail ou nome de exibição" class="flex-1 p-2 border border-gray-300 rounded-md text-sm" onkeydown="if(event.key==='Enter'){event.preventDefault();loadSiteUsers();}">
+        <button type="button" onclick="loadSiteUsers()" class="bg-gray-800 hover:bg-gray-900 text-white font-semibold py-2 px-4 rounded text-sm">Buscar</button>
+      </div>
+      <div class="overflow-x-auto border border-gray-200 rounded-lg max-h-[70vh] overflow-y-auto">
+        <table class="min-w-full text-sm">
+          <thead class="bg-gray-50 text-left text-gray-600 sticky top-0">
+            <tr>
+              <th class="p-2">Usuário</th>
+              <th class="p-2">E-mail</th>
+              <th class="p-2">País</th>
+              <th class="p-2">Status</th>
+              <th class="p-2">Último login</th>
+              <th class="p-2">Licença</th>
+              <th class="p-2">Cadastro</th>
+            </tr>
+          </thead>
+          <tbody id="site-users-body" class="divide-y divide-gray-100"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
 </div>
 
 <script>
@@ -655,6 +690,7 @@
     'bot-monitor-section': 'nav-bot-monitor',
     'security-section': 'nav-security',
     'crypto-orders-section': 'nav-crypto-orders',
+    'site-users-section': 'nav-site-users',
   };
 
   // --- Funções de Autenticação e Navegação ---
@@ -744,6 +780,10 @@
 
     if (panelId === 'crypto-orders-section') {
       loadCryptoOrders();
+    }
+
+    if (panelId === 'site-users-section') {
+      loadSiteUsers();
     }
   }
 
@@ -2182,6 +2222,57 @@
       body.innerHTML = rows || '<tr><td class="p-3 text-gray-500" colspan="7">Nenhuma conta encontrada.</td></tr>';
     } catch (error) {
       console.error('Erro messager users:', error);
+      if (body) body.innerHTML = '<tr><td class="p-3 text-red-500" colspan="7">Erro de conexão.</td></tr>';
+    }
+  }
+
+  async function loadSiteUsers() {
+    const token = localStorage.getItem(TOKEN_KEY);
+    const q = document.getElementById('site-users-q')?.value?.trim() || '';
+    const body = document.getElementById('site-users-body');
+    const meta = document.getElementById('site-users-meta');
+    if (!token) return logout();
+    if (body) body.innerHTML = '<tr><td class="p-3 text-gray-500" colspan="7">Carregando...</td></tr>';
+
+    try {
+      const response = await fetch(`${API_DOMAIN}/admin/site-users?q=${encodeURIComponent(q)}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (response.status === 401 || response.status === 403) return logout();
+      const data = await response.json();
+      if (!data.success) {
+        if (body) body.innerHTML = `<tr><td class="p-3 text-red-500" colspan="7">${escapeHtml(data.message || 'Erro')}</td></tr>`;
+        if (meta) meta.textContent = 'Erro';
+        return;
+      }
+      const users = data.users || [];
+      if (meta) meta.textContent = users.length + ' usuário(s)';
+      if (!body) return;
+      const rows = users.map((u) => {
+        const status = u.status === 'banned'
+          ? '<span class="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700">Banido</span>'
+          : '<span class="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700">Ativo</span>';
+        const license = u.licenseKey
+          ? '<code class="text-xs bg-gray-100 px-1 rounded">' + escapeHtml(u.licenseKey) + '</code>'
+          : '<span class="text-gray-400">—</span>';
+        const display = u.displayName && u.displayName !== u.username
+          ? '<div class="text-xs text-gray-500">' + escapeHtml(u.displayName) + '</div>'
+          : '';
+        return `
+          <tr>
+            <td class="p-2"><div class="font-medium">${escapeHtml(u.username || '—')}</div>${display}</td>
+            <td class="p-2 text-xs">${escapeHtml(u.email || '—')}</td>
+            <td class="p-2 text-xs">${escapeHtml(u.country || u.lastLoginCountry || '—')}</td>
+            <td class="p-2">${status}</td>
+            <td class="p-2 whitespace-nowrap text-xs">${fmtMessagerDate(u.lastLoginAt)}<div class="text-gray-400">${escapeHtml(u.lastLoginIp || '')}</div></td>
+            <td class="p-2 text-xs">${license}${u.playerId ? '<div class="text-gray-400">' + escapeHtml(u.playerId) + '</div>' : ''}</td>
+            <td class="p-2 whitespace-nowrap text-xs">${fmtMessagerDate(u.createdAt)}</td>
+          </tr>
+        `;
+      }).join('');
+      body.innerHTML = rows || '<tr><td class="p-3 text-gray-500" colspan="7">Nenhum cadastro no site ainda.</td></tr>';
+    } catch (error) {
+      console.error('Erro site users:', error);
       if (body) body.innerHTML = '<tr><td class="p-3 text-red-500" colspan="7">Erro de conexão.</td></tr>';
     }
   }

@@ -95,6 +95,8 @@ const {
     buildMessagerWelcomeEmailHtml,
     buildMessagerWelcomeEmailText,
     buildMessagerRegisterAdminEmailHtml,
+    buildSiteWelcomeEmailHtml,
+    buildSiteWelcomeEmailText,
     getPurchaseEmailAttachments,
 } = require('./purchase-email');
 const {
@@ -111,6 +113,14 @@ const {
     enrichLicenseFromDownloadKey,
     fetchProfileGames,
 } = require('./itch-api');
+const {
+    registerForumRoutes,
+} = require('./forum-board');
+const {
+    SiteUser,
+    registerSiteAuthRoutes,
+    resolveSiteUser,
+} = require('./site-auth');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 configurePlayerGuard({ sgMail });
 
@@ -133,7 +143,7 @@ app.get('/robots.txt', (req, res) => {
 });
 
 app.get('/sitemap.xml', (req, res) => {
-    const paths = ['/', '/privacy'];
+    const paths = ['/', '/privacy', '/patch-notes', '/forum', '/account'];
     const body = '<?xml version="1.0" encoding="UTF-8"?>\n' +
         '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
         paths.map(p => '  <url><loc>https://' + CANONICAL_HOST + p + '</loc></url>').join('\n') +
@@ -519,6 +529,39 @@ app.get('/privacy', async (req, res) => {
 
 app.get('/privacy-policy', (req, res) => {
     res.redirect(301, '/privacy');
+});
+
+app.get('/patch-notes', (req, res) => {
+    return res.sendFile(path.join(__dirname, 'patch-notes.html'));
+});
+
+app.get('/forum', (req, res) => {
+    return res.sendFile(path.join(__dirname, 'patch-notes.html'));
+});
+
+app.get('/account', (req, res) => {
+    return res.sendFile(path.join(__dirname, 'account.html'));
+});
+
+registerSiteAuthRoutes(app, {
+    License,
+    JWT_SECRET,
+    sgMail,
+    authenticateAdminToken,
+    PURCHASE_FROM,
+    PURCHASE_REPLY_TO,
+    buildPasswordResetEmailHtml,
+    buildPasswordResetEmailText,
+    buildSiteWelcomeEmailHtml,
+    buildSiteWelcomeEmailText,
+    getPurchaseEmailAttachments,
+    isValidEmail,
+    normalizeEmail,
+});
+
+registerForumRoutes(app, {
+    resolveSiteUser: (req) => resolveSiteUser(req, JWT_SECRET),
+    SiteUser,
 });
 
 app.get('/licenses', async (req, res) => {
@@ -2397,6 +2440,23 @@ app.post('/api/reset-password', async (req, res) => {
     }
 
     try {
+        const siteUser = await SiteUser.findOne({
+            resetToken: token,
+            resetTokenExpiration: { $gt: Date.now() },
+        });
+        if (siteUser) {
+            const hashedPassword = await bcrypt.hash(password, 10);
+            siteUser.password = hashedPassword;
+            siteUser.resetToken = undefined;
+            siteUser.resetTokenExpiration = undefined;
+            await siteUser.save();
+            return res.status(200).json({
+                success: true,
+                source: 'site',
+                message: 'Password reset successful. You can log in again on the website.',
+            });
+        }
+
         const user = await License.findOne({
             resetToken: token,
             resetTokenExpiration: { $gt: Date.now() },

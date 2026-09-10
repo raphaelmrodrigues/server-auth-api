@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
+    <link rel="apple-touch-icon" href="./images/gladiusbot-icon-128.png">
+    <title>Patch notes &amp; Forum — GladiusBot</title>
+    <link rel="canonical" href="https://gldbotserver.com/patch-notes">
+    <meta name="description" content="GladiusBot patch notes, version history and community forum. See what is new and leave suggestions.">
+    <meta name="robots" content="index, follow">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="site.css">
+</head>
+<body class="app forum-page">
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <a href="/" class="sidebar-brand-link" aria-label="GladiusBot home">
+            <img class="sidebar-logo-full" src="./images/gladiusbot-logo.svg" alt="GladiusBot">
+        </a>
+        <span class="sidebar-version">v4.0.1</span>
+    </div>
+    <nav class="sidebar-nav">
+        <a href="/" class="sidebar-link"><i class="fas fa-home"></i> Home</a>
+        <a href="/patch-notes" class="sidebar-link is-current"><i class="fas fa-scroll"></i> Patch notes &amp; Forum</a>
+        <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener" class="sidebar-link sidebar-link-chrome"><i class="fab fa-chrome"></i> Install Extension</a>
+        <a href="/" class="sidebar-link"><i class="fas fa-download"></i> Download Bot</a>
+        <a href="/" class="sidebar-link is-accent"><i class="fas fa-shopping-cart"></i> Buy</a>
+    </nav>
+    <div class="sidebar-footer-links">
+        <a href="/privacy">Privacy Policy</a>
+        <a href="mailto:gldbotsuport@gmail.com">Support</a>
+    </div>
+</aside>
+
+<main class="site-main forum-main">
+    <div class="forum-layout">
+        <section id="releases" class="forum-panel notes-panel" aria-labelledby="notes-title">
+            <header class="forum-panel-head">
+                <h2 id="notes-title"><i class="fas fa-scroll"></i> Version history</h2>
+                <p>Newest first. Entries describe what shipped in that version.</p>
+            </header>
+            <div id="notes-list" class="notes-list"></div>
+        </section>
+
+        <section id="forum" class="forum-panel board-panel" aria-labelledby="board-title">
+            <header class="forum-panel-head">
+                <h2 id="board-title"><i class="fas fa-comments"></i> Community board</h2>
+                <p>Ideas, bugs you hit, or a thank-you. Log in to post and like — everyone can still read.</p>
+            </header>
+
+            <div id="forum-guest-gate" class="forum-gate">
+                <p>Log in to comment and like. Registered players post under their account name.</p>
+                <a class="hero-btn hero-btn-primary" href="/account?next=/patch-notes%23forum"><i class="fas fa-right-to-bracket"></i> Log in to post</a>
+            </div>
+
+            <form id="forum-form" class="forum-form" autocomplete="on" hidden>
+                <div class="forum-hp" aria-hidden="true">
+                    <label for="forum-website">Website</label>
+                    <input type="text" id="forum-website" name="website" tabindex="-1" autocomplete="off">
+                </div>
+                <p class="forum-posting-as" id="forum-posting-as"></p>
+                <div class="form-group">
+                    <label for="forum-message">Comment</label>
+                    <textarea id="forum-message" name="message" rows="4" maxlength="800" required placeholder="Suggestion, question, or feedback…"></textarea>
+                    <div class="forum-form-meta">
+                        <span>Be respectful. No ads, keys, or personal data.</span>
+                        <span id="forum-char-count">0/800</span>
+                    </div>
+                </div>
+                <div class="forum-form-actions">
+                    <button type="button" class="forum-emoji-btn" data-emoji-for="forum-message" aria-label="Add emoji">
+                        <i class="far fa-face-smile"></i>
+                    </button>
+                    <button type="submit" class="btn-primary" id="forum-submit">
+                        <i class="fas fa-feather-pointed"></i> Post comment
+                    </button>
+                </div>
+                <p id="forum-form-status" class="forum-status" role="status"></p>
+            </form>
+
+            <div id="forum-comments" class="forum-comments" aria-live="polite">
+                <p class="forum-empty">Loading comments…</p>
+            </div>
+        </section>
+    </div>
+
+    <div id="note-lightbox" class="note-lightbox" hidden>
+        <div class="note-lightbox-frame">
+            <button type="button" class="note-lightbox-close" id="note-lightbox-close" aria-label="Close">×</button>
+            <button type="button" class="note-lightbox-nav is-prev" id="note-lightbox-prev" aria-label="Previous">‹</button>
+            <img id="note-lightbox-img" alt="">
+            <button type="button" class="note-lightbox-nav is-next" id="note-lightbox-next" aria-label="Next">›</button>
+            <p class="note-lightbox-caption" id="note-lightbox-caption"></p>
+        </div>
+    </div>
+
+    <div id="forum-emoji-modal" class="forum-emoji-modal" hidden>
+        <div class="forum-emoji-sheet" role="dialog" aria-label="Choose an emoji">
+            <header>
+                <strong>Emojis</strong>
+                <button type="button" id="forum-emoji-close" aria-label="Close">×</button>
+            </header>
+            <div id="forum-emoji-grid" class="forum-emoji-grid"></div>
+        </div>
+    </div>
+</main>
+
+<script src="site-auth-ui.js"></script>
+<script>
+(function () {
+    const RELEASES = [
+        {
+            version: '4.0.0',
+            date: 'September 2026',
+            tag: 'Latest',
+            summary: 'Major release: Auto-Forge, encyclopedia, events feed, and a reliable Underworld enter flow.',
+            new: [
+                'Auto-Forge tab after Foundry, with expandable recipe rules, rename, status badges, success/fail counters and “load into planner”.',
+                'Forge encyclopedia with in-game item sprites and material data.',
+                'Events & news panel inside the bot, with a scrollable announcement list.',
+                'Forge protection so protected items are skipped during smelting.',
+                'Underworld auto-enter now opens the Hermit difficulty page and uses the game’s own buttons — no more stopping on the Gameforge lobby.'
+            ],
+            improved: [
+                'Forge icons use authentic Gladiatus sprites (anvil, items, materials).',
+                'Forge rule labels translated across the supported languages.',
+                '“Run now” on Forge writes to the log box and no longer requires the main bot switch — only the Forge toggle.',
+                'Login automatic cookie is set when Underworld auto-enter is enabled, so a game logout can recover.'
+            ],
+            fixes: [
+                'Popup turning white after switching language.',
+                'Feature tabs stacking on top of each other instead of switching.',
+                'Bot state restored after an Underworld enter if the session is kicked to the lobby.'
+            ]
+        },
+        {
+            version: '3.2.0',
+            date: '',
+            tag: '',
+            summary: 'Auction food filter and the Messager — a dedicated bulk-PM companion.',
+            new: [
+                'Auction option: “do not bid on large-slot food”. When enabled, the bot skips food items that occupy 2×2 slots or larger, so gold is not wasted on bulky food.',
+                'Messaging bot under the Message tab: GladiusBot Messager, a separate Chrome extension for bulk private messages.',
+                'Messager filters for rank, ally, ignore list and country, plus a free trial with credits to test sending before buying.'
+            ],
+            improved: [
+                'Food bidding in the auction house is now more selective: small food can still be covered while large stacks are ignored.'
+            ],
+            fixes: []
+        },
+        {
+            version: '3.1.0',
+            date: '',
+            tag: '',
+            summary: 'Marketplace buying by material — pick what you need, optionally by color.',
+            new: [
+                'Marketplace feature: choose specific materials to purchase instead of buying whatever is listed.',
+                'Color is optional. If you do not select a color, the bot buys that material in every color/quality available.',
+                'If you do pick a color, only matching materials are purchased — useful for forge recipes that need a specific grade.'
+            ],
+            improved: [],
+            fixes: []
+        }
+    ];
+
+    const PATCH_SHOTS = [
+        'pic-1-v4.0.0.jpeg',
+        'pic-2-v4.0.0.jpeg',
+        'pic-3-v4.0.0.jpeg',
+        'pic-1-v3.2.0.jpeg',
+        'pic-2-v3.2.0.png',
+        'pic-1-v3.1.0.jpeg',
+        'pic-2-v3.1.0.jpeg'
+    ];
+
+    function shotsFor(version) {
+        const needle = '-v' + version + '.';
+        return PATCH_SHOTS.filter(function (file) { return file.indexOf(needle) !== -1; });
+    }
+
+    function shotsHtml(version) {
+        const files = shotsFor(version);
+        if (!files.length) return '';
+        return '<div class="note-shots">' +
+            '<p class="note-shots-label"><i class="fas fa-camera"></i> Screenshots</p>' +
+            '<div class="note-shots-row">' +
+            files.map(function (file, i) {
+                const src = './images/versions/' + file;
+                return '<button type="button" class="note-shot" data-src="' + src + '" data-version="' + version + '" data-index="' + i + '" aria-label="Open screenshot ' + (i + 1) + ' of v' + version + '">' +
+                    '<img src="' + src + '" alt="v' + version + ' screenshot ' + (i + 1) + '" loading="lazy">' +
+                    '</button>';
+            }).join('') +
+            '</div></div>';
+    }
+
+    const notesList = document.getElementById('notes-list');
+    notesList.innerHTML = RELEASES.map(function (rel, index) {
+        function block(title, items, icon) {
+            if (!items || !items.length) return '';
+            return '<div class="note-block">' +
+                '<h4><i class="fas ' + icon + '"></i> ' + title + '</h4>' +
+                '<ul>' + items.map(function (item) { return '<li>' + item + '</li>'; }).join('') + '</ul>' +
+                '</div>';
+        }
+        return '<article class="note-card' + (index === 0 ? ' is-latest' : '') + '">' +
+            '<header class="note-card-head">' +
+                '<div class="note-version">v' + rel.version + '</div>' +
+                (rel.tag ? '<span class="note-tag">' + rel.tag + '</span>' : '') +
+                (rel.date ? '<span class="note-date">' + rel.date + '</span>' : '') +
+            '</header>' +
+            '<p class="note-summary">' + rel.summary + '</p>' +
+            block('New', rel.new, 'fa-plus') +
+            block('Improved', rel.improved, 'fa-arrow-up') +
+            block('Fixed', rel.fixes, 'fa-wrench') +
+            shotsHtml(rel.version) +
+            '</article>';
+    }).join('');
+
+    (function setupLightbox() {
+        const box = document.getElementById('note-lightbox');
+        const img = document.getElementById('note-lightbox-img');
+        const caption = document.getElementById('note-lightbox-caption');
+        const prevBtn = document.getElementById('note-lightbox-prev');
+        const nextBtn = document.getElementById('note-lightbox-next');
+        let shots = [];
+        let index = 0;
+
+        function show(i) {
+            if (!shots.length) return;
+            index = (i + shots.length) % shots.length;
+            const shot = shots[index];
+            img.src = shot.src;
+            img.alt = shot.alt;
+            caption.textContent = 'v' + shot.version + ' · ' + (index + 1) + ' / ' + shots.length;
+            prevBtn.hidden = shots.length < 2;
+            nextBtn.hidden = shots.length < 2;
+            box.hidden = false;
+        }
+
+        function close() {
+            box.hidden = true;
+            img.src = '';
+        }
+
+        notesList.addEventListener('click', function (ev) {
+            const btn = ev.target.closest('.note-shot');
+            if (!btn) return;
+            const row = btn.closest('.note-shots-row');
+            shots = Array.prototype.map.call(row.querySelectorAll('.note-shot'), function (el) {
+                return {
+                    src: el.getAttribute('data-src'),
+                    version: el.getAttribute('data-version'),
+                    alt: el.querySelector('img') ? el.querySelector('img').alt : ''
+                };
+            });
+            show(Number(btn.getAttribute('data-index')) || 0);
+        });
+
+        document.getElementById('note-lightbox-close').addEventListener('click', close);
+        prevBtn.addEventListener('click', function (ev) { ev.stopPropagation(); show(index - 1); });
+        nextBtn.addEventListener('click', function (ev) { ev.stopPropagation(); show(index + 1); });
+        box.addEventListener('click', function (ev) {
+            if (ev.target === box) close();
+        });
+        document.addEventListener('keydown', function (ev) {
+            if (box.hidden) return;
+            if (ev.key === 'Escape') close();
+            if (ev.key === 'ArrowLeft') show(index - 1);
+            if (ev.key === 'ArrowRight') show(index + 1);
+        });
+    })();
+
+    const form = document.getElementById('forum-form');
+    const gateEl = document.getElementById('forum-guest-gate');
+    const postingAsEl = document.getElementById('forum-posting-as');
+    const messageEl = document.getElementById('forum-message');
+    const statusEl = document.getElementById('forum-form-status');
+    const listEl = document.getElementById('forum-comments');
+    const submitEl = document.getElementById('forum-submit');
+    const countEl = document.getElementById('forum-char-count');
+    const hpEl = document.getElementById('forum-website');
+    const gateDefaultHtml = gateEl.innerHTML;
+    let currentUser = null;
+
+    function authHeaders(extra) {
+        const headers = Object.assign({ 'Content-Type': 'application/json' }, extra || {});
+        const token = window.gldSiteAuth && window.gldSiteAuth.getToken();
+        if (token) headers.Authorization = 'Bearer ' + token;
+        return headers;
+    }
+
+    function applyAuthUi(user) {
+        currentUser = user;
+        if (user && user.forumBlocked && !user.isAdmin) {
+            gateEl.hidden = false;
+            form.hidden = true;
+            gateEl.innerHTML = '<p>Your account cannot comment on the forum.</p>';
+        } else if (user) {
+            gateEl.innerHTML = gateDefaultHtml;
+            gateEl.hidden = true;
+            form.hidden = false;
+            postingAsEl.innerHTML = user.isAdmin
+                ? 'Posting as <strong>' + escapeHtml(user.displayName || user.username) + '</strong> <span class="forum-admin-badge">Admin</span>'
+                : 'Posting as <strong>' + escapeHtml(user.displayName || user.username) + '</strong>';
+        } else {
+            gateEl.innerHTML = gateDefaultHtml;
+            gateEl.hidden = false;
+            form.hidden = true;
+        }
+        loadComments();
+    }
+
+    function escapeHtml(str) {
+        return String(str || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function setStatus(text, isError) {
+        statusEl.textContent = text || '';
+        statusEl.classList.toggle('is-error', !!isError);
+    }
+
+    function timeAgo(iso) {
+        const then = new Date(iso).getTime();
+        if (!then) return '';
+        const sec = Math.max(0, Math.floor((Date.now() - then) / 1000));
+        if (sec < 60) return 'just now';
+        const min = Math.floor(sec / 60);
+        if (min < 60) return min + 'm ago';
+        const hr = Math.floor(min / 60);
+        if (hr < 24) return hr + 'h ago';
+        const day = Math.floor(hr / 24);
+        if (day < 14) return day + 'd ago';
+        return new Date(iso).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+
+    function commentActionsHtml(c, isReply) {
+        const canReply = currentUser && !currentUser.forumBlocked && !isReply;
+        const canDelete = currentUser && (currentUser.isAdmin || (c.userId && c.userId === currentUser.id));
+        const canBlock = currentUser && currentUser.isAdmin && c.userId && !c.isAdmin && c.userId !== currentUser.id;
+        return '<div class="forum-comment-actions">' +
+            '<button type="button" class="forum-like' + (c.liked ? ' is-liked' : '') + '" data-like="' + escapeHtml(c.id) + '" aria-pressed="' + (c.liked ? 'true' : 'false') + '" title="' + (currentUser ? (c.liked ? 'Unlike' : 'Like') : 'Log in to like') + '">' +
+                '<i class="' + (c.liked ? 'fas' : 'far') + ' fa-heart"></i>' +
+                '<span>' + (c.likes || 0) + '</span>' +
+            '</button>' +
+            (canReply ? '<button type="button" class="forum-reply-btn" data-reply="' + escapeHtml(c.id) + '">Reply</button>' : '') +
+            (canDelete ? '<button type="button" class="forum-delete" data-delete="' + escapeHtml(c.id) + '">Delete</button>' : '') +
+            (canBlock ? '<button type="button" class="forum-block" data-block="' + escapeHtml(c.userId) + '" data-name="' + escapeHtml(c.name) + '">Block</button>' : '') +
+            '</div>';
+    }
+
+    function renderOneComment(c, isReply) {
+        const admin = !!c.isAdmin;
+        const replies = (!isReply && Array.isArray(c.replies) && c.replies.length)
+            ? '<div class="forum-replies">' + c.replies.map(function (r) { return renderOneComment(r, true); }).join('') + '</div>'
+            : '';
+        return '<article class="forum-comment' + (admin ? ' is-admin' : '') + (isReply ? ' is-reply' : '') + '" data-id="' + escapeHtml(c.id) + '">' +
+            '<div class="forum-comment-top">' +
+                '<strong class="forum-comment-name">' + escapeHtml(c.name) +
+                    (admin ? ' <span class="forum-admin-badge">Admin</span>' : '') +
+                '</strong>' +
+                '<time datetime="' + escapeHtml(c.createdAt) + '">' + timeAgo(c.createdAt) + '</time>' +
+            '</div>' +
+            '<p class="forum-comment-body">' + escapeHtml(c.message).replace(/\n/g, '<br>') + '</p>' +
+            commentActionsHtml(c, isReply) +
+            '<div class="forum-reply-wrap" hidden>' +
+                '<textarea class="forum-reply-input" rows="2" maxlength="800" placeholder="Write a reply…"></textarea>' +
+                '<div class="forum-form-actions">' +
+                    '<button type="button" class="forum-emoji-btn" aria-label="Add emoji"><i class="far fa-face-smile"></i></button>' +
+                    '<button type="button" class="forum-reply-send" data-parent="' + escapeHtml(c.id) + '">Send reply</button>' +
+                '</div>' +
+            '</div>' +
+            replies +
+            '</article>';
+    }
+
+    function renderComments(comments) {
+        if (!comments.length) {
+            listEl.innerHTML = '<p class="forum-empty">No comments yet. Be the first to write something.</p>';
+            return;
+        }
+        listEl.innerHTML = comments.map(function (c) { return renderOneComment(c, false); }).join('');
+    }
+
+    async function loadComments() {
+        try {
+            const res = await fetch('/api/forum/comments', { headers: authHeaders() });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.message || 'Failed');
+            renderComments(data.comments || []);
+        } catch (err) {
+            listEl.innerHTML = '<p class="forum-empty is-error">Could not load comments. Try again in a moment.</p>';
+        }
+    }
+
+    messageEl.addEventListener('input', function () {
+        countEl.textContent = messageEl.value.length + '/800';
+    });
+
+    const EMOJIS = [
+        '😀','😁','😂','🤣','😊','😍','🤩','😎','😇','😉',
+        '🙂','🤗','🤔','😐','😴','😭','😤','🤯','😱','🥳',
+        '👍','👎','👏','🙌','🙏','💪','🔥','✨','⭐','💯',
+        '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','💖',
+        '⚔️','🛡️','🏆','👑','⚡','💀','🐉','🪙','💎','🎯',
+        '✅','❌','⚠️','📌','💡','👀','🤝','🫡','🫠','🫡'
+    ].filter(function (e, i, arr) { return arr.indexOf(e) === i; });
+
+    const emojiModal = document.getElementById('forum-emoji-modal');
+    const emojiGrid = document.getElementById('forum-emoji-grid');
+    let emojiTarget = messageEl;
+
+    emojiGrid.innerHTML = EMOJIS.map(function (emo) {
+        return '<button type="button" class="forum-emoji-pick">' + emo + '</button>';
+    }).join('');
+
+    function openEmojiPicker(textarea) {
+        emojiTarget = textarea;
+        emojiModal.hidden = false;
+    }
+
+    function closeEmojiPicker() {
+        emojiModal.hidden = true;
+    }
+
+    function insertEmoji(textarea, emoji) {
+        if (!textarea) return;
+        const start = textarea.selectionStart || textarea.value.length;
+        const end = textarea.selectionEnd || textarea.value.length;
+        textarea.value = textarea.value.slice(0, start) + emoji + textarea.value.slice(end);
+        textarea.focus();
+        const pos = start + emoji.length;
+        textarea.selectionStart = textarea.selectionEnd = pos;
+        textarea.dispatchEvent(new Event('input'));
+    }
+
+    document.querySelectorAll('[data-emoji-for]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            const id = btn.getAttribute('data-emoji-for');
+            openEmojiPicker(document.getElementById(id));
+        });
+    });
+
+    emojiGrid.addEventListener('click', function (ev) {
+        const pick = ev.target.closest('.forum-emoji-pick');
+        if (!pick) return;
+        insertEmoji(emojiTarget, pick.textContent);
+        closeEmojiPicker();
+    });
+    document.getElementById('forum-emoji-close').addEventListener('click', closeEmojiPicker);
+    emojiModal.addEventListener('click', function (ev) {
+        if (ev.target === emojiModal) closeEmojiPicker();
+    });
+    document.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Escape' && !emojiModal.hidden) closeEmojiPicker();
+    });
+
+    form.addEventListener('submit', async function (ev) {
+        ev.preventDefault();
+        setStatus('');
+        submitEl.disabled = true;
+        try {
+            const res = await fetch('/api/forum/comments', {
+                method: 'POST',
+                headers: authHeaders(),
+                body: JSON.stringify({
+                    message: messageEl.value,
+                    website: hpEl.value
+                })
+            });
+            const data = await res.json();
+            if (data.needLogin) {
+                location.href = '/account?next=/patch-notes%23forum';
+                return;
+            }
+            if (!res.ok || !data.success) {
+                setStatus(data.message || 'Could not publish.', true);
+                return;
+            }
+            messageEl.value = '';
+            countEl.textContent = '0/800';
+            setStatus('Posted. Thank you.');
+            await loadComments();
+        } catch (err) {
+            setStatus('Connection error. Try again.', true);
+        } finally {
+            submitEl.disabled = false;
+        }
+    });
+
+    listEl.addEventListener('click', async function (ev) {
+        const emojiBtn = ev.target.closest('.forum-emoji-btn');
+        if (emojiBtn) {
+            const box = emojiBtn.closest('.forum-reply-wrap');
+            const ta = box ? box.querySelector('.forum-reply-input') : messageEl;
+            openEmojiPicker(ta);
+            return;
+        }
+
+        const replyToggle = ev.target.closest('[data-reply]');
+        if (replyToggle) {
+            if (!currentUser) {
+                location.href = '/account?next=/patch-notes%23forum';
+                return;
+            }
+            const card = replyToggle.closest('.forum-comment');
+            const wrap = card && Array.prototype.find.call(card.children, function (el) {
+                return el.classList.contains('forum-reply-wrap');
+            });
+            if (!wrap) return;
+            wrap.hidden = !wrap.hidden;
+            if (!wrap.hidden) wrap.querySelector('textarea').focus();
+            return;
+        }
+
+        const sendBtn = ev.target.closest('.forum-reply-send');
+        if (sendBtn) {
+            const wrap = sendBtn.closest('.forum-reply-wrap');
+            const ta = wrap.querySelector('.forum-reply-input');
+            sendBtn.disabled = true;
+            try {
+                const res = await fetch('/api/forum/comments', {
+                    method: 'POST',
+                    headers: authHeaders(),
+                    body: JSON.stringify({
+                        message: ta.value,
+                        parentId: sendBtn.getAttribute('data-parent'),
+                        website: hpEl.value
+                    })
+                });
+                const data = await res.json();
+                if (data.needLogin) {
+                    location.href = '/account?next=/patch-notes%23forum';
+                    return;
+                }
+                if (!res.ok || !data.success) {
+                    alert(data.message || 'Could not reply.');
+                    return;
+                }
+                await loadComments();
+            } catch (err) {
+            } finally {
+                sendBtn.disabled = false;
+            }
+            return;
+        }
+
+        const blockBtn = ev.target.closest('[data-block]');
+        if (blockBtn) {
+            const name = blockBtn.getAttribute('data-name') || 'this user';
+            if (!confirm('Block ' + name + ' from commenting?')) return;
+            blockBtn.disabled = true;
+            try {
+                const res = await fetch('/api/forum/users/' + encodeURIComponent(blockBtn.getAttribute('data-block')) + '/block', {
+                    method: 'POST',
+                    headers: authHeaders()
+                });
+                const data = await res.json();
+                alert(data.message || (data.success ? 'User blocked.' : 'Could not block.'));
+            } catch (err) {
+            } finally {
+                blockBtn.disabled = false;
+            }
+            return;
+        }
+
+        const delBtn = ev.target.closest('[data-delete]');
+        if (delBtn) {
+            if (!confirm('Delete this comment?')) return;
+            delBtn.disabled = true;
+            try {
+                const res = await fetch('/api/forum/comments/' + encodeURIComponent(delBtn.getAttribute('data-delete')) + '/delete', {
+                    method: 'POST',
+                    headers: authHeaders()
+                });
+                const data = await res.json();
+                if (data.success) await loadComments();
+                else if (data.message) alert(data.message);
+            } catch (err) {
+            } finally {
+                delBtn.disabled = false;
+            }
+            return;
+        }
+        const btn = ev.target.closest('[data-like]');
+        if (!btn) return;
+        if (!currentUser) {
+            location.href = '/account?next=/patch-notes%23forum';
+            return;
+        }
+        const id = btn.getAttribute('data-like');
+        btn.disabled = true;
+        try {
+            const res = await fetch('/api/forum/comments/' + encodeURIComponent(id) + '/like', {
+                method: 'POST',
+                headers: authHeaders()
+            });
+            const data = await res.json();
+            if (data.needLogin) {
+                location.href = '/account?next=/patch-notes%23forum';
+                return;
+            }
+            if (!data.success || !data.comment) {
+                if (data.message) alert(data.message);
+                return;
+            }
+            const liked = !!data.comment.liked;
+            btn.classList.toggle('is-liked', liked);
+            btn.setAttribute('aria-pressed', liked ? 'true' : 'false');
+            btn.setAttribute('title', liked ? 'Unlike' : 'Like');
+            btn.querySelector('i').className = (liked ? 'fas' : 'far') + ' fa-heart';
+            btn.querySelector('span').textContent = String(data.comment.likes || 0);
+        } catch (err) {
+        } finally {
+            btn.disabled = false;
+        }
+    });
+
+    if (window.gldSiteAuth) {
+        window.gldSiteAuth.fetchMe().then(applyAuthUi);
+    } else {
+        applyAuthUi(null);
+    }
+})();
+</script>
+</body>
+</html>
