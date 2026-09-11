@@ -1,0 +1,189 @@
+<div class="settings_tab_title">Quest Rules</div>
+    <div class="quest-rule-container">
+        <div class="quest-rule-template" style="display:none;">
+            <div class="quest-rule-header">
+                <label class="quest-rule-checkbox-wrapper"><input type="checkbox" class="quest-rule-enabled" checked></label>
+                <select class="quest-rule-action">
+                    <option value="accept">✓ Accept</option>
+                    <option value="skip">✗ Skip</option>
+                </select>
+                <span class="quest-rule-title">Quest Rule</span>
+                <button class="quest-rule-remove" title="Delete this rule">✕</button>
+            </div>
+            
+            <div class="quest-rule-section">
+                <div class="quest-section-header">Quest Categories</div>
+                <div class="quest-rule-categories">
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-cat" value="arena"><span class="quest-cb-box"></span> Arena</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-cat" value="circus"><span class="quest-cb-box"></span> Circus</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-cat" value="combat"><span class="quest-cb-box"></span> Combat</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-cat" value="expedition"><span class="quest-cb-box"></span> Expedition</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-cat" value="dungeon"><span class="quest-cb-box"></span> Dungeon</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-cat" value="work"><span class="quest-cb-box"></span> Work</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-cat" value="items"><span class="quest-cb-box"></span> Items</label>
+                </div>
+            </div>
+            
+            <div class="quest-rule-section">
+                <div class="quest-section-header">Text Filters</div>
+                <div class="quest-rule-filters">
+                    <div class="quest-filter-group">
+                        <label class="quest-filter-label">Quest Title Contains:</label>
+                        <input type="text" class="quest-title-filter" placeholder="e.g. succession, arena">
+                    </div>
+                    <div class="quest-filter-group">
+                        <label class="quest-filter-label">Quest Title Excludes:</label>
+                        <input type="text" class="quest-title-excludes" placeholder="e.g. time, wait">
+                    </div>
+                    <div class="quest-filter-group">
+                        <label class="quest-filter-label">Location Contains:</label>
+                        <input type="text" class="quest-location-filter" placeholder="e.g. Koman, Cave">
+                    </div>
+                    <div class="quest-filter-group">
+                        <label class="quest-filter-label">Location Excludes:</label>
+                        <input type="text" class="quest-location-excludes" placeholder="e.g. underworld">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="quest-rule-section">
+                <div class="quest-section-header">Reward Requirements</div>
+                <div class="quest-reward-checks">
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-require-item"><span class="quest-cb-box"></span> Must have Item</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-avoid-item"><span class="quest-cb-box"></span> Avoid Item</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-require-food"><span class="quest-cb-box"></span> Must have Food</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-avoid-food"><span class="quest-cb-box"></span> Avoid Food</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-require-god"><span class="quest-cb-box"></span> Must have God Favor</label>
+                    <label class="quest-checkbox"><input type="checkbox" class="quest-avoid-god"><span class="quest-cb-box"></span> Avoid God Favor</label>
+                </div>
+                <div class="quest-filter-group" style="padding: 8px; background: rgba(255,255,255,0.3);">
+                    <label class="quest-filter-label">Item Name Contains (for item reward filtering):</label>
+                    <input type="text" class="quest-item-name-filter" placeholder="e.g. sword, helmet, shield">
+                </div>
+                <div class="quest-reward-selects">
+                    <div class="quest-select-group">
+                        <label>Item Quality:</label>
+                        <select class="quest-item-quality">
+                            <option value="">Any</option>
+                            <option value="green">Green</option>
+                            <option value="blue">Blue</option>
+                            <option value="purple">Purple</option>
+                            <option value="orange">Orange</option>
+                            <option value="red">Red</option>
+                        </select>
+                    </div>
+                    <div class="quest-select-group">
+                        <label>Only accept quests based on god type.</label>
+                        <select class="quest-god-type">
+                            <option value="">Any</option>
+                            <option value="mars">Mars</option>
+                            <option value="merkur">Merkur</option>
+                            <option value="diana">Diana</option>
+                            <option value="minerva">Minerva</option>
+                            <option value="vulcanus">Vulcanus</option>
+                            <option value="apollo">Apollo</option>
+                        </select>
+                    </div>
+                    <div class="quest-select-group">
+                        <label>Battles Required:</label>
+                        <select class="quest-battle-count">
+                            <option value="">Any</option>
+                            <option value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                            <option value="5">5</option>
+                            <option value="6">6</option>
+                            <option value="7">7</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="quest-reward-ranges">
+                    <div class="quest-range-group">
+                        <label>Gold:</label>
+                        <input type="number" class="quest-min-gold" min="0" value="0" placeholder="Min (0=any)" title="Minimum value. 0 means no minimum."> - <input type="number" class="quest-max-gold" min="0" value="0" placeholder="Max (0=∞)" title="Maximum value. 0 means no upper limit.">
+                    </div>
+                    <div class="quest-range-group">
+                        <label>Honor:</label>
+                        <input type="number" class="quest-min-honor" min="0" value="0" placeholder="Min (0=any)" title="Minimum value. 0 means no minimum."> - <input type="number" class="quest-max-honor" min="0" value="0" placeholder="Max (0=∞)" title="Maximum value. 0 means no upper limit.">
+                    </div>
+                    <div class="quest-range-group">
+                        <label>XP:</label>
+                        <input type="number" class="quest-min-xp" min="0" value="0" placeholder="Min (0=any)" title="Minimum value. 0 means no minimum."> - <input type="number" class="quest-max-xp" min="0" value="0" placeholder="Max (0=∞)" title="Maximum value. 0 means no upper limit.">
+                    </div>
+                </div>
+            </div>
+            
+            <div class="quest-rule-section">
+                <div class="quest-section-header">Special Options</div>
+                <div class="quest-rule-options">
+                    <label class="quest-checkbox" title="Skip quests that require waiting time"><input type="checkbox" class="quest-skip-time"><span class="quest-cb-box"></span> Skip Time Quests</label>
+                    <label class="quest-checkbox" title="Only apply this rule when in Underworld"><input type="checkbox" class="quest-only-underworld"><span class="quest-cb-box"></span> Only in Underworld</label>
+                    <label class="quest-checkbox" title="Skip matching quests when in Underworld"><input type="checkbox" class="quest-skip-underworld"><span class="quest-cb-box"></span> Skip in Underworld</label>
+                    <label class="quest-checkbox" title="Auto-match expedition/dungeon with current location"><input type="checkbox" class="quest-auto-match"><span class="quest-cb-box"></span> Auto-match Location</label>
+                    <label class="quest-checkbox" title="Only accept if item matches underworld keywords"><input type="checkbox" class="quest-underworld-item"><span class="quest-cb-box"></span> UW Item Keywords</label>
+                </div>
+            </div>
+        </div>
+        <div id="gd-questRulesListNew"></div>
+        <div class="quest-rule-buttons">
+            <button class="gld-btn" id="gd-addQuestRuleNew">Add rule</button>
+            <button class="gld-btn" id="gd-resetQuestRulesNew">Reset</button>
+        </div>
+    </div>
+    <div class="settings_tab_title">Global Settings</div>
+    <div class="setting-row">
+        <label for="gd-deleteQuests">Cancel all quests upon entering underworld?</label>
+        <label class="toggle-switch"><input type="checkbox" id="gd-deleteQuests" /><span class="switch"></span></label>
+    </div>
+    <div class="setting-row" title="When cancelling on UW entry, skip quests whose item reward matches your underworld item keywords.">
+        <label for="gd-keepUWQuests">Keep underworld-item quests when cancelling</label>
+        <label class="toggle-switch"><input type="checkbox" id="gd-keepUWQuests" /><span class="switch"></span></label>
+    </div>
+    <div class="setting-row">
+        <label for="gd-questPriorityMode">Quest Priority Mode</label>
+        <select id="gd-questPriorityMode">
+            <option value="default">Default (First Available)</option>
+            <option value="highestGold">Highest Gold</option>
+            <option value="highestHonor">Highest Honor</option>
+            <option value="highestXp">Highest XP</option>
+<option value="highestXpPerAttack">Highest XP per Attack (Arena)</option>
+<option value="thresholdXpPerAttack">Min XP per Attack/Attempt</option>
+        </select>
+\t\t\t<div class="setting-row" id="gd-questThresholdSection" style="display: none;">
+\t\t\t\t<label><strong>XP per Attack/Attempt Thresholds:</strong></label><br>
+\t\t\t\t<span class="span-hint" style="font-size: 10px; color: #888; margin-bottom: 8px; display: block;">Set minimum XP efficiency for each quest type (0 = no threshold)</span>
+\t\t\t\t<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px;">
+\t\t\t\t\t<div style="display: flex; align-items: center; gap: 5px;">
+\t\t\t\t\t\t<label style="min-width: 80px;">Arena:</label>
+\t\t\t\t\t\t<input type="number" id="gd-thresholdArena" min="0" value="0" placeholder="0" style="width: 60px;">
+\t\t\t\t\t\t<span style="font-size: 10px;">XP/attack</span>
+\t\t\t\t\t</div>
+\t\t\t\t\t<div style="display: flex; align-items: center; gap: 5px;">
+\t\t\t\t\t\t<label style="min-width: 80px;">Circus:</label>
+\t\t\t\t\t\t<input type="number" id="gd-thresholdCircus" min="0" value="0" placeholder="0" style="width: 60px;">
+\t\t\t\t\t\t<span style="font-size: 10px;">XP/attack</span>
+\t\t\t\t\t</div>
+\t\t\t\t\t<div style="display: flex; align-items: center; gap: 5px;">
+\t\t\t\t\t\t<label style="min-width: 80px;">Combat:</label>
+\t\t\t\t\t\t<input type="number" id="gd-thresholdCombat" min="0" value="0" placeholder="0" style="width: 60px;">
+\t\t\t\t\t\t<span style="font-size: 10px;">XP/attack</span>
+\t\t\t\t\t</div>
+\t\t\t\t\t<div style="display: flex; align-items: center; gap: 5px;">
+\t\t\t\t\t\t<label style="min-width: 80px;">Expedition:</label>
+\t\t\t\t\t\t<input type="number" id="gd-thresholdExpedition" min="0" value="0" placeholder="0" style="width: 60px;">
+\t\t\t\t\t\t<span style="font-size: 10px;">XP/attempt</span>
+\t\t\t\t\t</div>
+\t\t\t\t\t<div style="display: flex; align-items: center; gap: 5px;">
+\t\t\t\t\t\t<label style="min-width: 80px;">Dungeon:</label>
+\t\t\t\t\t\t<input type="number" id="gd-thresholdDungeon" min="0" value="0" placeholder="0" style="width: 60px;">
+\t\t\t\t\t\t<span style="font-size: 10px;">XP/attempt</span>
+\t\t\t\t\t</div>
+\t\t\t\t\t<div style="display: flex; align-items: center; gap: 5px;">
+\t\t\t\t\t\t<label style="min-width: 80px;">Work:</label>
+\t\t\t\t\t\t<input type="number" id="gd-thresholdWork" min="0" value="0" placeholder="0" style="width: 60px;">
+\t\t\t\t\t\t<span style="font-size: 10px;">XP/task</span>
+\t\t\t\t\t</div>
+\t\t\t\t</div>
+\t\t\t</div>
+    </div>

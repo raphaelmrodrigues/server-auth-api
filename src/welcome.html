@@ -60,6 +60,9 @@
                     <button type="button" class="hero-btn hero-btn-secondary" id="hero-buy">
                         <i class="fas fa-shopping-cart"></i> Get license
                     </button>
+                    <a class="hero-btn hero-btn-secondary" href="#bot-demo" id="hero-demo">
+                        <i class="fas fa-sliders"></i> Try the panel
+                    </a>
                 </div>
             </div>
             <div class="hero-visual hero-showcase" id="hero-showcase" title="Click to see next screenshot">
@@ -75,6 +78,15 @@
                 </div>
             </div>
         </div>
+
+        <section class="gld-demo-section" id="bot-demo" aria-labelledby="bot-demo-title">
+            <header class="gld-demo-intro">
+                <p class="gld-demo-eyebrow">Interactive demo</p>
+                <h2 id="bot-demo-title">The panel you pilot</h2>
+                <p>Open every tab, flip the switches, add names to the arena list. This is the GladiusBot interface in the browser — nothing is saved and nothing runs on a character.</p>
+            </header>
+            <div id="gld-demo-root"></div>
+        </section>
     </section>
 
     <section id="video" class="site-view video-panel">
@@ -288,6 +300,8 @@
 </main>
 
 <script src="country-picker.js"></script>
+<script src="bot-demo-data.js"></script>
+<script src="bot-demo.js"></script>
 <script>
     const views = {
         hero: document.getElementById('hero-view'),
@@ -388,6 +402,13 @@
 
     document.getElementById('hero-buy').addEventListener('click', function () {
         document.getElementById('buyButton').click();
+    });
+
+    document.getElementById('hero-demo').addEventListener('click', function (ev) {
+        ev.preventDefault();
+        const demo = document.getElementById('bot-demo');
+        if (demo) demo.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        history.replaceState(null, '', '#demo');
     });
 
     const btnBack = document.getElementById('back');
