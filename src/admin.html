@@ -472,7 +472,7 @@
       <div class="flex flex-wrap justify-between items-start gap-4 mb-6">
         <div>
           <h2 class="text-2xl font-semibold text-gray-800">Monitoramento do Bot</h2>
-          <p class="text-sm text-gray-500 mt-1">Dados em tempo real com base nos heartbeats <code class="bg-gray-100 px-1 rounded">/v-s</code> (~3 min com bot ativo) e validações de licença. Sem impacto na performance da extensão.</p>
+          <p class="text-sm text-gray-500 mt-1">Extensão: heartbeats <code class="bg-gray-100 px-1 rounded">/v-s</code> (~3 min com bot ativo). App Android: heartbeat anônimo a cada 5 min (instalação, versão do Android, crashes). Sem senha Gameforge, IMEI ou Advertising ID.</p>
         </div>
         <div class="flex items-center gap-3">
           <span class="text-xs text-gray-500 flex items-center gap-2"><span class="monitor-pulse"></span> Auto-refresh 30s</span>
@@ -516,6 +516,55 @@
             <ul id="bot-monitor-stats-list" class="space-y-2 text-sm text-gray-700">
               <li class="text-gray-500">—</li>
             </ul>
+          </div>
+        </div>
+      </div>
+
+      <div id="android-monitor-stats" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mt-6 mb-4"></div>
+
+      <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3 class="font-semibold text-gray-800">App Android (dispositivos 7d)</h3>
+            <span class="text-xs text-gray-500">ID anônimo da instalação</span>
+          </div>
+          <div class="admin-card-body overflow-x-auto bot-monitor-online-scroll">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs sticky top-0">
+                <tr>
+                  <th class="px-3 py-2 text-left">App</th>
+                  <th class="px-3 py-2 text-left">Android</th>
+                  <th class="px-3 py-2 text-left">Aparelho</th>
+                  <th class="px-3 py-2 text-left">WebView</th>
+                  <th class="px-3 py-2 text-left">Bot</th>
+                  <th class="px-3 py-2 text-left">Sinal</th>
+                </tr>
+              </thead>
+              <tbody id="android-monitor-devices" class="divide-y divide-gray-100">
+                <tr><td colspan="6" class="px-3 py-4 text-gray-500">—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="admin-card">
+          <div class="admin-card-header">
+            <h3 class="font-semibold text-gray-800">Crashes / erros do app</h3>
+            <span class="text-xs text-gray-500">14 dias no Mongo</span>
+          </div>
+          <div class="admin-card-body overflow-x-auto bot-monitor-online-scroll">
+            <table class="min-w-full text-sm">
+              <thead class="bg-gray-50 text-gray-500 uppercase text-xs sticky top-0">
+                <tr>
+                  <th class="px-3 py-2 text-left">Quando</th>
+                  <th class="px-3 py-2 text-left">Tipo</th>
+                  <th class="px-3 py-2 text-left">Mensagem</th>
+                  <th class="px-3 py-2 text-left">Versão</th>
+                </tr>
+              </thead>
+              <tbody id="android-monitor-errors" class="divide-y divide-gray-100">
+                <tr><td colspan="4" class="px-3 py-4 text-gray-500">—</td></tr>
+              </tbody>
+            </table>
           </div>
         </div>
       </div>
@@ -1270,6 +1319,92 @@
     }
 
     renderBotMonitorEvents();
+    renderAndroidMonitor(data.android || {});
+  }
+
+  function renderCountList(counts) {
+    const entries = Object.entries(counts || {});
+    if (!entries.length) return '<p class="text-xs text-gray-400 mt-2">—</p>';
+    return entries
+      .sort((a, b) => b[1] - a[1])
+      .map(([key, val]) => `<div class="flex justify-between text-xs mt-1"><span>${escapeHtml(String(key))}</span><strong>${val}</strong></div>`)
+      .join('');
+  }
+
+  function renderAndroidMonitor(android) {
+    const statsEl = document.getElementById('android-monitor-stats');
+    const devicesEl = document.getElementById('android-monitor-devices');
+    const errorsEl = document.getElementById('android-monitor-errors');
+    if (!statsEl) return;
+
+    if (android.error) {
+      statsEl.innerHTML = '<p class="text-red-500 col-span-full">Não foi possível carregar a telemetria do Android.</p>';
+      return;
+    }
+
+    statsEl.innerHTML = `
+      <div class="bg-teal-50 border border-teal-100 p-4 rounded-xl">
+        <p class="text-sm font-medium text-teal-800">Android online</p>
+        <p class="text-3xl font-bold text-teal-600">${android.onlineCount || 0}</p>
+        <p class="text-xs text-teal-700 mt-1">Sinal nos últimos ${android.onlineTtlMinutes || 15} min</p>
+      </div>
+      <div class="bg-cyan-50 border border-cyan-100 p-4 rounded-xl">
+        <p class="text-sm font-medium text-cyan-800">Únicos 24h / 7d</p>
+        <p class="text-3xl font-bold text-cyan-600">${android.unique24h || 0} <span class="text-lg font-semibold text-cyan-700">/ ${android.unique7d || 0}</span></p>
+        <p class="text-xs text-cyan-700 mt-1">Instalações distintas do app</p>
+      </div>
+      <div class="bg-orange-50 border border-orange-100 p-4 rounded-xl">
+        <p class="text-sm font-medium text-orange-800">Erros 24h</p>
+        <p class="text-3xl font-bold text-orange-600">${android.errors24h || 0}</p>
+        <p class="text-xs text-orange-700 mt-1">Crashes e falhas de WebView</p>
+      </div>
+      <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+        <p class="text-sm font-medium text-slate-800">Android / app online</p>
+        ${renderCountList(android.androidReleaseCounts)}
+        ${renderCountList(android.appVersionCounts)}
+      </div>
+    `;
+
+    const devices = android.devices || [];
+    if (devicesEl) {
+      if (!devices.length) {
+        devicesEl.innerHTML = '<tr><td colspan="6" class="px-3 py-4 text-gray-500 text-center">Nenhum aparelho com sinal nos últimos 7 dias.</td></tr>';
+      } else {
+        devicesEl.innerHTML = devices.map((d) => {
+          const phone = [d.manufacturer, d.model].filter(Boolean).join(' ') || '—';
+          const androidLabel = d.androidRelease
+            ? `${escapeHtml(d.androidRelease)}${d.androidSdk ? ' (API ' + d.androidSdk + ')' : ''}`
+            : '—';
+          return `<tr>
+            <td class="px-3 py-2"><code class="text-xs bg-gray-100 px-1 rounded">${escapeHtml(d.appVersion || '—')}</code></td>
+            <td class="px-3 py-2 font-mono text-xs">${androidLabel}</td>
+            <td class="px-3 py-2 text-xs">${escapeHtml(phone)}</td>
+            <td class="px-3 py-2 font-mono text-xs">${escapeHtml(d.webViewVersion || '—')}</td>
+            <td class="px-3 py-2">${d.botRunning ? '<span class="monitor-pill ok">ligado</span>' : '<span class="monitor-pill fail">pausado</span>'}</td>
+            <td class="px-3 py-2 text-xs">há ${d.agoSec == null ? '—' : d.agoSec + 's'}</td>
+          </tr>`;
+        }).join('');
+      }
+    }
+
+    const errors = android.errors || [];
+    if (errorsEl) {
+      if (!errors.length) {
+        errorsEl.innerHTML = '<tr><td colspan="4" class="px-3 py-4 text-gray-500 text-center">Nenhum erro registrado.</td></tr>';
+      } else {
+        errorsEl.innerHTML = errors.map((e) => {
+          const ver = [e.appVersion, e.androidRelease].filter(Boolean).join(' · ') || '—';
+          const msg = escapeHtml(e.message || '—');
+          const title = e.stack ? ` title="${escapeHtml(e.stack)}"` : '';
+          return `<tr>
+            <td class="px-3 py-2 whitespace-nowrap">${formatBRT(e.ts)}</td>
+            <td class="px-3 py-2"><code class="text-xs bg-gray-100 px-1 rounded">${escapeHtml(e.kind || 'app')}</code></td>
+            <td class="px-3 py-2 text-xs max-w-md truncate"${title}>${msg}</td>
+            <td class="px-3 py-2 font-mono text-xs">${escapeHtml(ver)}</td>
+          </tr>`;
+        }).join('');
+      }
+    }
   }
 
   async function fetchBotMonitor() {

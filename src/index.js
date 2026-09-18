@@ -57,6 +57,10 @@ const {
     getDashboard,
 } = require('./bot-monitor');
 const {
+    registerAppTelemetryRoutes,
+    getAndroidDashboard,
+} = require('./app-telemetry');
+const {
     guardPrecheck,
     configurePlayerGuard,
     logSuspiciousNoLicense,
@@ -1182,8 +1186,15 @@ app.post('/admin/announcement', authenticateAdminToken, async (req, res) => {
     });
 });
 
-app.get('/admin/bot-monitor', authenticateAdminToken, (req, res) => {
-    return res.json({ success: true, ...getDashboard() });
+app.get('/admin/bot-monitor', authenticateAdminToken, async (req, res) => {
+    let android = {};
+    try {
+        android = await getAndroidDashboard();
+    } catch (error) {
+        console.error('android telemetry dashboard:', error.message);
+        android = { error: true };
+    }
+    return res.json({ success: true, ...getDashboard(), android });
 });
 
 app.get('/admin/blocked-players', authenticateAdminToken, async (req, res) => {
@@ -3090,6 +3101,7 @@ registerBotProxyRoutes(app, {
     verifySessionSignature,
     verifySessionMark,
 });
+registerAppTelemetryRoutes(app);
 
 app.listen(port, () => {
     mongoose.connect(process.env.MONGO_URI)
