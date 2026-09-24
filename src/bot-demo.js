@@ -670,7 +670,7 @@
         '<div class="gld-demo-stage">' +
             '<div class="gld-demo-panel">' +
                 '<header class="gld-demo-head">' +
-                    '<span class="gld-demo-ver">Version 4.0.1</span>' +
+                    '<span class="gld-demo-ver">Version 4.0.2</span>' +
                     '<span class="gld-demo-exp">Expires: <em>demo</em></span>' +
                     '<div class="gld-demo-badge" aria-hidden="true">GB</div>' +
                     '<div class="gld-demo-langs">' + flagsHtml() + '</div>' +
