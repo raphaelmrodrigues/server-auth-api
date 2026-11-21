@@ -15,20 +15,28 @@ const STRIPE_PLANS = {
         title: 'GladiusBot - 30 days',
     },
     '60DAYS': {
-        priceId: 'price_1UeHllEMmK3pIrxI2BOnpfH6',
+        priceId: 'price_1UeJCAEMmK3pIrxI7knme4yx',
         productId: 'prod_Vfd1isbtwU6Gg2',
-        amountUsd: 6.76,
+        amountUsd: 6.96,
         duration: 60,
         title: 'GladiusBot - 60 days',
     },
 };
 
+/** STRIPE_PRICE_15DAYS etc. no .env substituem o preço (ex.: preços do sandbox para teste local). */
+function withPriceOverride(code, plan) {
+    const override = process.env[`STRIPE_PRICE_${code}`];
+    return override ? { ...plan, priceId: override } : plan;
+}
+
 function getStripePlan(planCode) {
-    return STRIPE_PLANS[String(planCode || '').toUpperCase()] || null;
+    const code = String(planCode || '').toUpperCase();
+    return STRIPE_PLANS[code] ? withPriceOverride(code, STRIPE_PLANS[code]) : null;
 }
 
 function findStripePlanByPrice(priceId) {
-    for (const [code, plan] of Object.entries(STRIPE_PLANS)) {
+    for (const code of Object.keys(STRIPE_PLANS)) {
+        const plan = getStripePlan(code);
         if (plan.priceId === priceId) return { code, plan };
     }
     return null;

@@ -137,6 +137,7 @@ const app = express();
 app.use(cors());
 
 const CANONICAL_HOST = process.env.CANONICAL_HOST || 'gldbotserver.com';
+const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || `https://${CANONICAL_HOST}`).replace(/\/+$/, '');
 app.use((req, res, next) => {
     const host = (req.headers.host || '').toLowerCase();
     if (host.startsWith('www.')) {
@@ -400,7 +401,7 @@ async function fulfillStripeSession(sessionId, eventType) {
         const plan = getStripePlan(session.metadata.plan_code);
         if (plan) match = { code: session.metadata.plan_code.toUpperCase(), plan };
     }
-    const email = normalizeEmail(session.customer_details?.email || session.customer_email || '');
+    const email = normalizeEmail(session.customer_email || session.customer_details?.email || '');
     audit.email = email;
     audit.planCode = match?.code;
 
@@ -414,20 +415,34 @@ async function fulfillStripeSession(sessionId, eventType) {
 
     const expireDate = new Date();
     expireDate.setDate(expireDate.getDate() + match.plan.duration);
-    const license = new License({
-        playerid: '',
-        licenseKey: uuidv4(),
-        plan: match.plan.title,
-        expireDate,
-        trial: false,
-        email,
-        country: session.customer_details?.address?.country || '',
-        sessionId: session.id,
-        payment_id: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
-        payment_method: 'stripe',
-        transaction_amount: (session.amount_total || 0) / 100,
-    });
-    await license.save();
+    // Upsert atômico: dois eventos simultâneos da mesma sessão não geram duas licenças.
+    const result = await License.findOneAndUpdate(
+        { sessionId: session.id },
+        {
+            $setOnInsert: {
+                playerid: '',
+                licenseKey: uuidv4(),
+                plan: match.plan.title,
+                expireDate,
+                trial: false,
+                email,
+                country: session.customer_details?.address?.country || '',
+                sessionId: session.id,
+                payment_id: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+                payment_method: 'stripe',
+                transaction_amount: (session.amount_total || 0) / 100,
+            },
+        },
+        { upsert: true, new: true, includeResultMetadata: true }
+    );
+    const license = result.value;
+    if (result.lastErrorObject?.updatedExisting) {
+        audit.status = 'ignored';
+        audit.licenseLink = license._id;
+        audit.auditNotes = 'Stripe: licença já gerada para esta sessão (evento simultâneo).';
+        await new SaleAudit(audit).save();
+        return;
+    }
 
     audit.status = 'approved';
     audit.licenseLink = license._id;
@@ -454,6 +469,8 @@ async function fulfillStripeSession(sessionId, eventType) {
     }
 }
 
+const stripeFulfillmentLocks = new Map();
+
 app.post('/webhook', express.raw({ type: 'application/json' }), async (request, response) => {
     let event;
     try {
@@ -464,8 +481,16 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
     }
 
     if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+        const sessionId = event.data.object.id;
         try {
-            await fulfillStripeSession(event.data.object.id, event.type);
+            const previous = stripeFulfillmentLocks.get(sessionId) || Promise.resolve();
+            const current = previous.catch(() => {}).then(() => fulfillStripeSession(sessionId, event.type));
+            stripeFulfillmentLocks.set(sessionId, current);
+            try {
+                await current;
+            } finally {
+                if (stripeFulfillmentLocks.get(sessionId) === current) stripeFulfillmentLocks.delete(sessionId);
+            }
         } catch (err) {
             console.error('Stripe: falha ao gerar licença:', err);
             return response.status(500).json({ received: false });
@@ -2043,7 +2068,7 @@ app.post('/stripe/checkout', async (req, res) => {
         return res.status(400).json({ error: 'Invalid plan.' });
     }
     const email = normalizeEmail(req.body.email || '');
-    if (email && !isValidEmail(email)) {
+    if (!email || !isValidEmail(email)) {
         return res.status(400).json({ error: 'Invalid email.' });
     }
 
@@ -2051,12 +2076,12 @@ app.post('/stripe/checkout', async (req, res) => {
         const session = await stripe.checkout.sessions.create({
             mode: 'payment',
             line_items: [{ price: plan.priceId, quantity: 1 }],
-            customer_email: email || undefined,
+            customer_email: email,
             metadata: { plan_code: planCode },
             payment_intent_data: { metadata: { plan_code: planCode } },
             locale: 'auto',
-            success_url: `https://${CANONICAL_HOST}/success.html?session_id={CHECKOUT_SESSION_ID}&lang=en`,
-            cancel_url: `https://${CANONICAL_HOST}/checkout-usd.html`,
+            success_url: `${PUBLIC_BASE_URL}/success.html?session_id={CHECKOUT_SESSION_ID}&lang=en`,
+            cancel_url: `${PUBLIC_BASE_URL}/checkout-usd.html`,
         });
         return res.json({ checkoutUrl: session.url });
     } catch (err) {
