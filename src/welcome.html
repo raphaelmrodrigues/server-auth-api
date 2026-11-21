@@ -493,8 +493,8 @@
         {
             id: 'paid-license',
             category: 'License',
-            title: 'Activate a paid license (itch.io)',
-            description: 'After purchase on itch.io, copy your License Key from External keys on the download page and paste it in the Extras tab inside Gladiatus.',
+            title: 'Activate a paid license',
+            description: 'After purchase, copy the License Key sent to your email and paste it in the Extras tab inside Gladiatus.',
             type: 'video',
             available: false
         },
@@ -760,7 +760,7 @@
         });
     }
 
-    const ITCH_HUB_URL = 'https://gladiusbot.itch.io/gladiusbot';
+    const USD_CHECKOUT_URL = 'checkout-usd.html';
 
     submitButton.addEventListener('click', async function () {
         const country = select.value;
@@ -785,8 +785,8 @@
                     window.location.href = 'checkout.html';
                     return;
                 }
-                if (data.redirectTo === 'itch' || data.redirectTo === 'gumroad') {
-                    window.location.href = data.url || ITCH_HUB_URL;
+                if (data.url) {
+                    window.location.href = data.url;
                     return;
                 }
             }
@@ -794,7 +794,7 @@
             console.error('Country redirect error:', error);
         }
 
-        window.location.href = ITCH_HUB_URL;
+        window.location.href = USD_CHECKOUT_URL;
     });
 
     function showSiteAlert(message, type) {

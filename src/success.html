@@ -339,73 +339,82 @@
 
 <div class="success-shell">
     <div class="success-top">
-        <a class="success-back" href="/"><i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao início</a>
+        <a class="success-back" href="/" data-en='<i class="fas fa-arrow-left" aria-hidden="true"></i> Back to home'><i class="fas fa-arrow-left" aria-hidden="true"></i> Voltar ao início</a>
     </div>
 
     <div class="success-card">
         <header class="success-header">
             <img src="./images/gladiusbot-mark.svg" alt="GladiusBot">
-            <h1>Compra realizada com sucesso</h1>
-            <p>O pagamento foi confirmado. Sua licença está pronta para ativação.</p>
-            <span class="success-badge"><i class="fas fa-check-circle"></i> Pagamento aprovado</span>
+            <h1 data-en="Purchase completed">Compra realizada com sucesso</h1>
+            <p data-en="Your payment was confirmed. Your license is ready to activate.">O pagamento foi confirmado. Sua licença está pronta para ativação.</p>
+            <span class="success-badge" data-en='<i class="fas fa-check-circle"></i> Payment approved'><i class="fas fa-check-circle"></i> Pagamento aprovado</span>
         </header>
 
         <div class="success-body" id="success-content">
-            <div class="loading-state" id="loading-state">
+            <div class="loading-state" id="loading-state" data-en='<i class="fas fa-spinner fa-spin"></i> Loading your license…'>
                 <i class="fas fa-spinner fa-spin"></i> Carregando detalhes da licença…
             </div>
 
             <div id="license-panel" class="hidden" hidden>
-                <h2 class="success-section-title">Detalhes da compra</h2>
+                <h2 class="success-section-title" data-en="Purchase details">Detalhes da compra</h2>
                 <ul class="success-details">
-                    <li><strong>Plano</strong> <span id="plan">—</span></li>
-                    <li><strong>Data da compra</strong> <span id="purchaseDate">—</span></li>
-                    <li><strong>Validade da licença</strong> <span id="expirationDate">—</span></li>
-                    <li><strong>Observação</strong> <span id="customerNote">Chave válida para uma única conta.</span></li>
+                    <li><strong data-en="Plan">Plano</strong> <span id="plan">—</span></li>
+                    <li><strong data-en="Purchase date">Data da compra</strong> <span id="purchaseDate">—</span></li>
+                    <li><strong data-en="Valid until">Validade da licença</strong> <span id="expirationDate">—</span></li>
+                    <li><strong data-en="Note">Observação</strong> <span id="customerNote" data-en="Key valid for a single account.">Chave válida para uma única conta.</span></li>
                     <li><strong>E-mail</strong> <span id="customerEmail">—</span></li>
                 </ul>
 
                 <div class="license-block">
-                    <label for="licenseKey">Chave da licença</label>
+                    <label for="licenseKey" data-en="License key">Chave da licença</label>
                     <div class="license-row">
                         <input type="text" id="licenseKey" readonly aria-label="Chave da licença">
-                        <button type="button" class="btn-copy" onclick="copyKey()"><i class="fas fa-copy"></i> Copiar</button>
+                        <button type="button" class="btn-copy" onclick="copyKey()" data-en='<i class="fas fa-copy"></i> Copy'><i class="fas fa-copy"></i> Copiar</button>
                     </div>
                 </div>
 
-                <h2 class="success-section-title">Próximos passos</h2>
+                <h2 class="success-section-title" data-en="Next steps">Próximos passos</h2>
                 <ol class="success-steps">
-                    <li>Instale a extensão pela <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">Chrome Web Store</a>.</li>
-                    <li>Abra o Gladiatus no mesmo perfil do Chrome.</li>
-                    <li>No painel GladiusBot, vá em <strong>GladiusBot</strong> → <strong>GladiusBot License</strong> e cole a chave.</li>
+                    <li data-en='Install the extension from the <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">Chrome Web Store</a>.'>Instale a extensão pela <a href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">Chrome Web Store</a>.</li>
+                    <li data-en="Open Gladiatus in the same Chrome profile.">Abra o Gladiatus no mesmo perfil do Chrome.</li>
+                    <li data-en="In the GladiusBot panel, go to <strong>GladiusBot</strong> → <strong>GladiusBot License</strong> and paste the key.">No painel GladiusBot, vá em <strong>GladiusBot</strong> → <strong>GladiusBot License</strong> e cole a chave.</li>
                 </ol>
 
-                <p class="success-note">Enviamos os mesmos dados para o seu e-mail. Guarde a chave em local seguro.</p>
+                <p class="success-note" data-en="We also sent these details to your email. Keep the key in a safe place.">Enviamos os mesmos dados para o seu e-mail. Guarde a chave em local seguro.</p>
 
                 <div class="success-actions">
-                    <a class="btn-primary" href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener">
+                    <a class="btn-primary" href="https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa" target="_blank" rel="noopener" data-en='<i class="fab fa-chrome"></i> Install extension'>
                         <i class="fab fa-chrome"></i> Instalar extensão
                     </a>
-                    <a class="btn-secondary" href="/">
+                    <a class="btn-secondary" href="/" data-en='<i class="fas fa-home"></i> Back to home'>
                         <i class="fas fa-home"></i> Voltar à página principal
                     </a>
                 </div>
             </div>
 
             <div id="error-panel" class="error-state hidden" hidden>
-                <p><strong>Não foi possível carregar a licença ainda.</strong></p>
-                <p style="margin-top:0.5rem;">O pagamento pode estar em processamento. Verifique seu e-mail em alguns minutos ou acesse o suporte em <a href="https://gldbotserver.com/">gldbotserver.com</a>.</p>
-                <a class="btn-secondary" href="/" style="margin-top:1rem;">Voltar ao início</a>
+                <p data-en="<strong>Your license is not ready yet.</strong>"><strong>Não foi possível carregar a licença ainda.</strong></p>
+                <p style="margin-top:0.5rem;" data-en='The payment may still be processing. Check your email in a few minutes or contact support at <a href="mailto:gldbotsuport@gmail.com">gldbotsuport@gmail.com</a>.'>O pagamento pode estar em processamento. Verifique seu e-mail em alguns minutos ou acesse o suporte em <a href="https://gldbotserver.com/">gldbotserver.com</a>.</p>
+                <a class="btn-secondary" href="/" style="margin-top:1rem;" data-en="Back to home">Voltar ao início</a>
             </div>
         </div>
     </div>
 </div>
 
-<div class="toast" id="copyNotification" role="status">Chave copiada!</div>
+<div class="toast" id="copyNotification" role="status" data-en="Key copied!">Chave copiada!</div>
 
 <script>
     const API_BASE = window.location.origin;
     const CHROME_STORE_URL = 'https://chromewebstore.google.com/detail/gladiusbot/fincifcpkcbcongikgggepbgonnbfopa';
+    const IS_EN = new URLSearchParams(window.location.search).get('lang') === 'en';
+
+    if (IS_EN) {
+        document.documentElement.lang = 'en';
+        document.title = 'GladiusBot — Purchase confirmed';
+        document.querySelectorAll('[data-en]').forEach((el) => {
+            el.innerHTML = el.getAttribute('data-en');
+        });
+    }
 
     function formatPlanLabel(plan) {
         if (!plan || !String(plan).trim()) return 'GladiusBot';
@@ -413,6 +422,16 @@
     }
 
     function formatDate(date) {
+        if (IS_EN) {
+            return new Intl.DateTimeFormat('en-US', {
+                day: '2-digit',
+                month: 'long',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false,
+            }).format(date);
+        }
         return new Intl.DateTimeFormat('pt-BR', {
             timeZone: 'America/Sao_Paulo',
             day: '2-digit',
@@ -508,17 +527,22 @@
         }
 
         if (sessionId) {
-            try {
-                const response = await fetch(`${API_BASE}/license-info?session_id=${encodeURIComponent(sessionId)}`);
-                const data = await response.json();
-                if (response.ok && data.licenseKey) {
-                    fillLicenseData(data);
-                    await maybeSendEmail(data, `stripe_${sessionId}`);
-                    return;
+            // A licença é criada pelo webhook da Stripe, que pode chegar alguns segundos depois do redirecionamento.
+            for (let attempt = 0; attempt < 10; attempt++) {
+                try {
+                    const response = await fetch(`${API_BASE}/license-info?session_id=${encodeURIComponent(sessionId)}`);
+                    const data = await response.json();
+                    if (response.ok && data.licenseKey) {
+                        fillLicenseData(data);
+                        return;
+                    }
+                } catch (error) {
+                    console.error('Erro ao buscar licença:', error);
                 }
-            } catch (error) {
-                console.error('Erro ao buscar licença:', error);
+                await new Promise((resolve) => setTimeout(resolve, 3000));
             }
+            showErrorPanel();
+            return;
         }
 
         if (paymentId || sessionId) {

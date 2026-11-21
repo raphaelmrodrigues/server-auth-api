@@ -89,9 +89,14 @@ const {
     resolvePlanTitleForDb,
 } = require('./mercadopago-plans');
 const {
+    getStripePlan,
+    findStripePlanByPrice,
+} = require('./stripe-plans');
+const {
     PURCHASE_FROM,
     PURCHASE_REPLY_TO,
     buildPurchaseEmailHtml,
+    buildCardPurchaseEmailHtml,
     buildCryptoConfirmationEmailHtml,
     buildCryptoRejectionEmailHtml,
     buildPasswordResetEmailHtml,
@@ -350,83 +355,124 @@ function generateCryptoOrderId() {
     return 'GC-' + crypto.randomBytes(9).toString('hex').toUpperCase();
 }
 
-app.post ('/webhook', express.raw({type: 'application/json'}), async (request, response) => {
-    const sig = request.headers['stripe-signature'];
+/**
+ * Gera a licença de uma Checkout Session paga. Idempotente por session.id:
+ * a Stripe reenvia o mesmo evento e o completed/async_succeeded podem chegar os dois.
+ */
+async function fulfillStripeSession(sessionId, eventType) {
+    const audit = {
+        paymentId: sessionId,
+        webhookType: eventType,
+        status: 'pending',
+        auditNotes: 'Stripe: processamento iniciado.',
+    };
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+        expand: ['line_items'],
+    });
+    audit.paymentDetails = {
+        id: session.id,
+        payment_status: session.payment_status,
+        amount_total: session.amount_total,
+        currency: session.currency,
+        payment_intent: session.payment_intent,
+        metadata: session.metadata,
+    };
+
+    if (session.payment_status !== 'paid') {
+        audit.auditNotes = `Stripe: pagamento ainda não confirmado (${session.payment_status}).`;
+        await new SaleAudit(audit).save();
+        return;
+    }
+
+    const existing = await License.findOne({ sessionId: session.id });
+    if (existing) {
+        audit.status = 'ignored';
+        audit.licenseLink = existing._id;
+        audit.auditNotes = 'Stripe: licença já gerada para esta sessão (evento repetido).';
+        await new SaleAudit(audit).save();
+        return;
+    }
+
+    const priceId = session.line_items?.data?.[0]?.price?.id;
+    let match = findStripePlanByPrice(priceId);
+    if (!match && session.metadata?.plan_code) {
+        const plan = getStripePlan(session.metadata.plan_code);
+        if (plan) match = { code: session.metadata.plan_code.toUpperCase(), plan };
+    }
+    const email = normalizeEmail(session.customer_details?.email || session.customer_email || '');
+    audit.email = email;
+    audit.planCode = match?.code;
+
+    if (!match || !email) {
+        audit.status = 'error';
+        audit.auditNotes = `Stripe: plano ou e-mail ausente (price=${priceId || 'N/A'}, email=${email || 'N/A'}).`;
+        await new SaleAudit(audit).save();
+        console.error(audit.auditNotes);
+        return;
+    }
+
+    const expireDate = new Date();
+    expireDate.setDate(expireDate.getDate() + match.plan.duration);
+    const license = new License({
+        playerid: '',
+        licenseKey: uuidv4(),
+        plan: match.plan.title,
+        expireDate,
+        trial: false,
+        email,
+        country: session.customer_details?.address?.country || '',
+        sessionId: session.id,
+        payment_id: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+        payment_method: 'stripe',
+        transaction_amount: (session.amount_total || 0) / 100,
+    });
+    await license.save();
+
+    audit.status = 'approved';
+    audit.licenseLink = license._id;
+    audit.auditNotes = 'Stripe: pagamento aprovado e licença gerada.';
+    await new SaleAudit(audit).save();
+    console.log('Stripe: licença gerada', license.licenseKey, 'para', email);
+
+    try {
+        await sgMail.send({
+            to: [email, 'gldbotsuport@gmail.com'],
+            from: PURCHASE_FROM,
+            replyTo: PURCHASE_REPLY_TO,
+            subject: 'Your GladiusBot license — purchase confirmed',
+            html: buildCardPurchaseEmailHtml({
+                customerName: session.customer_details?.name || email.split('@')[0],
+                planLabel: match.plan.title,
+                licenseKey: license.licenseKey,
+                expirationDate: expireDate,
+            }),
+            attachments: getPurchaseEmailAttachments(),
+        });
+    } catch (mailErr) {
+        console.error('Stripe: erro ao enviar e-mail da licença:', mailErr?.response?.body || mailErr);
+    }
+}
+
+app.post('/webhook', express.raw({ type: 'application/json' }), async (request, response) => {
     let event;
     try {
-        event = stripe.webhooks.constructEvent(request.body, sig, endpointSecret);
+        event = stripe.webhooks.constructEvent(request.body, request.headers['stripe-signature'], endpointSecret);
+    } catch (err) {
+        console.error('Stripe webhook com assinatura inválida:', err.message);
+        return response.status(400).send(`Webhook Error: ${err.message}`);
     }
-    catch (err) {
-        response.status(400).send(`Webhook Error: ${err.message}`);
+
+    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
+        try {
+            await fulfillStripeSession(event.data.object.id, event.type);
+        } catch (err) {
+            console.error('Stripe: falha ao gerar licença:', err);
+            return response.status(500).json({ received: false });
+        }
     }
 
-    // Handle the event
-    switch (event.type) {
-        case 'checkout.session.async_payment_failed':
-            const payment_failed = event.data.object;
-            console.log('payment_failed!');
-            break;
-        case 'checkout.session.async_payment_succeeded':
-            const payment_succeeded = event.data.object;
-            console.log('payment_succeeded!');
-            break;
-        case 'checkout.session.completed':
-            const session = event.data.object;
-            const userEmail = session.customer_details.email; // Captura o e-mail digitado pelo usuário
-            const userCountry = session.customer_details.address ? session.customer_details.address.country : ''; // Captura o país
-            const customerName = userEmail.split('@')[0]; // Captura o nome do cliente
-
-            // Captura os itens da sessão
-            const lineItems = await stripe.checkout.sessions.listLineItems(session.id);
-            console.log(`E-mail do cliente: ${userEmail}`);
-            console.log(`Nome do cliente: ${customerName}`);
-            console.log(`País: ${userCountry}`);
-            console.log('Id da sessão:', session.id);
-            lineItems.data.forEach(item => {
-                console.log(`Produto: ${item.description}, ID: ${item.id}`);
-
-                // Definir a data de expiração com base no produto
-                let expirationDate;
-                let description;
-                const currentDate = new Date();
-
-                if (item.description === 'GLDbot - 60 dias') {
-                    expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 60)); // Adiciona 60 dias
-                } else if (item.description === 'GLDbot - 30 dias') {
-                    expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 30)); // Adiciona 30 dias
-                } else if (item.description === 'GLDbot - 15 dias') {
-                    expirationDate = new Date(currentDate.setDate(currentDate.getDate() + 15)); // Adiciona 15 dias
-                }
-
-                // Gerar chave UUID
-                const licenseKey = uuidv4();
-
-                // Salvar no banco de dados
-                const newLicense = new License({
-                    playerid: "",
-                    licenseKey: licenseKey,
-                    plan: item.description,
-                    expireDate: expirationDate,
-                    trial: false, // Set trial como false
-                    email: userEmail,
-                    country: userCountry,
-                    sessionId: session.id,
-                });
-
-                newLicense.save()
-                    .then(() => console.log(`License for ${customerName} saved successfully.`))
-                    .catch((err) => console.error('Error saving license:', err));
-            });
-            break;
-        case 'checkout.session.expired':
-            const expired = event.data.object;
-            console.log('expired!');
-            break;
-        default:
-            console.log(`Unhandled event type ${event.type}`);
-    }
-    // Return a response to acknowledge receipt of the event
-    response.json({received: true});
+    response.json({ received: true });
 });
 
 app.use(express.json());
@@ -1986,59 +2032,37 @@ app.post('/country', (req, res) => {
     if (country === 'br') {
         res.json({ redirectTo: 'checkout' });
     } else {
-        res.json({ redirectTo: 'itch', url: ITCH_HUB_URL });
+        res.json({ redirectTo: 'stripe', url: '/checkout-usd.html' });
     }
 });
 
-app.post('/checkout15', async (req, res) => {
-    const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-            {
-                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QKLLuAgZqiodFBThrtZMlzj',
-                quantity: 1,
-            },
-        ],
-        mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `https://gldbotserver.com/checkout.html`,
-    });
-    res.redirect(303, session.url);
-});
+app.post('/stripe/checkout', async (req, res) => {
+    const planCode = String(req.body.plan_code || '').toUpperCase();
+    const plan = getStripePlan(planCode);
+    if (!plan) {
+        return res.status(400).json({ error: 'Invalid plan.' });
+    }
+    const email = normalizeEmail(req.body.email || '');
+    if (email && !isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email.' });
+    }
 
-app.post('/checkout30', async (req, res) => {
-    const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-            {
-                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QKLKDAgZqiodFBTn6IkgSME',
-                quantity: 1,
-            },
-        ],
-        mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `https://gldbotserver.com/checkout.html`,
-    });
-    res.redirect(303, session.url);
-});
-
-app.post('/checkout60', async (req, res) => {
-    const session = await stripe.checkout.sessions.create({
-        payment_method_types: ['card'],
-        line_items: [
-            {
-                // Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                price: 'price_1QKLMyAgZqiodFBTBK4PXXMV',
-                quantity: 1,
-            },
-        ],
-        mode: 'payment',
-        success_url: `https://gldbotserver.com/success.html?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `https://gldbotserver.com/checkout.html`,
-    });
-    res.redirect(303, session.url);
+    try {
+        const session = await stripe.checkout.sessions.create({
+            mode: 'payment',
+            line_items: [{ price: plan.priceId, quantity: 1 }],
+            customer_email: email || undefined,
+            metadata: { plan_code: planCode },
+            payment_intent_data: { metadata: { plan_code: planCode } },
+            locale: 'auto',
+            success_url: `https://${CANONICAL_HOST}/success.html?session_id={CHECKOUT_SESSION_ID}&lang=en`,
+            cancel_url: `https://${CANONICAL_HOST}/checkout-usd.html`,
+        });
+        return res.json({ checkoutUrl: session.url });
+    } catch (err) {
+        console.error('Stripe: erro ao criar checkout:', err);
+        return res.status(500).json({ error: 'Could not start checkout. Please try again.' });
+    }
 });
 
 app.post('/teste', async (req, res) => {

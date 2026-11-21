@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
+    <link rel="apple-touch-icon" href="./images/gladiusbot-icon-128.png">
+    <title>GladiusBot — Buy a license</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+<style>
+    :root {
+        --gld-gold: #ffcc66;
+        --gld-accent: #ba9700;
+        --gld-border: #876e3e;
+        --gld-text: #3d2a1a;
+        --gld-text-muted: #6b4f32;
+        --gld-font: Tahoma, "Segoe UI", Arial, sans-serif;
+        --gld-font-display: Georgia, "Times New Roman", serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+        font-family: var(--gld-font);
+        background:
+            radial-gradient(ellipse 70% 40% at 50% 0%, rgb(186 151 0 / 0.1), transparent 55%),
+            linear-gradient(180deg, #1a120a 0%, #0e0a06 100%);
+        min-height: 100vh;
+        color: var(--gld-text);
+        padding: 1.25rem 1rem 2rem;
+    }
+
+    .checkout-shell { width: 100%; max-width: 980px; margin: 0 auto; }
+
+    .checkout-top { margin-bottom: 0.85rem; }
+
+    .checkout-back {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 1.05rem;
+        font-size: 0.84rem;
+        font-weight: 600;
+        font-family: var(--gld-font-display);
+        color: #fff8cf;
+        text-decoration: none;
+        background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 100%);
+        border: 1px solid rgb(255 204 102 / 0.4);
+        border-radius: 4px;
+    }
+
+    .checkout-back i { font-size: 0.78rem; color: var(--gld-gold); }
+    .checkout-back:hover { color: #fff; border-color: var(--gld-gold); }
+
+    .checkout-header {
+        text-align: center;
+        padding: 0.85rem 1.15rem 0.75rem;
+        background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 55%, #2a1a0e 100%);
+        border: 2px solid var(--gld-border);
+        border-radius: 4px;
+        box-shadow: 0 8px 24px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.1);
+        color: #f4e4c1;
+    }
+
+    .checkout-brand { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem; }
+    .checkout-brand img { width: 48px; height: 48px; filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.45)); }
+
+    .checkout-header h1 {
+        font-family: var(--gld-font-display);
+        font-size: 1.3rem;
+        color: var(--gld-gold);
+        letter-spacing: 0.05em;
+    }
+
+    .checkout-sub { font-size: 0.86rem; color: rgb(244 228 193 / 0.85); line-height: 1.5; }
+
+    .checkout-trust {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.85rem;
+        margin-top: 0.55rem;
+        padding-top: 0.45rem;
+        border-top: 1px solid rgb(255 204 102 / 0.18);
+    }
+
+    .checkout-trust img { width: clamp(56px, 8.5%, 84px); height: auto; opacity: 0.92; }
+    .checkout-trust img.trust-stripe-wide { width: clamp(118px, 21%, 195px); }
+
+    .pricing-table { display: flex; gap: 1.25rem; justify-content: center; flex-wrap: wrap; margin-top: 3rem; }
+
+    .plan {
+        background: linear-gradient(180deg, #f4e4c1 0%, #ebe0c4 100%);
+        padding: 1.75rem 1.5rem 1.5rem;
+        width: 280px;
+        border-radius: 4px;
+        box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);
+        text-align: center;
+        position: relative;
+        border: 2px solid var(--gld-border);
+        transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .plan:hover { transform: translateY(-4px); border-color: var(--gld-gold); }
+    .plan.featured { border-color: var(--gld-gold); background: linear-gradient(180deg, #fff8cf 0%, #f4e4c1 100%); }
+
+    .plan .badge {
+        position: absolute;
+        top: -13px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(180deg, #ffcc66, #ba9700);
+        color: #1a1008;
+        padding: 0.35rem 0.9rem;
+        font-size: 0.75rem;
+        border-radius: 3px;
+        font-weight: 700;
+        font-family: var(--gld-font-display);
+        border: 1px solid #d4a742;
+        white-space: nowrap;
+    }
+
+    .plan-icon { width: 96px; height: 96px; object-fit: contain; margin-bottom: 0.85rem; }
+
+    .plan h2 { font-family: var(--gld-font-display); font-size: 1.25rem; margin-bottom: 0.45rem; }
+
+    .plan .price { font-family: var(--gld-font-display); font-size: 2rem; color: var(--gld-accent); font-weight: 700; }
+    .plan .per-day { font-size: 0.8rem; color: var(--gld-text-muted); margin-bottom: 1rem; }
+
+    .plan-notice {
+        margin-bottom: 1.15rem;
+        padding: 0.65rem 0.7rem;
+        background: rgb(92 58 28 / 0.06);
+        border: 1px solid rgb(135 110 62 / 0.35);
+        border-radius: 3px;
+        font-size: 0.82rem;
+        line-height: 1.5;
+        color: var(--gld-text-muted);
+    }
+
+    button {
+        padding: 0.75rem 1.5rem;
+        border: 1px solid #876e3e;
+        background: linear-gradient(180deg, #ffcc66, #ba9700);
+        color: #1a1008;
+        font-size: 0.95rem;
+        font-weight: 700;
+        font-family: var(--gld-font-display);
+        border-radius: 3px;
+        cursor: pointer;
+    }
+
+    button:hover { background: linear-gradient(180deg, #ffe08a, #d4a742); }
+    button:disabled { opacity: 0.6; cursor: wait; }
+
+    .checkout-foot {
+        margin: 2rem auto 0;
+        max-width: 640px;
+        text-align: center;
+        font-size: 0.84rem;
+        line-height: 1.6;
+        color: rgb(244 228 193 / 0.75);
+    }
+
+    .checkout-foot a { color: var(--gld-gold); }
+
+    .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 1000;
+        background: rgba(0, 0, 0, 0.7);
+        align-items: center;
+        justify-content: center;
+    }
+
+    .modal.show { display: flex; }
+
+    .modal-content {
+        background: #f4e4c1;
+        border: 2px solid var(--gld-border);
+        padding: 20px;
+        width: 90%;
+        max-width: 400px;
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    .modal-close { float: right; font-size: 24px; font-weight: bold; cursor: pointer; color: #6b4f32; }
+
+    .modal h2 { font-family: var(--gld-font-display); margin-bottom: 0.6rem; }
+    .modal p { font-size: 0.9rem; line-height: 1.5; color: var(--gld-text-muted); }
+
+    .modal input[type="email"] {
+        width: 100%;
+        padding: 10px;
+        margin: 12px 0;
+        border: 1px solid #c9a66b;
+        border-radius: 4px;
+        font-size: 16px;
+    }
+
+    .modal button { width: 100%; }
+
+    .modal-error { display: none; margin-top: 0.6rem; color: #8b2222; font-size: 0.85rem; }
+
+    @media (max-width: 768px) {
+        .pricing-table { flex-direction: column; align-items: center; gap: 2rem; }
+        .plan { width: 100%; max-width: 360px; }
+    }
+</style>
+
+<div class="checkout-shell">
+    <div class="checkout-top">
+        <a class="checkout-back" href="/"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to home</a>
+    </div>
+
+    <header class="checkout-header">
+        <div class="checkout-brand">
+            <img src="./images/gladiusbot-mark.svg" alt="GladiusBot" width="48" height="48">
+            <h1>GladiusBot plans</h1>
+        </div>
+        <p class="checkout-sub">One-time payment in US dollars. No subscription, no automatic renewal.</p>
+        <div class="checkout-trust">
+            <img src="./images/stripe.png" alt="Secure payments">
+            <img class="trust-stripe-wide" src="./images/stripe-v2.png" alt="Stripe">
+        </div>
+    </header>
+
+    <div class="pricing-table">
+        <div class="plan">
+            <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
+            <h2>15 days</h2>
+            <p class="price">US$ 1.98</p>
+            <p class="per-day">about US$ 0.13 per day</p>
+            <div class="plan-notice">The license key is sent to your email right after the payment is confirmed.</div>
+            <button type="button" data-plan="15DAYS">Buy now</button>
+        </div>
+        <div class="plan featured">
+            <div class="badge">Best seller</div>
+            <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
+            <h2>30 days</h2>
+            <p class="price">US$ 3.76</p>
+            <p class="per-day">about US$ 0.13 per day</p>
+            <div class="plan-notice">The license key is sent to your email right after the payment is confirmed.</div>
+            <button type="button" data-plan="30DAYS">Buy now</button>
+        </div>
+        <div class="plan">
+            <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
+            <h2>60 days</h2>
+            <p class="price">US$ 6.76</p>
+            <p class="per-day">about US$ 0.11 per day</p>
+            <div class="plan-notice">The license key is sent to your email right after the payment is confirmed.</div>
+            <button type="button" data-plan="60DAYS">Buy now</button>
+        </div>
+    </div>
+
+    <p class="checkout-foot">
+        Payments are processed by Stripe. Card details never reach our server.<br>
+        Paying with a card issued in Brazil? Use the <a href="checkout.html">Brazilian checkout (BRL / Pix)</a>.<br>
+        Questions: <a href="mailto:gldbotsuport@gmail.com">gldbotsuport@gmail.com</a>
+    </p>
+</div>
+
+<div id="emailModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="emailModalTitle">
+    <div class="modal-content">
+        <span class="modal-close" aria-label="Close">&times;</span>
+        <h2 id="emailModalTitle">Your email</h2>
+        <p>We send the license key to this address. Check your spam folder if it doesn't arrive in a few minutes.</p>
+        <input type="email" id="userEmail" placeholder="you@example.com" autocomplete="email" required>
+        <button type="button" id="submitEmail">Continue to payment</button>
+        <p class="modal-error" id="modalError"></p>
+    </div>
+</div>
+
+<script>
+    (function () {
+        var modal = document.getElementById('emailModal');
+        var emailInput = document.getElementById('userEmail');
+        var submit = document.getElementById('submitEmail');
+        var errorBox = document.getElementById('modalError');
+        var selectedPlan = null;
+
+        function showError(text) {
+            errorBox.textContent = text;
+            errorBox.style.display = text ? 'block' : 'none';
+        }
+
+        document.querySelectorAll('button[data-plan]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                selectedPlan = btn.getAttribute('data-plan');
+                showError('');
+                modal.classList.add('show');
+                emailInput.focus();
+            });
+        });
+
+        document.querySelector('.modal-close').addEventListener('click', function () {
+            modal.classList.remove('show');
+        });
+        modal.addEventListener('click', function (e) {
+            if (e.target === modal) modal.classList.remove('show');
+        });
+        emailInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') submit.click();
+        });
+
+        submit.addEventListener('click', async function () {
+            var email = emailInput.value.trim();
+            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                showError('Please enter a valid email.');
+                return;
+            }
+            showError('');
+            submit.disabled = true;
+            submit.textContent = 'Redirecting…';
+            try {
+                var response = await fetch('/stripe/checkout', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ plan_code: selectedPlan, email: email })
+                });
+                var data = await response.json();
+                if (response.ok && data.checkoutUrl) {
+                    window.location.href = data.checkoutUrl;
+                    return;
+                }
+                showError(data.error || 'Could not start checkout. Please try again.');
+            } catch (err) {
+                showError('Could not start checkout. Please try again.');
+            }
+            submit.disabled = false;
+            submit.textContent = 'Continue to payment';
+        });
+    })();
+</script>
+</body>
+</html>
