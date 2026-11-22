@@ -23,10 +23,13 @@ const STRIPE_PLANS = {
     },
 };
 
-/** STRIPE_PRICE_15DAYS etc. no .env substituem o preço (ex.: preços do sandbox para teste local). */
+/** `npm run start:test` (flag --stripe-test) usa as chaves e preços STRIPE_TEST_* do .env. */
+const STRIPE_TEST_MODE = process.argv.includes('--stripe-test');
+
 function withPriceOverride(code, plan) {
-    const override = process.env[`STRIPE_PRICE_${code}`];
-    return override ? { ...plan, priceId: override } : plan;
+    if (!STRIPE_TEST_MODE) return plan;
+    const testPrice = process.env[`STRIPE_TEST_PRICE_${code}`];
+    return testPrice ? { ...plan, priceId: testPrice } : plan;
 }
 
 function getStripePlan(planCode) {
@@ -43,6 +46,7 @@ function findStripePlanByPrice(priceId) {
 }
 
 module.exports = {
+    STRIPE_TEST_MODE,
     STRIPE_PLANS,
     getStripePlan,
     findStripePlanByPrice,

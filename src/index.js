@@ -10,7 +10,8 @@ const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);  // Usando a variável do .env
+const { STRIPE_TEST_MODE } = require('./stripe-plans');
+const stripe = require('stripe')(STRIPE_TEST_MODE ? process.env.STRIPE_TEST_SECRET_KEY : process.env.STRIPE_SECRET_KEY);
 const { MercadoPagoConfig, Preference, Payment } = require('mercadopago');
 const sgMail = require('@sendgrid/mail');
 const {
@@ -137,7 +138,7 @@ const app = express();
 app.use(cors());
 
 const CANONICAL_HOST = process.env.CANONICAL_HOST || 'gldbotserver.com';
-const PUBLIC_BASE_URL = (process.env.PUBLIC_BASE_URL || `https://${CANONICAL_HOST}`).replace(/\/+$/, '');
+const PUBLIC_BASE_URL = STRIPE_TEST_MODE ? 'http://localhost:4000' : `https://${CANONICAL_HOST}`;
 app.use((req, res, next) => {
     const host = (req.headers.host || '').toLowerCase();
     if (host.startsWith('www.')) {
@@ -178,7 +179,7 @@ const GLOBAL_EXPIRATION_DATE = process.env.GLOBAL_EXPIRATION_DATE;
 const GLOBAL_REFRESH_TOKEN = process.env.GLOBAL_REFRESH_TOKEN;
 const GLOBAL_TOKEN = process.env.GLOBAL_TOKEN;
 const YOUR_DOMAIN = process.env.YOUR_DOMAIN;
-const endpointSecret = process.env.ENDPOINT_SECRET;
+const endpointSecret = STRIPE_TEST_MODE ? process.env.STRIPE_TEST_ENDPOINT_SECRET : process.env.ENDPOINT_SECRET;
 var globalAnnouncement = '';
 var globalAnnouncementUpdatedAt = null;
 const ITCH_HUB_URL = process.env.ITCH_HUB_URL || 'https://gladiusbot.itch.io/gladiusbot';
@@ -3153,7 +3154,13 @@ registerBotProxyRoutes(app, {
 registerAppTelemetryRoutes(app);
 
 app.listen(port, () => {
-    mongoose.connect(process.env.MONGO_URI)
+    if (STRIPE_TEST_MODE) {
+        console.log('*** Stripe em MODO TESTE (chaves e preços STRIPE_TEST_*) ***');
+        if (!process.env.MONGO_TEST_URI) {
+            console.warn('*** MONGO_TEST_URI não definida: licenças de teste vão para o banco de PRODUÇÃO ***');
+        }
+    }
+    mongoose.connect(STRIPE_TEST_MODE && process.env.MONGO_TEST_URI ? process.env.MONGO_TEST_URI : process.env.MONGO_URI)
     mongoose.connection.on('error', err => {
         console.error('Erro na conexão com o MongoDB:', err);
     });
