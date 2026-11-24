@@ -175,7 +175,7 @@
 
     label.field-label { display: block; margin-bottom: 0.35rem; font-size: 0.82rem; font-weight: 600; color: var(--gld-text-muted); }
 
-    input[type="email"] {
+    input[type="email"], .text-input {
         width: 100%;
         padding: 0.7rem 0.8rem;
         font: 1rem var(--gld-font);
@@ -186,8 +186,9 @@
         outline: none;
         transition: border-color 0.15s, box-shadow 0.15s;
     }
-    input[type="email"]:focus { border-color: var(--gld-accent); box-shadow: 0 0 0 2px rgb(186 151 0 / 0.25); }
-    input[type="email"].invalid { border-color: var(--gld-danger); }
+    input[type="email"]:focus, .text-input:focus { border-color: var(--gld-accent); box-shadow: 0 0 0 2px rgb(186 151 0 / 0.25); }
+    input[type="email"].invalid, .text-input.invalid { border-color: var(--gld-danger); }
+    .payment-element { margin-top: 0.85rem; }
     .hint { margin-top: 0.35rem; font-size: 0.76rem; color: var(--gld-text-muted); }
 
     #payment-element { min-height: 120px; }
@@ -343,7 +344,9 @@
 
             <section class="step">
                 <h2 class="step-title"><span class="step-num">3</span> Payment</h2>
-                <div id="payment-element"><div class="loading-box"><i class="fas fa-spinner fa-spin"></i> Loading secure payment form…</div></div>
+                <label class="field-label" for="card-name">Name on card</label>
+                <input type="text" id="card-name" class="text-input" placeholder="Full name as shown on the card" autocomplete="cc-name">
+                <div id="payment-element" class="payment-element"><div class="loading-box"><i class="fas fa-spinner fa-spin"></i> Loading secure payment form…</div></div>
                 <button type="button" class="pay-btn" id="pay-btn" disabled>
                     <i class="fas fa-lock" aria-hidden="true"></i> <span id="pay-label">Pay</span>
                 </button>
@@ -534,10 +537,30 @@
             return msg;
         }
 
+        var cardNameInput = document.getElementById('card-name');
+        cardNameInput.addEventListener('input', function () {
+            cardNameInput.classList.remove('invalid');
+            showMessage('');
+        });
+
+        function getCardName() {
+            return cardNameInput.value.trim().replace(/\s+/g, ' ');
+        }
+
+        function validateCardName() {
+            var ok = getCardName().length >= 3;
+            cardNameInput.classList.toggle('invalid', !ok);
+            if (!ok) {
+                showMessage('Please enter the name shown on your card.');
+                cardNameInput.focus();
+            }
+            return ok;
+        }
+
         async function payWithCard() {
             if (busy || !elements) return;
             showMessage('');
-            if (!validateEmail()) return;
+            if (!validateEmail() || !validateCardName()) return;
             setBusy(true);
             try {
                 var submitResult = await elements.submit();
@@ -554,7 +577,8 @@
                     clientSecret: intent.clientSecret,
                     confirmParams: {
                         return_url: window.location.origin + '/success.html?lang=en',
-                        receipt_email: email
+                        receipt_email: email,
+                        payment_method_data: { billing_details: { name: getCardName(), email: email } }
                     },
                     redirect: 'if_required'
                 });
