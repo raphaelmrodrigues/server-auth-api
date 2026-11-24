@@ -509,7 +509,7 @@
 
     async function fetchLicenseInfo() {
         const urlParams = new URLSearchParams(window.location.search);
-        const sessionId = urlParams.get('session_id');
+        const sessionId = urlParams.get('session_id') || urlParams.get('payment_intent');
         const paymentId = urlParams.get('payment_id') || urlParams.get('collection_id');
 
         if (paymentId) {
@@ -530,6 +530,9 @@
             // A licença é criada pelo webhook da Stripe, que pode chegar alguns segundos depois do redirecionamento.
             for (let attempt = 0; attempt < 10; attempt++) {
                 try {
+                    if (sessionId.startsWith('pi_')) {
+                        await fetch(`${API_BASE}/stripe/payment-intent/${encodeURIComponent(sessionId)}/complete`, { method: 'POST' });
+                    }
                     const response = await fetch(`${API_BASE}/license-info?session_id=${encodeURIComponent(sessionId)}`);
                     const data = await response.json();
                     if (response.ok && data.licenseKey) {

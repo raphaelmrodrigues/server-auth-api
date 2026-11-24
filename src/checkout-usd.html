@@ -5,17 +5,28 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="./images/gladiusbot-icon-48.png">
     <link rel="apple-touch-icon" href="./images/gladiusbot-icon-128.png">
-    <title>GladiusBot — Buy a license</title>
+    <title>GladiusBot — Checkout</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://js.stripe.com/v3/"></script>
 </head>
 <body>
 <style>
     :root {
-        --gld-gold: #ffcc66;
-        --gld-accent: #ba9700;
-        --gld-border: #876e3e;
+        --gld-bg-deep: #ebe0c4;
+        --gld-bg-panel: #f4e4c1;
+        --gld-bg-elevated: #e8d5b0;
+        --gld-bg-input: #fffef8;
+        --gld-border: #b28b60;
+        --gld-border-soft: #c9a66b;
         --gld-text: #3d2a1a;
         --gld-text-muted: #6b4f32;
+        --gld-accent: #ba9700;
+        --gld-accent-hover: #d4a742;
+        --gld-success: #4a7c2a;
+        --gld-danger: #8b2222;
+        --gld-wood-dark: #5c3a1c;
+        --gld-gold: #ffcc66;
+        --gld-btn-border: #876e3e;
         --gld-font: Tahoma, "Segoe UI", Arial, sans-serif;
         --gld-font-display: Georgia, "Times New Roman", serif;
     }
@@ -25,316 +36,659 @@
     body {
         font-family: var(--gld-font);
         background:
-            radial-gradient(ellipse 70% 40% at 50% 0%, rgb(186 151 0 / 0.1), transparent 55%),
+            radial-gradient(ellipse 70% 40% at 50% 0%, rgb(186 151 0 / 0.12), transparent 55%),
             linear-gradient(180deg, #1a120a 0%, #0e0a06 100%);
         min-height: 100vh;
         color: var(--gld-text);
-        padding: 1.25rem 1rem 2rem;
+        padding: 1.25rem 1rem 2.5rem;
     }
 
-    .checkout-shell { width: 100%; max-width: 980px; margin: 0 auto; }
+    .shell { width: 100%; max-width: 1040px; margin: 0 auto; }
 
-    .checkout-top { margin-bottom: 0.85rem; }
-
-    .checkout-back {
+    .back {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
+        margin-bottom: 0.85rem;
         padding: 0.55rem 1.05rem;
-        font-size: 0.84rem;
-        font-weight: 600;
-        font-family: var(--gld-font-display);
+        font: 600 0.84rem var(--gld-font-display);
         color: #fff8cf;
         text-decoration: none;
         background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 100%);
         border: 1px solid rgb(255 204 102 / 0.4);
         border-radius: 4px;
     }
+    .back i { font-size: 0.78rem; color: var(--gld-gold); }
+    .back:hover { color: #fff; border-color: var(--gld-gold); }
 
-    .checkout-back i { font-size: 0.78rem; color: var(--gld-gold); }
-    .checkout-back:hover { color: #fff; border-color: var(--gld-gold); }
-
-    .checkout-header {
-        text-align: center;
-        padding: 0.85rem 1.15rem 0.75rem;
+    .header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.9rem 1.2rem;
         background: linear-gradient(180deg, #5c3a1c 0%, #3d2814 55%, #2a1a0e 100%);
-        border: 2px solid var(--gld-border);
+        border: 2px solid var(--gld-btn-border);
         border-radius: 4px;
         box-shadow: 0 8px 24px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.1);
         color: #f4e4c1;
     }
+    .header img { width: 46px; height: 46px; filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.45)); }
+    .header h1 { font: 700 1.3rem var(--gld-font-display); color: var(--gld-gold); letter-spacing: 0.05em; }
+    .header p { font-size: 0.84rem; color: rgb(244 228 193 / 0.85); margin-top: 0.15rem; }
+    .header .secure {
+        margin-left: auto;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.78rem;
+        color: rgb(244 228 193 / 0.85);
+        white-space: nowrap;
+    }
+    .header .secure i { color: var(--gld-gold); }
 
-    .checkout-brand { display: flex; flex-direction: column; align-items: center; gap: 0.4rem; margin-bottom: 0.45rem; }
-    .checkout-brand img { width: 48px; height: 48px; filter: drop-shadow(0 3px 10px rgb(0 0 0 / 0.45)); }
-
-    .checkout-header h1 {
-        font-family: var(--gld-font-display);
-        font-size: 1.3rem;
-        color: var(--gld-gold);
-        letter-spacing: 0.05em;
+    .layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 320px;
+        gap: 1.1rem;
+        margin-top: 1.1rem;
+        align-items: start;
     }
 
-    .checkout-sub { font-size: 0.86rem; color: rgb(244 228 193 / 0.85); line-height: 1.5; }
+    .panel {
+        background: linear-gradient(180deg, var(--gld-bg-panel) 0%, var(--gld-bg-deep) 100%);
+        border: 2px solid var(--gld-btn-border);
+        border-radius: 4px;
+        box-shadow: 0 10px 28px rgb(0 0 0 / 0.35), inset 0 1px 0 rgb(255 255 255 / 0.35);
+        padding: 1.15rem 1.2rem 1.3rem;
+    }
 
-    .checkout-trust {
+    .step + .step { margin-top: 1.35rem; padding-top: 1.2rem; border-top: 1px solid rgb(135 110 62 / 0.3); }
+
+    .step-title {
+        display: flex;
+        align-items: center;
+        gap: 0.55rem;
+        margin-bottom: 0.8rem;
+        font: 700 1.02rem var(--gld-font-display);
+    }
+    .step-num {
+        display: inline-grid;
+        place-items: center;
+        width: 24px;
+        height: 24px;
+        font: 700 0.8rem var(--gld-font);
+        color: #1a1008;
+        background: linear-gradient(180deg, #ffcc66, #ba9700);
+        border: 1px solid var(--gld-btn-border);
+        border-radius: 50%;
+    }
+
+    .plans { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.7rem; }
+
+    .plan {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0.2rem;
+        padding: 1rem 0.6rem 0.85rem;
+        background: var(--gld-bg-input);
+        border: 1px solid var(--gld-border-soft);
+        border-radius: 10px;
+        cursor: pointer;
+        text-align: center;
+        transition: background 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+    }
+    .plan input { position: absolute; opacity: 0; pointer-events: none; }
+    .plan:hover { background: var(--gld-bg-elevated); border-color: var(--gld-border); }
+    .plan.selected {
+        border-color: var(--gld-accent);
+        background: #fff8cf;
+        box-shadow: 0 0 0 2px rgb(186 151 0 / 0.35), 0 6px 16px rgb(61 42 26 / 0.18);
+        transform: translateY(-2px);
+    }
+    .plan .days { font: 700 1.05rem var(--gld-font-display); }
+    .plan .price { font: 700 1.45rem var(--gld-font-display); color: var(--gld-accent); }
+    .plan .per-day { font-size: 0.74rem; color: var(--gld-text-muted); }
+    .plan .check {
+        position: absolute;
+        top: 8px;
+        right: 9px;
+        color: var(--gld-accent);
+        opacity: 0;
+        transition: opacity 0.15s;
+    }
+    .plan.selected .check { opacity: 1; }
+    .plan .badge {
+        position: absolute;
+        top: -10px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 0.18rem 0.6rem;
+        font: 700 0.68rem var(--gld-font-display);
+        color: #1a1008;
+        white-space: nowrap;
+        background: linear-gradient(180deg, #ffcc66, #ba9700);
+        border: 1px solid #d4a742;
+        border-radius: 3px;
+    }
+
+    label.field-label { display: block; margin-bottom: 0.35rem; font-size: 0.82rem; font-weight: 600; color: var(--gld-text-muted); }
+
+    input[type="email"] {
+        width: 100%;
+        padding: 0.7rem 0.8rem;
+        font: 1rem var(--gld-font);
+        color: var(--gld-text);
+        background: var(--gld-bg-input);
+        border: 1px solid var(--gld-border-soft);
+        border-radius: 4px;
+        outline: none;
+        transition: border-color 0.15s, box-shadow 0.15s;
+    }
+    input[type="email"]:focus { border-color: var(--gld-accent); box-shadow: 0 0 0 2px rgb(186 151 0 / 0.25); }
+    input[type="email"].invalid { border-color: var(--gld-danger); }
+    .hint { margin-top: 0.35rem; font-size: 0.76rem; color: var(--gld-text-muted); }
+
+    #payment-element { min-height: 120px; }
+    .loading-box { display: flex; align-items: center; gap: 0.5rem; padding: 1rem 0; font-size: 0.85rem; color: var(--gld-text-muted); }
+
+    .pay-btn {
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-wrap: wrap;
-        gap: 0.85rem;
-        margin-top: 0.55rem;
-        padding-top: 0.45rem;
-        border-top: 1px solid rgb(255 204 102 / 0.18);
-    }
-
-    .checkout-trust img { width: clamp(56px, 8.5%, 84px); height: auto; opacity: 0.92; }
-    .checkout-trust img.trust-stripe-wide { width: clamp(118px, 21%, 195px); }
-
-    .pricing-table { display: flex; gap: 1.25rem; justify-content: center; flex-wrap: wrap; margin-top: 3rem; }
-
-    .plan {
-        background: linear-gradient(180deg, #f4e4c1 0%, #ebe0c4 100%);
-        padding: 1.75rem 1.5rem 1.5rem;
-        width: 280px;
+        gap: 0.55rem;
+        width: 100%;
+        margin-top: 1rem;
+        padding: 0.85rem 1.5rem;
+        font: 700 1.02rem var(--gld-font-display);
+        color: #1a1008;
+        background: linear-gradient(180deg, #ffcc66, #ba9700);
+        border: 1px solid var(--gld-btn-border);
         border-radius: 4px;
-        box-shadow: 0 10px 28px rgb(0 0 0 / 0.35);
-        text-align: center;
-        position: relative;
-        border: 2px solid var(--gld-border);
-        transition: transform 0.2s ease, border-color 0.2s ease;
-    }
-
-    .plan:hover { transform: translateY(-4px); border-color: var(--gld-gold); }
-    .plan.featured { border-color: var(--gld-gold); background: linear-gradient(180deg, #fff8cf 0%, #f4e4c1 100%); }
-
-    .plan .badge {
-        position: absolute;
-        top: -13px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(180deg, #ffcc66, #ba9700);
-        color: #1a1008;
-        padding: 0.35rem 0.9rem;
-        font-size: 0.75rem;
-        border-radius: 3px;
-        font-weight: 700;
-        font-family: var(--gld-font-display);
-        border: 1px solid #d4a742;
-        white-space: nowrap;
-    }
-
-    .plan-icon { width: 96px; height: 96px; object-fit: contain; margin-bottom: 0.85rem; }
-
-    .plan h2 { font-family: var(--gld-font-display); font-size: 1.25rem; margin-bottom: 0.45rem; }
-
-    .plan .price { font-family: var(--gld-font-display); font-size: 2rem; color: var(--gld-accent); font-weight: 700; }
-    .plan .per-day { font-size: 0.8rem; color: var(--gld-text-muted); margin-bottom: 1rem; }
-
-    .plan-notice {
-        margin-bottom: 1.15rem;
-        padding: 0.65rem 0.7rem;
-        background: rgb(92 58 28 / 0.06);
-        border: 1px solid rgb(135 110 62 / 0.35);
-        border-radius: 3px;
-        font-size: 0.82rem;
-        line-height: 1.5;
-        color: var(--gld-text-muted);
-    }
-
-    button {
-        padding: 0.75rem 1.5rem;
-        border: 1px solid #876e3e;
-        background: linear-gradient(180deg, #ffcc66, #ba9700);
-        color: #1a1008;
-        font-size: 0.95rem;
-        font-weight: 700;
-        font-family: var(--gld-font-display);
-        border-radius: 3px;
         cursor: pointer;
+        box-shadow: 0 4px 12px rgb(61 42 26 / 0.25);
     }
+    .pay-btn:hover:not(:disabled) { background: linear-gradient(180deg, #ffe08a, #d4a742); }
+    .pay-btn:disabled { opacity: 0.6; cursor: wait; }
 
-    button:hover { background: linear-gradient(180deg, #ffe08a, #d4a742); }
-    button:disabled { opacity: 0.6; cursor: wait; }
-
-    .checkout-foot {
-        margin: 2rem auto 0;
-        max-width: 640px;
-        text-align: center;
-        font-size: 0.84rem;
-        line-height: 1.6;
-        color: rgb(244 228 193 / 0.75);
+    .divider {
+        display: flex;
+        align-items: center;
+        gap: 0.7rem;
+        margin: 1.15rem 0 0.9rem;
+        font-size: 0.78rem;
+        color: var(--gld-text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
     }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgb(135 110 62 / 0.35); }
 
-    .checkout-foot a { color: var(--gld-gold); }
+    .message { display: none; margin-top: 0.85rem; padding: 0.65rem 0.75rem; font-size: 0.85rem; line-height: 1.45; border-radius: 4px; }
+    .message.error { display: block; color: var(--gld-danger); background: rgb(139 34 34 / 0.07); border: 1px solid rgb(139 34 34 / 0.3); }
+    .message.info { display: block; color: var(--gld-success); background: rgb(74 124 42 / 0.08); border: 1px solid rgb(74 124 42 / 0.3); }
 
-    .modal {
-        display: none;
+    .summary h2 { font: 700 1.05rem var(--gld-font-display); margin-bottom: 0.8rem; }
+    .summary-row { display: flex; justify-content: space-between; gap: 0.5rem; padding: 0.45rem 0; font-size: 0.88rem; border-bottom: 1px dashed rgb(135 110 62 / 0.35); }
+    .summary-row span:first-child { color: var(--gld-text-muted); }
+    .summary-total { display: flex; justify-content: space-between; align-items: baseline; margin-top: 0.7rem; font: 700 1rem var(--gld-font-display); }
+    .summary-total .amount { font-size: 1.55rem; color: var(--gld-accent); }
+    .perks { list-style: none; margin-top: 1rem; display: grid; gap: 0.5rem; }
+    .perks li { display: flex; gap: 0.55rem; font-size: 0.82rem; line-height: 1.4; color: var(--gld-text-muted); }
+    .perks i { margin-top: 0.15rem; color: var(--gld-accent); width: 14px; text-align: center; }
+    .trust { display: flex; align-items: center; justify-content: center; gap: 0.8rem; margin-top: 1rem; padding-top: 0.8rem; border-top: 1px solid rgb(135 110 62 / 0.3); }
+    .trust img { height: 26px; width: auto; opacity: 0.9; }
+
+    .processing {
         position: fixed;
         inset: 0;
-        z-index: 1000;
-        background: rgba(0, 0, 0, 0.7);
+        z-index: 2000;
+        display: none;
         align-items: center;
         justify-content: center;
+        padding: 1rem;
+        background: rgb(14 10 6 / 0.82);
+        backdrop-filter: blur(3px);
     }
-
-    .modal.show { display: flex; }
-
-    .modal-content {
-        background: #f4e4c1;
-        border: 2px solid var(--gld-border);
-        padding: 20px;
-        width: 90%;
-        max-width: 400px;
-        border-radius: 6px;
-        text-align: center;
-    }
-
-    .modal-close { float: right; font-size: 24px; font-weight: bold; cursor: pointer; color: #6b4f32; }
-
-    .modal h2 { font-family: var(--gld-font-display); margin-bottom: 0.6rem; }
-    .modal p { font-size: 0.9rem; line-height: 1.5; color: var(--gld-text-muted); }
-
-    .modal input[type="email"] {
+    .processing.show { display: flex; }
+    .processing-card {
         width: 100%;
-        padding: 10px;
-        margin: 12px 0;
-        border: 1px solid #c9a66b;
+        max-width: 400px;
+        padding: 1.5rem 1.4rem 1.3rem;
+        text-align: center;
+        background: linear-gradient(180deg, var(--gld-bg-panel) 0%, var(--gld-bg-deep) 100%);
+        border: 2px solid var(--gld-btn-border);
         border-radius: 4px;
-        font-size: 16px;
+        box-shadow: 0 16px 40px rgb(0 0 0 / 0.5);
     }
+    .processing-card img { width: 52px; height: 52px; }
+    .processing-card h2 { margin: 0.6rem 0 0.3rem; font: 700 1.15rem var(--gld-font-display); }
+    .processing-card .status { font-size: 0.86rem; color: var(--gld-text-muted); min-height: 1.3em; }
+    .spinner {
+        width: 38px;
+        height: 38px;
+        margin: 1rem auto;
+        border: 3px solid rgb(186 151 0 / 0.25);
+        border-top-color: var(--gld-accent);
+        border-radius: 50%;
+        animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .processing-card .summary-row { text-align: left; }
+    .processing-card .note { margin-top: 0.9rem; font-size: 0.76rem; color: var(--gld-text-muted); }
 
-    .modal button { width: 100%; }
+    .foot { margin: 1.6rem auto 0; max-width: 680px; text-align: center; font-size: 0.82rem; line-height: 1.6; color: rgb(244 228 193 / 0.75); }
+    .foot a { color: var(--gld-gold); }
 
-    .modal-error { display: none; margin-top: 0.6rem; color: #8b2222; font-size: 0.85rem; }
-
-    @media (max-width: 768px) {
-        .pricing-table { flex-direction: column; align-items: center; gap: 2rem; }
-        .plan { width: 100%; max-width: 360px; }
+    @media (max-width: 860px) {
+        .layout { grid-template-columns: 1fr; }
+        .summary { order: -1; }
+        .header .secure { display: none; }
+    }
+    @media (max-width: 520px) {
+        .plans { grid-template-columns: 1fr; gap: 0.85rem; }
+        .plan { flex-direction: row; justify-content: space-between; padding: 0.85rem 2.2rem 0.85rem 0.9rem; text-align: left; }
+        .plan .per-day { display: none; }
     }
 </style>
 
-<div class="checkout-shell">
-    <div class="checkout-top">
-        <a class="checkout-back" href="/"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to home</a>
-    </div>
+<div class="shell">
+    <a class="back" href="/"><i class="fas fa-arrow-left" aria-hidden="true"></i> Back to home</a>
 
-    <header class="checkout-header">
-        <div class="checkout-brand">
-            <img src="./images/gladiusbot-mark.svg" alt="GladiusBot" width="48" height="48">
-            <h1>GladiusBot plans</h1>
+    <header class="header">
+        <img src="./images/gladiusbot-mark.svg" alt="GladiusBot" width="46" height="46">
+        <div>
+            <h1>GladiusBot checkout</h1>
+            <p>One-time payment in US dollars. No subscription, no automatic renewal.</p>
         </div>
-        <p class="checkout-sub">One-time payment in US dollars. No subscription, no automatic renewal.</p>
-        <div class="checkout-trust">
-            <img src="./images/stripe.png" alt="Secure payments">
-            <img class="trust-stripe-wide" src="./images/stripe-v2.png" alt="Stripe">
-        </div>
+        <span class="secure"><i class="fas fa-lock" aria-hidden="true"></i> Secure payment</span>
     </header>
 
-    <div class="pricing-table">
-        <div class="plan">
-            <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
-            <h2>15 days</h2>
-            <p class="price">US$ 1.98</p>
-            <p class="per-day">about US$ 0.13 per day</p>
-            <div class="plan-notice">The license key is sent to your email right after the payment is confirmed.</div>
-            <button type="button" data-plan="15DAYS">Buy now</button>
-        </div>
-        <div class="plan featured">
-            <div class="badge">Best seller</div>
-            <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
-            <h2>30 days</h2>
-            <p class="price">US$ 3.76</p>
-            <p class="per-day">about US$ 0.13 per day</p>
-            <div class="plan-notice">The license key is sent to your email right after the payment is confirmed.</div>
-            <button type="button" data-plan="30DAYS">Buy now</button>
-        </div>
-        <div class="plan">
-            <img class="plan-icon" src="./images/gladiusbot-mark.svg" alt="GladiusBot">
-            <h2>60 days</h2>
-            <p class="price">US$ 6.96</p>
-            <p class="per-day">about US$ 0.11 per day</p>
-            <div class="plan-notice">The license key is sent to your email right after the payment is confirmed.</div>
-            <button type="button" data-plan="60DAYS">Buy now</button>
-        </div>
+    <div class="layout">
+        <main class="panel">
+            <section class="step">
+                <h2 class="step-title"><span class="step-num">1</span> Choose your plan</h2>
+                <div class="plans" id="plans">
+                    <label class="plan" data-plan="15DAYS">
+                        <input type="radio" name="plan" value="15DAYS">
+                        <i class="fas fa-check-circle check" aria-hidden="true"></i>
+                        <span class="days">15 days</span>
+                        <span class="price" data-price>US$ 1.98</span>
+                        <span class="per-day" data-per-day></span>
+                    </label>
+                    <label class="plan selected" data-plan="30DAYS">
+                        <span class="badge">Best seller</span>
+                        <input type="radio" name="plan" value="30DAYS" checked>
+                        <i class="fas fa-check-circle check" aria-hidden="true"></i>
+                        <span class="days">30 days</span>
+                        <span class="price" data-price>US$ 3.76</span>
+                        <span class="per-day" data-per-day></span>
+                    </label>
+                    <label class="plan" data-plan="60DAYS">
+                        <input type="radio" name="plan" value="60DAYS">
+                        <i class="fas fa-check-circle check" aria-hidden="true"></i>
+                        <span class="days">60 days</span>
+                        <span class="price" data-price>US$ 6.96</span>
+                        <span class="per-day" data-per-day></span>
+                    </label>
+                </div>
+            </section>
+
+            <section class="step">
+                <h2 class="step-title"><span class="step-num">2</span> Your email</h2>
+                <label class="field-label" for="email">The license key is sent to this address</label>
+                <input type="email" id="email" placeholder="you@example.com" autocomplete="email" required>
+                <p class="hint">Check your spam folder if it doesn't arrive in a few minutes.</p>
+            </section>
+
+            <section class="step">
+                <h2 class="step-title"><span class="step-num">3</span> Payment</h2>
+                <div id="payment-element"><div class="loading-box"><i class="fas fa-spinner fa-spin"></i> Loading secure payment form…</div></div>
+                <button type="button" class="pay-btn" id="pay-btn" disabled>
+                    <i class="fas fa-lock" aria-hidden="true"></i> <span id="pay-label">Pay</span>
+                </button>
+
+                <div id="paypal-section" hidden>
+                    <div class="divider">or</div>
+                    <div id="paypal-buttons"></div>
+                </div>
+
+                <div class="message" id="message" role="alert"></div>
+            </section>
+        </main>
+
+        <aside class="panel summary">
+            <h2>Order summary</h2>
+            <div class="summary-row"><span>Product</span><span>GladiusBot license</span></div>
+            <div class="summary-row"><span>Duration</span><span id="sum-days">30 days</span></div>
+            <div class="summary-total"><span>Total</span><span class="amount" id="sum-total">US$ 3.76</span></div>
+            <ul class="perks">
+                <li><i class="fas fa-bolt" aria-hidden="true"></i> License key delivered instantly on screen and by email</li>
+                <li><i class="fas fa-redo" aria-hidden="true"></i> One-time payment — nothing is charged again</li>
+                <li><i class="fas fa-shield-alt" aria-hidden="true"></i> Card details are handled by Stripe and never reach our server</li>
+            </ul>
+            <div class="trust">
+                <img src="./images/stripe.png" alt="Secure payments">
+                <img src="./images/stripe-v2.png" alt="Stripe">
+            </div>
+        </aside>
     </div>
 
-    <p class="checkout-foot">
-        Payments are processed by Stripe. Card details never reach our server.<br>
+    <p class="foot">
         Paying with a card issued in Brazil? Use the <a href="checkout.html">Brazilian checkout (BRL / Pix)</a>.<br>
         Questions: <a href="mailto:gldbotsuport@gmail.com">gldbotsuport@gmail.com</a>
     </p>
 </div>
 
-<div id="emailModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="emailModalTitle">
-    <div class="modal-content">
-        <span class="modal-close" aria-label="Close">&times;</span>
-        <h2 id="emailModalTitle">Your email</h2>
-        <p>We send the license key to this address. Check your spam folder if it doesn't arrive in a few minutes.</p>
-        <input type="email" id="userEmail" placeholder="you@example.com" autocomplete="email" required>
-        <button type="button" id="submitEmail">Continue to payment</button>
-        <p class="modal-error" id="modalError"></p>
+<div class="processing" id="processing" role="dialog" aria-modal="true" aria-live="polite">
+    <div class="processing-card">
+        <img src="./images/gladiusbot-mark.svg" alt="">
+        <h2 id="proc-title">Confirming your payment</h2>
+        <p class="status" id="proc-status">Please don't close this page.</p>
+        <div class="spinner" aria-hidden="true"></div>
+        <div class="summary-row"><span>Plan</span><span id="proc-plan"></span></div>
+        <div class="summary-row"><span>Total</span><span id="proc-total"></span></div>
+        <div class="summary-row"><span>License sent to</span><span id="proc-email"></span></div>
+        <p class="note">You'll be redirected to your license key automatically.</p>
     </div>
 </div>
 
 <script>
     (function () {
-        var modal = document.getElementById('emailModal');
-        var emailInput = document.getElementById('userEmail');
-        var submit = document.getElementById('submitEmail');
-        var errorBox = document.getElementById('modalError');
-        var selectedPlan = null;
+        var EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        var plans = {};
+        var selectedPlan = '30DAYS';
+        var stripe = null;
+        var elements = null;
+        var intentCache = null;
+        var busy = false;
 
-        function showError(text) {
-            errorBox.textContent = text;
-            errorBox.style.display = text ? 'block' : 'none';
+        var emailInput = document.getElementById('email');
+        var payBtn = document.getElementById('pay-btn');
+        var payLabel = document.getElementById('pay-label');
+        var messageBox = document.getElementById('message');
+
+        function money(cents) {
+            return 'US$ ' + (cents / 100).toFixed(2);
         }
 
-        document.querySelectorAll('button[data-plan]').forEach(function (btn) {
-            btn.addEventListener('click', function () {
-                selectedPlan = btn.getAttribute('data-plan');
-                showError('');
-                modal.classList.add('show');
+        function showMessage(text, type) {
+            messageBox.textContent = text || '';
+            messageBox.className = 'message' + (text ? ' ' + (type || 'error') : '');
+        }
+
+        function getEmail() {
+            return emailInput.value.trim().toLowerCase();
+        }
+
+        function validateEmail() {
+            var ok = EMAIL_RE.test(getEmail());
+            emailInput.classList.toggle('invalid', !ok);
+            if (!ok) {
+                showMessage('Please enter a valid email so we can send your license key.');
                 emailInput.focus();
-            });
-        });
-
-        document.querySelector('.modal-close').addEventListener('click', function () {
-            modal.classList.remove('show');
-        });
-        modal.addEventListener('click', function (e) {
-            if (e.target === modal) modal.classList.remove('show');
-        });
-        emailInput.addEventListener('keydown', function (e) {
-            if (e.key === 'Enter') submit.click();
-        });
-
-        submit.addEventListener('click', async function () {
-            var email = emailInput.value.trim();
-            if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-                showError('Please enter a valid email.');
-                return;
             }
-            showError('');
-            submit.disabled = true;
-            submit.textContent = 'Redirecting…';
+            return ok;
+        }
+
+        function successUrl(id) {
+            return '/success.html?session_id=' + encodeURIComponent(id) + '&lang=en';
+        }
+
+        function renderPlans() {
+            document.querySelectorAll('.plan').forEach(function (el) {
+                var plan = plans[el.getAttribute('data-plan')];
+                if (!plan) return;
+                el.querySelector('[data-price]').textContent = money(plan.amount);
+                el.querySelector('[data-per-day]').textContent = 'about US$ ' + (plan.amount / 100 / plan.duration).toFixed(2) + ' per day';
+            });
+        }
+
+        function selectPlan(code) {
+            selectedPlan = code;
+            document.querySelectorAll('.plan').forEach(function (el) {
+                var on = el.getAttribute('data-plan') === code;
+                el.classList.toggle('selected', on);
+                el.querySelector('input').checked = on;
+            });
+            var plan = plans[code];
+            if (!plan) return;
+            document.getElementById('sum-days').textContent = plan.duration + ' days';
+            document.getElementById('sum-total').textContent = money(plan.amount);
+            payLabel.textContent = 'Pay ' + money(plan.amount);
+            if (elements) elements.update({ amount: plan.amount });
+            showMessage('');
+        }
+
+        document.querySelectorAll('.plan').forEach(function (el) {
+            el.addEventListener('click', function () { selectPlan(el.getAttribute('data-plan')); });
+        });
+        emailInput.addEventListener('input', function () {
+            emailInput.classList.remove('invalid');
+            showMessage('');
+        });
+
+        function setBusy(on) {
+            busy = on;
+            payBtn.disabled = on;
+            payLabel.textContent = on ? 'Processing…' : 'Pay ' + money(plans[selectedPlan].amount);
+        }
+
+        async function getIntent(email) {
+            if (intentCache && intentCache.plan === selectedPlan && intentCache.email === email) return intentCache;
+            var response = await fetch('/stripe/payment-intent', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ plan_code: selectedPlan, email: email })
+            });
+            var data = await response.json();
+            if (!response.ok || !data.clientSecret) throw new Error(data.error || 'Could not start the payment. Please try again.');
+            intentCache = { plan: selectedPlan, email: email, clientSecret: data.clientSecret, id: data.paymentIntentId };
+            return intentCache;
+        }
+
+        var processing = document.getElementById('processing');
+
+        function showProcessing(status) {
+            var plan = plans[selectedPlan];
+            document.getElementById('proc-plan').textContent = plan.duration + ' days';
+            document.getElementById('proc-total').textContent = money(plan.amount);
+            document.getElementById('proc-email').textContent = getEmail();
+            document.getElementById('proc-status').textContent = status;
+            processing.classList.add('show');
+        }
+
+        function setProcessingStatus(status) {
+            document.getElementById('proc-status').textContent = status;
+        }
+
+        function hideProcessing() {
+            processing.classList.remove('show');
+        }
+
+        function finish(id) {
+            document.getElementById('proc-title').textContent = 'Payment confirmed!';
+            setProcessingStatus('Your license is ready. Redirecting…');
+            window.location.href = successUrl(id);
+        }
+
+        /** Pede ao servidor para gerar a licença já; se demorar, a página de sucesso continua aguardando. */
+        async function completeCardPayment(paymentIntentId) {
+            setProcessingStatus('Payment approved. Generating your license…');
+            for (var attempt = 0; attempt < 15; attempt++) {
+                try {
+                    var response = await fetch('/stripe/payment-intent/' + encodeURIComponent(paymentIntentId) + '/complete', { method: 'POST' });
+                    var data = await response.json();
+                    if (response.ok && data.status === 'COMPLETED') return finish(paymentIntentId);
+                } catch (err) { /* tenta de novo */ }
+                await new Promise(function (r) { setTimeout(r, 2000); });
+            }
+            window.location.href = successUrl(paymentIntentId);
+        }
+
+        function friendlyCardError(error) {
+            var msg = error.message || 'Your payment could not be completed.';
+            if (error.code === 'card_declined' || error.decline_code) {
+                msg += ' If your card was issued in Brazil, please use the Brazilian checkout (BRL / Pix).';
+            }
+            return msg;
+        }
+
+        async function payWithCard() {
+            if (busy || !elements) return;
+            showMessage('');
+            if (!validateEmail()) return;
+            setBusy(true);
             try {
-                var response = await fetch('/stripe/checkout', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ plan_code: selectedPlan, email: email })
-                });
-                var data = await response.json();
-                if (response.ok && data.checkoutUrl) {
-                    window.location.href = data.checkoutUrl;
+                var submitResult = await elements.submit();
+                if (submitResult.error) {
+                    showMessage(submitResult.error.message);
+                    setBusy(false);
                     return;
                 }
-                showError(data.error || 'Could not start checkout. Please try again.');
+                var email = getEmail();
+                var intent = await getIntent(email);
+                showProcessing('Contacting your bank…');
+                var result = await stripe.confirmPayment({
+                    elements: elements,
+                    clientSecret: intent.clientSecret,
+                    confirmParams: {
+                        return_url: window.location.origin + '/success.html?lang=en',
+                        receipt_email: email
+                    },
+                    redirect: 'if_required'
+                });
+                if (result.error) {
+                    hideProcessing();
+                    showMessage(friendlyCardError(result.error));
+                    setBusy(false);
+                    return;
+                }
+                var status = result.paymentIntent && result.paymentIntent.status;
+                if (status === 'succeeded' || status === 'processing') {
+                    await completeCardPayment(result.paymentIntent.id);
+                    return;
+                }
+                hideProcessing();
+                showMessage('Your payment was not completed. Please try again.');
             } catch (err) {
-                showError('Could not start checkout. Please try again.');
+                hideProcessing();
+                showMessage(err.message || 'Could not complete the payment. Please try again.');
             }
-            submit.disabled = false;
-            submit.textContent = 'Continue to payment';
-        });
+            setBusy(false);
+        }
+
+        payBtn.addEventListener('click', payWithCard);
+
+        function setupStripe(publishableKey) {
+            stripe = Stripe(publishableKey);
+            elements = stripe.elements({
+                mode: 'payment',
+                amount: plans[selectedPlan].amount,
+                currency: 'usd',
+                paymentMethodTypes: ['card'],
+                appearance: {
+                    theme: 'stripe',
+                    variables: {
+                        colorPrimary: '#ba9700',
+                        colorBackground: '#fffef8',
+                        colorText: '#3d2a1a',
+                        colorTextSecondary: '#6b4f32',
+                        colorTextPlaceholder: '#a08866',
+                        colorDanger: '#8b2222',
+                        colorIcon: '#876e3e',
+                        fontFamily: 'Tahoma, "Segoe UI", Arial, sans-serif',
+                        fontSizeBase: '15px',
+                        borderRadius: '4px',
+                        spacingUnit: '4px'
+                    },
+                    rules: {
+                        '.Input': { border: '1px solid #c9a66b', boxShadow: 'none' },
+                        '.Input:focus': { borderColor: '#ba9700', boxShadow: '0 0 0 2px rgba(186, 151, 0, 0.25)' },
+                        '.Input--invalid': { borderColor: '#8b2222' },
+                        '.Label': { color: '#6b4f32', fontWeight: '600', fontSize: '13px' },
+                        '.Tab': { border: '1px solid #c9a66b', backgroundColor: '#fffef8', boxShadow: 'none' },
+                        '.Tab--selected': { borderColor: '#ba9700', backgroundColor: '#fff8cf', boxShadow: '0 0 0 2px rgba(186, 151, 0, 0.25)' }
+                    }
+                }
+            });
+            var paymentElement = elements.create('payment', { layout: 'tabs' });
+            document.getElementById('payment-element').innerHTML = '';
+            paymentElement.mount('#payment-element');
+            paymentElement.on('ready', function () {
+                payBtn.disabled = false;
+            });
+        }
+
+        function setupPaypal(clientId) {
+            var script = document.createElement('script');
+            script.src = 'https://www.paypal.com/sdk/js?client-id=' + encodeURIComponent(clientId) +
+                '&currency=USD&intent=capture&components=buttons&disable-funding=card,credit,paylater';
+            script.onload = function () {
+                document.getElementById('paypal-section').hidden = false;
+                window.paypal.Buttons({
+                    style: { layout: 'horizontal', color: 'gold', shape: 'rect', label: 'paypal', height: 46, tagline: false },
+                    onClick: function (data, actions) {
+                        showMessage('');
+                        return validateEmail() ? actions.resolve() : actions.reject();
+                    },
+                    createOrder: async function () {
+                        var response = await fetch('/paypal/orders', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ plan_code: selectedPlan, email: getEmail() })
+                        });
+                        var data = await response.json();
+                        if (!response.ok || !data.id) throw new Error(data.error || 'Could not start PayPal.');
+                        return data.id;
+                    },
+                    onApprove: async function (data, actions) {
+                        showProcessing('Confirming your PayPal payment…');
+                        var result = {};
+                        try {
+                            var response = await fetch('/paypal/orders/' + encodeURIComponent(data.orderID) + '/capture', { method: 'POST' });
+                            result = await response.json();
+                            if (response.ok && result.status === 'COMPLETED') return finish(data.orderID);
+                        } catch (err) { /* mensagem abaixo */ }
+                        hideProcessing();
+                        if (result.status === 'PENDING') {
+                            showMessage('PayPal is still reviewing this payment. Your license key will be emailed as soon as it is approved.', 'info');
+                            return;
+                        }
+                        if (result.issue === 'INSTRUMENT_DECLINED') return actions.restart();
+                        showMessage(result.error || 'Could not complete the PayPal payment. Please try again.');
+                    },
+                    onCancel: function () {
+                        hideProcessing();
+                        showMessage('PayPal payment was cancelled. You can try again.');
+                    },
+                    onError: function (err) {
+                        hideProcessing();
+                        console.error('PayPal error:', err);
+                        showMessage('Could not complete the PayPal payment. Please try again.');
+                    }
+                }).render('#paypal-buttons');
+            };
+            document.head.appendChild(script);
+        }
+
+        async function init() {
+            try {
+                var response = await fetch('/payments/config');
+                var config = await response.json();
+                (config.plans || []).forEach(function (p) { plans[p.code] = p; });
+                renderPlans();
+                selectPlan(selectedPlan);
+                if (!config.stripePublishableKey) throw new Error('missing key');
+                setupStripe(config.stripePublishableKey);
+                if (config.paypal && config.paypal.enabled && config.paypal.clientId) setupPaypal(config.paypal.clientId);
+            } catch (err) {
+                document.getElementById('payment-element').innerHTML = '';
+                showMessage('The payment form could not be loaded. Please refresh the page or contact gldbotsuport@gmail.com.');
+            }
+        }
+
+        init();
     })();
 </script>
 </body>

@@ -90,9 +90,11 @@ const {
     resolvePlanTitleForDb,
 } = require('./mercadopago-plans');
 const {
+    STRIPE_PLANS,
     getStripePlan,
     findStripePlanByPrice,
 } = require('./stripe-plans');
+const paypal = require('./paypal');
 const {
     PURCHASE_FROM,
     PURCHASE_REPLY_TO,
@@ -242,6 +244,9 @@ const License = mongoose.model('license', {
     resetTokenExpiration: Date,
     isAdmin: Boolean,
     transaction_amount: Number,
+    /** Estorno ou contestação: a licença é invalidada (expireDate = momento da revogação). */
+    revokedAt: Date,
+    revokedReason: String,
     /** Messager: trial gratuito já concedido nesta conta */
     msgTrialClaimed: Boolean,
     /** Messager: playerId que recebeu o trial nesta conta */
@@ -414,63 +419,262 @@ async function fulfillStripeSession(sessionId, eventType) {
         return;
     }
 
+    await issuePaidLicense({
+        audit,
+        orderId: session.id,
+        paymentId: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
+        paymentMethod: 'stripe',
+        plan: match.plan,
+        email,
+        amount: (session.amount_total || 0) / 100,
+        country: session.customer_details?.address?.country || '',
+        customerName: session.customer_details?.name || '',
+    });
+}
+
+/**
+ * Cria a licença de um pagamento em dólar confirmado (Stripe ou PayPal) e envia o e-mail.
+ * Upsert atômico por orderId (gravado em License.sessionId): eventos repetidos ou simultâneos
+ * do mesmo pedido não geram duas licenças.
+ */
+async function issuePaidLicense({ audit, orderId, paymentId, paymentMethod, plan, email, amount, country, customerName }) {
+    const label = paymentMethod === 'paypal' ? 'PayPal' : 'Stripe';
     const expireDate = new Date();
-    expireDate.setDate(expireDate.getDate() + match.plan.duration);
-    // Upsert atômico: dois eventos simultâneos da mesma sessão não geram duas licenças.
+    expireDate.setDate(expireDate.getDate() + plan.duration);
     const result = await License.findOneAndUpdate(
-        { sessionId: session.id },
+        { sessionId: orderId },
         {
             $setOnInsert: {
                 playerid: '',
                 licenseKey: uuidv4(),
-                plan: match.plan.title,
+                plan: plan.title,
                 expireDate,
                 trial: false,
                 email,
-                country: session.customer_details?.address?.country || '',
-                sessionId: session.id,
-                payment_id: typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id,
-                payment_method: 'stripe',
-                transaction_amount: (session.amount_total || 0) / 100,
+                country: country || '',
+                sessionId: orderId,
+                payment_id: paymentId,
+                payment_method: paymentMethod,
+                transaction_amount: amount,
             },
         },
         { upsert: true, new: true, includeResultMetadata: true }
     );
     const license = result.value;
+    audit.licenseLink = license._id;
     if (result.lastErrorObject?.updatedExisting) {
         audit.status = 'ignored';
-        audit.licenseLink = license._id;
-        audit.auditNotes = 'Stripe: licença já gerada para esta sessão (evento simultâneo).';
+        audit.auditNotes = `${label}: licença já gerada para este pedido (evento repetido).`;
         await new SaleAudit(audit).save();
-        return;
+        return license;
     }
 
     audit.status = 'approved';
-    audit.licenseLink = license._id;
-    audit.auditNotes = 'Stripe: pagamento aprovado e licença gerada.';
+    audit.auditNotes = `${label}: pagamento aprovado e licença gerada.`;
     await new SaleAudit(audit).save();
-    console.log('Stripe: licença gerada', license.licenseKey, 'para', email);
+    console.log(`${label}: licença gerada`, license.licenseKey, 'para', email);
 
     try {
         await sgMail.send({
-            to: [email, 'gldbotsuport@gmail.com'],
+            to: [...new Set([email, 'gldbotsuport@gmail.com'])],
             from: PURCHASE_FROM,
             replyTo: PURCHASE_REPLY_TO,
             subject: 'Your GladiusBot license — purchase confirmed',
             html: buildCardPurchaseEmailHtml({
-                customerName: session.customer_details?.name || email.split('@')[0],
-                planLabel: match.plan.title,
+                customerName: customerName || email.split('@')[0],
+                planLabel: plan.title,
                 licenseKey: license.licenseKey,
                 expirationDate: expireDate,
             }),
             attachments: getPurchaseEmailAttachments(),
         });
     } catch (mailErr) {
-        console.error('Stripe: erro ao enviar e-mail da licença:', mailErr?.response?.body || mailErr);
+        console.error(`${label}: erro ao enviar e-mail da licença:`, mailErr?.response?.body || mailErr);
+    }
+    return license;
+}
+
+/** Marca de origem nos PaymentIntents do formulário próprio; os da Checkout Session não a têm. */
+const USD_CHECKOUT_SOURCE = 'gld_usd_checkout';
+
+/** Licença do formulário de cartão no checkout-usd.html (PaymentIntent criado em /stripe/payment-intent). */
+async function fulfillStripePaymentIntent(paymentIntentId, eventType) {
+    const audit = {
+        paymentId: paymentIntentId,
+        webhookType: eventType,
+        status: 'pending',
+        auditNotes: 'Stripe: processamento iniciado.',
+    };
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId, { expand: ['latest_charge'] });
+    if (intent.metadata?.source !== USD_CHECKOUT_SOURCE) return;
+
+    audit.paymentDetails = {
+        id: intent.id,
+        status: intent.status,
+        amount_received: intent.amount_received,
+        currency: intent.currency,
+        metadata: intent.metadata,
+    };
+    if (intent.status !== 'succeeded') {
+        audit.auditNotes = `Stripe: pagamento ainda não confirmado (${intent.status}).`;
+        await new SaleAudit(audit).save();
+        return;
+    }
+
+    const planCode = String(intent.metadata.plan_code || '').toUpperCase();
+    const plan = getStripePlan(planCode);
+    const email = normalizeEmail(intent.metadata.email || intent.receipt_email || '');
+    audit.email = email;
+    audit.planCode = planCode;
+    if (!plan || !email || intent.metadata.price_id !== plan.priceId) {
+        audit.status = 'error';
+        audit.auditNotes = `Stripe: plano, preço ou e-mail inválido (plan=${planCode || 'N/A'}, email=${email || 'N/A'}).`;
+        await new SaleAudit(audit).save();
+        console.error(audit.auditNotes);
+        return;
+    }
+
+    const billing = intent.latest_charge?.billing_details || {};
+    await issuePaidLicense({
+        audit,
+        orderId: intent.id,
+        paymentId: intent.id,
+        paymentMethod: 'stripe',
+        plan,
+        email,
+        amount: (intent.amount_received || 0) / 100,
+        country: billing.address?.country || '',
+        customerName: billing.name || '',
+    });
+}
+
+/**
+ * Estorno total ou contestação: a licença deixa de valer na hora (expireDate = agora),
+ * mesmo se já estiver vinculada a um jogador. Avisa o suporte por e-mail.
+ */
+async function revokeLicenseByPayment({ paymentMethod, paymentIds, reason, eventType, details }) {
+    const ids = paymentIds.filter(Boolean);
+    const audit = {
+        paymentId: ids[0] || 'N/A',
+        webhookType: eventType,
+        status: 'update',
+        paymentDetails: details,
+    };
+    const license = ids.length
+        ? await License.findOne({ payment_method: paymentMethod, payment_id: { $in: ids } })
+        : null;
+    if (!license) {
+        audit.status = 'ignored';
+        audit.auditNotes = `${reason}: nenhuma licença encontrada para ${ids.join(', ') || 'N/A'}.`;
+        await new SaleAudit(audit).save();
+        return;
+    }
+
+    audit.licenseLink = license._id;
+    audit.email = license.email;
+    if (license.revokedAt) {
+        audit.status = 'ignored';
+        audit.auditNotes = `${reason}: licença já estava revogada.`;
+        await new SaleAudit(audit).save();
+        return;
+    }
+
+    const now = new Date();
+    license.expireDate = now;
+    license.valid = 'revoked';
+    license.revokedAt = now;
+    license.revokedReason = reason;
+    await license.save();
+    audit.auditNotes = `${reason}: licença ${license.licenseKey} revogada.`;
+    await new SaleAudit(audit).save();
+    console.log(audit.auditNotes);
+
+    await notifySupport(
+        `[GladiusBot] Licença revogada — ${reason}`,
+        `<p><b>${reason}</b> (${paymentMethod}).</p>
+         <p>Licença: <code>${license.licenseKey}</code><br>
+         Plano: ${license.plan}<br>
+         E-mail do comprador: ${license.email}<br>
+         PlayerID vinculado: ${license.playerid || '(nenhum)'}<br>
+         Pagamento: ${ids.join(', ')}</p>
+         <p>A licença foi invalidada automaticamente.</p>`
+    );
+}
+
+async function notifySupport(subject, html) {
+    try {
+        await sgMail.send({
+            to: 'gldbotsuport@gmail.com',
+            from: PURCHASE_FROM,
+            subject,
+            html,
+        });
+    } catch (mailErr) {
+        console.error('Erro ao enviar aviso ao suporte:', mailErr?.response?.body || mailErr);
     }
 }
 
+async function handleStripeRefund(charge, eventType) {
+    const paymentIntentId = typeof charge.payment_intent === 'string' ? charge.payment_intent : charge.payment_intent?.id;
+    if (!charge.refunded) {
+        await notifySupport(
+            '[GladiusBot] Estorno parcial na Stripe',
+            `<p>Estorno parcial de US$ ${((charge.amount_refunded || 0) / 100).toFixed(2)} no pagamento ${paymentIntentId}.
+             A licença <b>não</b> foi revogada.</p>`
+        );
+        return;
+    }
+    await revokeLicenseByPayment({
+        paymentMethod: 'stripe',
+        paymentIds: [paymentIntentId],
+        reason: 'Estorno (Stripe)',
+        eventType,
+        details: { charge: charge.id, payment_intent: paymentIntentId, amount_refunded: charge.amount_refunded },
+    });
+}
+
+async function handleStripeDispute(dispute, eventType) {
+    let paymentIntentId = typeof dispute.payment_intent === 'string' ? dispute.payment_intent : dispute.payment_intent?.id;
+    if (!paymentIntentId && dispute.charge) {
+        const charge = await stripe.charges.retrieve(typeof dispute.charge === 'string' ? dispute.charge : dispute.charge.id);
+        paymentIntentId = charge.payment_intent;
+    }
+    await revokeLicenseByPayment({
+        paymentMethod: 'stripe',
+        paymentIds: [paymentIntentId],
+        reason: 'Contestação / chargeback (Stripe)',
+        eventType,
+        details: { dispute: dispute.id, reason: dispute.reason, amount: dispute.amount, payment_intent: paymentIntentId },
+    });
+}
+
+async function handleStripeFraudWarning(warning) {
+    const paymentIntentId = typeof warning.payment_intent === 'string' ? warning.payment_intent : warning.payment_intent?.id;
+    const license = paymentIntentId
+        ? await License.findOne({ payment_method: 'stripe', payment_id: paymentIntentId })
+        : null;
+    await notifySupport(
+        '[GladiusBot] Alerta de fraude na Stripe',
+        `<p>A Stripe emitiu um alerta antecipado de fraude (${warning.fraud_type || 'tipo não informado'}).</p>
+         <p>Pagamento: ${paymentIntentId || warning.charge}<br>
+         Licença: ${license ? `<code>${license.licenseKey}</code> (${license.email})` : '(não encontrada)'}</p>
+         <p>Recomendado: estornar pelo painel da Stripe antes que vire contestação. O estorno revoga a licença automaticamente.</p>`
+    );
+}
+
 const stripeFulfillmentLocks = new Map();
+
+/** Serializa o processamento por id, para eventos simultâneos do mesmo pedido não correrem em paralelo. */
+async function runExclusive(key, task) {
+    const previous = stripeFulfillmentLocks.get(key) || Promise.resolve();
+    const current = previous.catch(() => {}).then(task);
+    stripeFulfillmentLocks.set(key, current);
+    try {
+        return await current;
+    } finally {
+        if (stripeFulfillmentLocks.get(key) === current) stripeFulfillmentLocks.delete(key);
+    }
+}
 
 app.post('/webhook', express.raw({ type: 'application/json' }), async (request, response) => {
     let event;
@@ -481,21 +685,31 @@ app.post('/webhook', express.raw({ type: 'application/json' }), async (request, 
         return response.status(400).send(`Webhook Error: ${err.message}`);
     }
 
-    if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
-        const sessionId = event.data.object.id;
-        try {
-            const previous = stripeFulfillmentLocks.get(sessionId) || Promise.resolve();
-            const current = previous.catch(() => {}).then(() => fulfillStripeSession(sessionId, event.type));
-            stripeFulfillmentLocks.set(sessionId, current);
-            try {
-                await current;
-            } finally {
-                if (stripeFulfillmentLocks.get(sessionId) === current) stripeFulfillmentLocks.delete(sessionId);
-            }
-        } catch (err) {
-            console.error('Stripe: falha ao gerar licença:', err);
-            return response.status(500).json({ received: false });
+    const object = event.data.object;
+    try {
+        switch (event.type) {
+            case 'checkout.session.completed':
+            case 'checkout.session.async_payment_succeeded':
+                await runExclusive(object.id, () => fulfillStripeSession(object.id, event.type));
+                break;
+            case 'payment_intent.succeeded':
+                await runExclusive(object.id, () => fulfillStripePaymentIntent(object.id, event.type));
+                break;
+            case 'charge.refunded':
+                await handleStripeRefund(object, event.type);
+                break;
+            case 'charge.dispute.created':
+                await handleStripeDispute(object, event.type);
+                break;
+            case 'radar.early_fraud_warning.created':
+                await handleStripeFraudWarning(object);
+                break;
+            default:
+                break;
         }
+    } catch (err) {
+        console.error(`Stripe: falha ao processar ${event.type}:`, err);
+        return response.status(500).json({ received: false });
     }
 
     response.json({ received: true });
@@ -2089,6 +2303,260 @@ app.post('/stripe/checkout', async (req, res) => {
         console.error('Stripe: erro ao criar checkout:', err);
         return res.status(500).json({ error: 'Could not start checkout. Please try again.' });
     }
+});
+
+const stripePriceCache = new Map();
+
+/** Valor cobrado vem do Price da Stripe (não do navegador); cache de 10 min. */
+async function getStripePriceAmount(plan) {
+    const cached = stripePriceCache.get(plan.priceId);
+    if (cached && cached.expiresAt > Date.now()) return cached;
+    const price = await stripe.prices.retrieve(plan.priceId);
+    const entry = { amount: price.unit_amount, currency: price.currency, expiresAt: Date.now() + 10 * 60 * 1000 };
+    stripePriceCache.set(plan.priceId, entry);
+    return entry;
+}
+
+app.get('/payments/config', async (req, res) => {
+    const paypalCfg = paypal.getPaypalConfig();
+    const plans = [];
+    for (const code of Object.keys(STRIPE_PLANS)) {
+        const plan = getStripePlan(code);
+        let amount = Math.round(plan.amountUsd * 100);
+        try {
+            amount = (await getStripePriceAmount(plan)).amount;
+        } catch (err) {
+            console.error('Stripe: erro ao ler preço', plan.priceId, err.message);
+        }
+        plans.push({ code, title: plan.title, duration: plan.duration, amount, paypalAmount: plan.amountUsd });
+    }
+    res.json({
+        stripePublishableKey: STRIPE_TEST_MODE ? process.env.STRIPE_TEST_PUBLISHABLE_KEY : process.env.STRIPE_PUBLISHABLE_KEY,
+        paypal: { enabled: paypalCfg.enabled, clientId: paypalCfg.enabled ? paypalCfg.clientId : null },
+        plans,
+    });
+});
+
+app.post('/stripe/payment-intent', async (req, res) => {
+    const planCode = String(req.body.plan_code || '').toUpperCase();
+    const plan = getStripePlan(planCode);
+    if (!plan) {
+        return res.status(400).json({ error: 'Invalid plan.' });
+    }
+    const email = normalizeEmail(req.body.email || '');
+    if (!email || !isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email.' });
+    }
+
+    try {
+        const price = await getStripePriceAmount(plan);
+        const intent = await stripe.paymentIntents.create({
+            amount: price.amount,
+            currency: price.currency,
+            payment_method_types: ['card'],
+            receipt_email: email,
+            description: plan.title,
+            metadata: { source: USD_CHECKOUT_SOURCE, plan_code: planCode, email, price_id: plan.priceId },
+        });
+        return res.json({ clientSecret: intent.client_secret, paymentIntentId: intent.id });
+    } catch (err) {
+        console.error('Stripe: erro ao criar PaymentIntent:', err);
+        return res.status(500).json({ error: 'Could not start the payment. Please try again.' });
+    }
+});
+
+/**
+ * Chamado pela página logo após o pagamento: confere direto na Stripe e gera a licença sem esperar o webhook
+ * (que continua como reserva). Idempotente; só gera licença para PaymentIntent pago e criado pelo checkout.
+ */
+app.post('/stripe/payment-intent/:id/complete', async (req, res) => {
+    const id = String(req.params.id || '');
+    if (!/^pi_[A-Za-z0-9]+$/.test(id)) {
+        return res.status(400).json({ error: 'Invalid payment.' });
+    }
+    try {
+        await runExclusive(id, () => fulfillStripePaymentIntent(id, 'client.complete'));
+        const license = await License.findOne({ sessionId: id }).select('_id');
+        return res.json({ status: license ? 'COMPLETED' : 'PENDING' });
+    } catch (err) {
+        console.error('Stripe: erro ao concluir pagamento', id, err.message);
+        return res.status(500).json({ error: 'Could not confirm the payment yet.' });
+    }
+});
+
+/** Pedido PayPal capturado: valida valor e plano e gera a licença (idempotente pelo id do pedido). */
+async function fulfillPaypalOrder(order, eventType) {
+    const unit = order.purchase_units?.[0] || {};
+    const capture = unit.payments?.captures?.[0];
+    const { planCode, email: customEmail } = paypal.parseCustomId(unit.custom_id || capture?.custom_id);
+    const plan = getStripePlan(planCode);
+    const email = normalizeEmail(customEmail || order.payer?.email_address || '');
+    const audit = {
+        paymentId: order.id,
+        webhookType: eventType,
+        status: 'pending',
+        email,
+        planCode,
+        paymentDetails: { id: order.id, status: order.status, capture_id: capture?.id, capture_status: capture?.status, amount: capture?.amount },
+    };
+
+    if (order.status !== 'COMPLETED' || capture?.status !== 'COMPLETED') {
+        audit.auditNotes = `PayPal: pagamento ainda não confirmado (${order.status}/${capture?.status || 'sem captura'}).`;
+        await new SaleAudit(audit).save();
+        return null;
+    }
+    const paidValue = capture.amount?.value;
+    if (!plan || !email || capture.amount?.currency_code !== 'USD' || paidValue !== plan.amountUsd.toFixed(2)) {
+        audit.status = 'error';
+        audit.auditNotes = `PayPal: plano, valor ou e-mail inválido (plan=${planCode || 'N/A'}, valor=${paidValue}, email=${email || 'N/A'}).`;
+        await new SaleAudit(audit).save();
+        console.error(audit.auditNotes);
+        return null;
+    }
+
+    const payerName = [order.payer?.name?.given_name, order.payer?.name?.surname].filter(Boolean).join(' ');
+    return issuePaidLicense({
+        audit,
+        orderId: order.id,
+        paymentId: capture.id,
+        paymentMethod: 'paypal',
+        plan,
+        email,
+        amount: Number(paidValue),
+        country: order.payer?.address?.country_code || '',
+        customerName: payerName,
+    });
+}
+
+app.post('/paypal/orders', async (req, res) => {
+    if (!paypal.getPaypalConfig().enabled) {
+        return res.status(404).json({ error: 'PayPal is not available.' });
+    }
+    const planCode = String(req.body.plan_code || '').toUpperCase();
+    const plan = getStripePlan(planCode);
+    if (!plan) {
+        return res.status(400).json({ error: 'Invalid plan.' });
+    }
+    const email = normalizeEmail(req.body.email || '');
+    if (!email || !isValidEmail(email)) {
+        return res.status(400).json({ error: 'Invalid email.' });
+    }
+    try {
+        const order = await paypal.createOrder({ planCode, plan, email });
+        return res.json({ id: order.id });
+    } catch (err) {
+        console.error('PayPal: erro ao criar pedido:', err.message, err.details || '');
+        return res.status(500).json({ error: 'Could not start PayPal. Please try again.' });
+    }
+});
+
+app.post('/paypal/orders/:orderId/capture', async (req, res) => {
+    if (!paypal.getPaypalConfig().enabled) {
+        return res.status(404).json({ error: 'PayPal is not available.' });
+    }
+    const orderId = String(req.params.orderId || '');
+    try {
+        try {
+            await paypal.captureOrder(orderId);
+        } catch (err) {
+            const issue = err.details?.details?.[0]?.issue;
+            if (issue !== 'ORDER_ALREADY_CAPTURED') throw err;
+        }
+        const order = await paypal.getOrder(orderId);
+        const license = await runExclusive(orderId, () => fulfillPaypalOrder(order, 'paypal.capture'));
+        if (license) {
+            return res.json({ status: 'COMPLETED', orderId });
+        }
+        if (order.status === 'COMPLETED') {
+            return res.json({ status: 'PENDING', orderId });
+        }
+        return res.status(402).json({ error: 'Payment was not completed.', status: order.status });
+    } catch (err) {
+        const issue = err.details?.details?.[0]?.issue;
+        console.error('PayPal: erro ao capturar pedido:', orderId, err.message);
+        if (issue === 'INSTRUMENT_DECLINED') {
+            return res.status(402).json({ error: 'PayPal declined this payment method. Please try another one.', issue });
+        }
+        return res.status(500).json({ error: 'Could not complete the PayPal payment. Please try again.' });
+    }
+});
+
+/** Captura a partir de um link "up" (refund → capture) dos recursos do PayPal. */
+function paypalCaptureIdFromLinks(links) {
+    const up = (links || []).find((l) => l.rel === 'up' && /\/captures\//.test(l.href));
+    return up ? up.href.split('/captures/')[1].split(/[/?]/)[0] : null;
+}
+
+app.post('/paypal/webhook', async (req, res) => {
+    const event = req.body || {};
+    try {
+        const verified = await paypal.verifyWebhookSignature(req.headers, event);
+        if (!verified) {
+            console.error('PayPal webhook com assinatura inválida.');
+            return res.status(400).send('Invalid signature');
+        }
+    } catch (err) {
+        console.error('PayPal webhook: erro na verificação:', err.message);
+        return res.status(400).send('Verification failed');
+    }
+
+    const resource = event.resource || {};
+    try {
+        switch (event.event_type) {
+            case 'PAYMENT.CAPTURE.COMPLETED': {
+                const orderId = resource.supplementary_data?.related_ids?.order_id;
+                if (orderId) {
+                    const order = await paypal.getOrder(orderId);
+                    await runExclusive(orderId, () => fulfillPaypalOrder(order, event.event_type));
+                }
+                break;
+            }
+            case 'PAYMENT.CAPTURE.REFUNDED': {
+                const captureId = paypalCaptureIdFromLinks(resource.links);
+                const capture = captureId ? await paypal.getCapture(captureId) : null;
+                if (capture?.status === 'REFUNDED') {
+                    await revokeLicenseByPayment({
+                        paymentMethod: 'paypal',
+                        paymentIds: [captureId],
+                        reason: 'Estorno (PayPal)',
+                        eventType: event.event_type,
+                        details: { refund: resource.id, capture: captureId },
+                    });
+                } else {
+                    await notifySupport(
+                        '[GladiusBot] Estorno parcial no PayPal',
+                        `<p>Estorno parcial (${resource.amount?.value || '?'} ${resource.amount?.currency_code || ''}) na captura ${captureId}.
+                         A licença <b>não</b> foi revogada.</p>`
+                    );
+                }
+                break;
+            }
+            case 'PAYMENT.CAPTURE.REVERSED':
+                await revokeLicenseByPayment({
+                    paymentMethod: 'paypal',
+                    paymentIds: [resource.id],
+                    reason: 'Pagamento revertido (PayPal)',
+                    eventType: event.event_type,
+                    details: { capture: resource.id },
+                });
+                break;
+            case 'CUSTOMER.DISPUTE.CREATED':
+                await revokeLicenseByPayment({
+                    paymentMethod: 'paypal',
+                    paymentIds: (resource.disputed_transactions || []).map((t) => t.seller_transaction_id),
+                    reason: 'Contestação (PayPal)',
+                    eventType: event.event_type,
+                    details: { dispute: resource.dispute_id, reason: resource.reason },
+                });
+                break;
+            default:
+                break;
+        }
+    } catch (err) {
+        console.error(`PayPal: falha ao processar ${event.event_type}:`, err);
+        return res.status(500).json({ received: false });
+    }
+    res.json({ received: true });
 });
 
 app.post('/teste', async (req, res) => {
